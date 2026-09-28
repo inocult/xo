@@ -47,15 +47,17 @@ JSON
  {"full_name":"acme/attic","name":"attic","owner":{"login":"acme"},"default_branch":"main","archived":true,"fork":false,"pushed_at":"2024-01-01T00:00:00Z","private":false}
 ]
 JSON
+  # Every commit carries both dates GitHub reports. They agree here, which is the
+  # ordinary case; the case where they disagree gets its own fixture below.
   cat > "$dir/commits-widgets.json" <<'JSON'
 [
- {"sha":"c1","author":{"login":"ada","type":"User"},"parents":[{"sha":"c0"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"message":"feat: add widget\n\nbody"}},
- {"sha":"c2","author":{"login":"ada","type":"User"},"parents":[{"sha":"c1"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-20T00:00:00Z"},"message":"fix: widget edge case"}},
- {"sha":"c3","author":{"login":"brooke","type":"User"},"parents":[{"sha":"c2"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-02-05T00:00:00Z"},"message":"feat: add gadget"}},
- {"sha":"c4","author":null,"parents":[{"sha":"c3"}],"commit":{"author":{"email":"Carol@Example.com","date":"2026-02-15T00:00:00Z"},"message":"chore: tidy"}},
- {"sha":"c5","author":{"login":"dependabot[bot]","type":"Bot"},"parents":[{"sha":"c4"}],"commit":{"author":{"email":"bot@example.com","date":"2026-03-01T00:00:00Z"},"message":"build(deps): bump lib"}},
- {"sha":"c6","author":{"login":"ada","type":"User"},"parents":[{"sha":"c5"},{"sha":"x1"}],"commit":{"author":{"email":"ada@example.com","date":"2026-03-10T00:00:00Z"},"message":"Merge pull request #4"}},
- {"sha":"c7","author":{"login":"brooke","type":"User"},"parents":[{"sha":"c6"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-03-12T00:00:00Z"},"message":"Revert \"feat: add gadget\""}}
+ {"sha":"c1","author":{"login":"ada","type":"User"},"parents":[{"sha":"c0"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"message":"feat: add widget\n\nbody"}},
+ {"sha":"c2","author":{"login":"ada","type":"User"},"parents":[{"sha":"c1"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-20T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-20T00:00:00Z"},"message":"fix: widget edge case"}},
+ {"sha":"c3","author":{"login":"brooke","type":"User"},"parents":[{"sha":"c2"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-02-05T00:00:00Z"},"committer":{"email":"brooke@example.com","date":"2026-02-05T00:00:00Z"},"message":"feat: add gadget"}},
+ {"sha":"c4","author":null,"parents":[{"sha":"c3"}],"commit":{"author":{"email":"Carol@Example.com","date":"2026-02-15T00:00:00Z"},"committer":{"email":"Carol@Example.com","date":"2026-02-15T00:00:00Z"},"message":"chore: tidy"}},
+ {"sha":"c5","author":{"login":"dependabot[bot]","type":"Bot"},"parents":[{"sha":"c4"}],"commit":{"author":{"email":"bot@example.com","date":"2026-03-01T00:00:00Z"},"committer":{"email":"bot@example.com","date":"2026-03-01T00:00:00Z"},"message":"build(deps): bump lib"}},
+ {"sha":"c6","author":{"login":"ada","type":"User"},"parents":[{"sha":"c5"},{"sha":"x1"}],"commit":{"author":{"email":"ada@example.com","date":"2026-03-10T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-03-10T00:00:00Z"},"message":"Merge pull request #4"}},
+ {"sha":"c7","author":{"login":"brooke","type":"User"},"parents":[{"sha":"c6"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-03-12T00:00:00Z"},"committer":{"email":"brooke@example.com","date":"2026-03-12T00:00:00Z"},"message":"Revert \"feat: add gadget\""}}
 ]
 JSON
   # The runs list returns one entry per run carrying that run's CURRENT attempt:
@@ -85,7 +87,7 @@ JSON
  {"number":2,"state":"MERGED","isDraft":false,"createdAt":"2026-02-01T00:00:00Z","updatedAt":"2026-02-03T00:00:00Z","mergedAt":"2026-02-03T00:00:00Z","closedAt":"2026-02-03T00:00:00Z","additions":200,"deletions":100,"changedFiles":9,"headRefName":"f/2","title":"add gadget","author":{"login":"brooke","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-02-01T00:00:00Z"}}]},"reviews":{"totalCount":2,"nodes":[{"author":{"login":"brooke","__typename":"User"},"submittedAt":"2026-02-02T00:00:00Z","state":"COMMENTED"},{"author":{"login":"ada","__typename":"User"},"submittedAt":"2026-02-02T06:00:00Z","state":"APPROVED"}]},"reviewThreads":{"totalCount":5}},
  {"number":3,"state":"MERGED","isDraft":false,"createdAt":"2026-03-05T00:00:00Z","updatedAt":"2026-03-06T00:00:00Z","mergedAt":"2026-03-06T00:00:00Z","closedAt":"2026-03-06T00:00:00Z","additions":5,"deletions":2,"changedFiles":1,"headRefName":"f/3","title":"tidy","author":{"login":"ada","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-03-04T00:00:00Z"}}]},"reviews":{"totalCount":0,"nodes":[]},"reviewThreads":{"totalCount":0}},
  {"number":4,"state":"MERGED","isDraft":false,"createdAt":"2026-03-08T00:00:00Z","updatedAt":"2026-03-09T00:00:00Z","mergedAt":"2026-03-09T00:00:00Z","closedAt":"2026-03-09T00:00:00Z","additions":2,"deletions":2,"changedFiles":1,"headRefName":"f/4","title":"bump lib","author":{"login":"dependabot","__typename":"Bot"},"commits":{"nodes":[{"commit":{"committedDate":"2026-03-08T00:00:00Z"}}]},"reviews":{"totalCount":1,"nodes":[{"author":{"login":"copilot-pull-request-reviewer","__typename":"Bot"},"submittedAt":"2026-03-08T01:00:00Z","state":"COMMENTED"}]},"reviewThreads":{"totalCount":0}},
- {"number":5,"state":"OPEN","isDraft":false,"createdAt":"2026-01-15T00:00:00Z","updatedAt":"2026-01-16T00:00:00Z","mergedAt":null,"closedAt":null,"additions":10,"deletions":0,"changedFiles":1,"headRefName":"f/5","title":"spike\twith a tab","author":{"login":"brooke","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-01-15T00:00:00Z"}}]},"reviews":{"totalCount":1,"nodes":[{"author":{"login":"ada","__typename":"User"},"submittedAt":"2026-01-16T00:00:00Z","state":"APPROVED"}]},"reviewThreads":{"totalCount":0}},
+ {"number":5,"state":"OPEN","isDraft":false,"createdAt":"2026-01-15T00:00:00Z","updatedAt":"2026-01-16T00:00:00Z","mergedAt":null,"closedAt":null,"additions":10,"deletions":0,"changedFiles":1,"headRefName":"f/5","title":"spike\twith a tab | and a pipe","author":{"login":"brooke","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-01-15T00:00:00Z"}}]},"reviews":{"totalCount":1,"nodes":[{"author":{"login":"ada","__typename":"User"},"submittedAt":"2026-01-16T00:00:00Z","state":"APPROVED"}]},"reviewThreads":{"totalCount":0}},
  {"number":6,"state":"CLOSED","isDraft":false,"createdAt":"2026-02-20T00:00:00Z","updatedAt":"2026-02-21T00:00:00Z","mergedAt":null,"closedAt":"2026-02-21T00:00:00Z","additions":1,"deletions":1,"changedFiles":1,"headRefName":"f/6","title":"abandoned","author":{"login":"ada","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-02-20T00:00:00Z"}}]},"reviews":{"totalCount":0,"nodes":[]},"reviewThreads":{"totalCount":0}}
 ]}}}}
 JSON
@@ -476,9 +478,11 @@ test_free_text_from_the_estate_cannot_break_a_record() {
   printf '%s' "$model" > "$root/model.json"
   # The stalled pull request's title contains a tab in the fixture. A tab is the
   # record separator, so it has to be neutralised at the collection boundary or
-  # every field after it shifts.
-  assert_equals "spike with a tab" \
-    "$(jq -r '.risk.stalled_pull_requests[0].title' "$root/model.json")" "the tabbed title survives as one field"
+  # every field after it shifts. The pipe in the same title is not a record
+  # separator, so the model keeps the estate's own text and the renderer is what
+  # deals with it.
+  assert_equals "spike with a tab | and a pipe" \
+    "$(jq -r '.risk.stalled_pull_requests[0].title' "$root/model.json")" "the tabbed title survives as one field, pipe included"
   assert_equals "5" "$(jq -r '.risk.stalled_pull_requests[0].number' "$root/model.json")" "the fields after it did not shift"
   assert_equals "brooke" "$(jq -r '.risk.stalled_pull_requests[0].author' "$root/model.json")" "the author field did not shift"
   pass "estate free text containing a record separator is neutralised rather than shifting every later field"
@@ -651,6 +655,91 @@ test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound() {
   pass "a pull request carrying more reviews than one page holds is disclosed as a cap rather than silently shortening a review count"
 }
 
+test_an_account_reaching_the_table_only_through_a_merged_pull_request_is_whole() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-merged-only) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # Two pull requests opened before the window and merged inside it, by accounts
+  # with no in-window commit and no review. Each account reaches the person table
+  # through the merge alone, which is an ordinary way to arrive there and the one
+  # way that used to lose half the row.
+  jq '.data.repository.pullRequests.nodes += [
+      {"number":7,"state":"MERGED","isDraft":false,"createdAt":"2025-12-20T00:00:00Z","updatedAt":"2026-01-05T00:00:00Z",
+       "mergedAt":"2026-01-05T00:00:00Z","closedAt":"2026-01-05T00:00:00Z","additions":4,"deletions":1,"changedFiles":1,
+       "headRefName":"f/7","title":"bump transitive lib","author":{"login":"renovate","__typename":"Bot"},
+       "commits":{"nodes":[{"commit":{"committedDate":"2025-12-20T00:00:00Z"}}]},
+       "reviews":{"totalCount":0,"nodes":[]},"reviewThreads":{"totalCount":0}},
+      {"number":8,"state":"MERGED","isDraft":false,"createdAt":"2025-12-01T00:00:00Z","updatedAt":"2026-01-15T00:00:00Z",
+       "mergedAt":"2026-01-15T00:00:00Z","closedAt":"2026-01-15T00:00:00Z","additions":9,"deletions":3,"changedFiles":2,
+       "headRefName":"f/8","title":"long-running spike","author":{"login":"casey","__typename":"User"},
+       "commits":{"nodes":[{"commit":{"committedDate":"2025-12-01T00:00:00Z"}}]},
+       "reviews":{"totalCount":0,"nodes":[]},"reviewThreads":{"totalCount":0}}]' \
+    "$root/fixtures/prs-widgets.json" > "$root/fixtures/prs.tmp" ||
+    fail "could not extend the pull-request fixture"
+  mv "$root/fixtures/prs.tmp" "$root/fixtures/prs-widgets.json" || fail "could not install the extended fixture"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "0" "$(jq -r '.people[] | select(.person == "renovate") | .prs_opened' "$root/model.json")"     "the bot reaches the table through its merge alone"
+  assert_equals "1" "$(jq -r '.people[] | select(.person == "renovate") | .prs_merged' "$root/model.json")"     "the bot's merge is credited"
+  assert_equals "true" "$(jq -r '.people[] | select(.person == "renovate") | .automation' "$root/model.json")"     "an automation account is marked as such however it reached the table"
+  assert_equals "1" "$(jq -r '.people[] | select(.person == "casey") | .repos' "$root/model.json")"     "a merged pull request is a repository touched"
+  assert_equals "false" "$(jq -r '.people[] | select(.person == "casey") | .automation' "$root/model.json")"     "a human who only merged is still a human"
+
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_grep "Automation accounts in this table: 3 of 7" "$root/report.md"     "the automation count in section 3.1 includes the merge-only bot"
+  pass "an account that reaches the person table only through a merged pull request is marked and counted like any other"
+}
+
+test_a_table_cell_carrying_a_pipe_stays_one_cell() {
+  local root model report header_cells row_cells
+  root=$(xo_test_tmproot xo-estate-review-pipe) || fail "no fixture root"
+  model=$(collect_model "$root/fixtures" ok) || fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  # The stalled pull request's title carries a pipe, which is this table's own
+  # cell separator. The row has to keep the column count its header declares, or
+  # a Markdown reader silently drops the overflow and shows a shortened title.
+  cells_of() { printf '%s' "$1" | sed 's/\\|//g' | awk -F'|' '{print NF - 2}'; }
+  header_cells=$(cells_of "$(grep -F '| Repository | Number | Idle days |' "$report")")
+  row_cells=$(cells_of "$(grep -F '| acme/widgets | 5 |' "$report")")
+  assert_equals "7" "$header_cells" "the stalled-work header declares seven columns"
+  assert_equals "$header_cells" "$row_cells" "the row with a pipe in its title has the columns its header declares"
+  assert_grep 'spike with a tab \| and a pipe' "$report" "the title survives intact rather than being cut at the pipe"
+  pass "a table cell carrying the pipe that separates cells stays one cell and keeps its text"
+}
+
+test_a_commit_is_counted_in_the_window_it_landed_in() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-landed) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # A commit written in December and rebased onto the default branch in February.
+  # GitHub's commit list filters since/until on the committer date, so the API
+  # returns it for this window; counting it by its author date would drop a commit
+  # the request itself asked for, with nothing in section 9.2 to say so.
+  jq '. += [{"sha":"c8","author":{"login":"brooke","type":"User"},"parents":[{"sha":"c7"}],
+      "commit":{"author":{"email":"brooke@example.com","date":"2025-12-20T00:00:00Z"},
+                "committer":{"email":"brooke@example.com","date":"2026-02-10T00:00:00Z"},
+                "message":"feat: land the december spike"}}]' \
+    "$root/fixtures/commits-widgets.json" > "$root/fixtures/commits.tmp" ||
+    fail "could not extend the commit fixture"
+  mv "$root/fixtures/commits.tmp" "$root/fixtures/commits-widgets.json" || fail "could not install the extended fixture"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "8" "$(jq -r '.quality.commits.total' "$root/model.json")" "the rebased commit is counted"
+  assert_equals "[2,4,1]" "$(jq -c '.velocity.commits.per_period' "$root/model.json")"     "it falls in the period it landed in, not the one it was written in"
+  assert_equals "3" "$(jq -r '.people[] | select(.person == "brooke") | .commits' "$root/model.json")"     "it is credited to whoever wrote it"
+  pass "a commit rebased into the window is counted in the period it landed in and credited to its author"
+}
+
 test_a_commit_whose_workflow_ran_twice_counts_every_attempt() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-attempts) || fail "no fixture root"
@@ -800,5 +889,8 @@ test_a_review_on_an_open_pull_request_is_counted_once
 test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound
 test_a_last_period_with_no_measurement_reports_no_direction
 test_a_commit_whose_workflow_ran_twice_counts_every_attempt
+test_an_account_reaching_the_table_only_through_a_merged_pull_request_is_whole
+test_a_table_cell_carrying_a_pipe_stays_one_cell
+test_a_commit_is_counted_in_the_window_it_landed_in
 
 echo "# xo-estate-review.test.sh: all assertions passed"

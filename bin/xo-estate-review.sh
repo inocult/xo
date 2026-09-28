@@ -479,7 +479,12 @@ list_repos() {
 # ---------------------------------------------------------------------------
 # Per-repository reads.
 # ---------------------------------------------------------------------------
-COMMITS_JQ='(["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.author.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")[0]|gsub("[\\t\\r]";" "))]|@tsv])|join("\n")'
+# The date recorded is the committer date, which is the date the commits list
+# itself filters `since` and `until` on. Recording the author date instead would
+# count a different set of commits from the one the request asked for, and the
+# difference is silent: a rebased commit's author date can sit outside a window
+# the API already decided it belongs to.
+COMMITS_JQ='(["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.committer.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")[0]|gsub("[\\t\\r]";" "))]|@tsv])|join("\n")'
 RUNS_JQ='(["items\t" + (.workflow_runs|length|tostring)] + [.workflow_runs[]|["run",(.workflow_id|tostring),(.head_sha//"-"),(.run_number|tostring),(.run_attempt|tostring),(.conclusion//"-"),(.created_at//"-")]|@tsv])|join("\n")'
 # The open-issue read is the one program that drops items GitHub returned: the
 # endpoint answers with pull requests alongside issues. The `items` count is the
@@ -803,6 +808,7 @@ $win as $w
       + ($reviews_in | map(.person))) | unique) as $ids
     | ((($authored | map(select(.bot)) | map(.person))
         + ($opened_in | map(select(.author_bot)) | map(.author))
+        + ($merged_in | map(select(.author_bot)) | map(.author))
         + ($reviews_in | map(select(.bot)) | map(.person))) | unique) as $bots
     | [$ids[] as $id
        | { person: $id,
@@ -815,6 +821,7 @@ $win as $w
                           | map(.repo + "#" + (.number | tostring)) | unique | length),
            repos: ((($authored | map(select(.person == $id)) | map(.repo))
                     + ($opened_in | map(select(.author == $id)) | map(.repo))
+                    + ($merged_in | map(select(.author == $id)) | map(.repo))
                     + ($reviews_in | map(select(.person == $id)) | map(.repo))) | unique | length) } ]
     | sort_by(.person);
 
@@ -1024,7 +1031,11 @@ def trendword: if . == "rising" then "rising"
   elif . == "not-tracked" then "not tracked over periods"
   elif . == "final-period-unmeasured" then "not reported: the last period has no measurement"
   else "not enough history" end;
-def row($cells): "| " + ($cells | map(tostring) | join(" | ")) + " |";
+# A cell is one column, whatever the estate put in it. A pull request title or a
+# vendor diagnostic can carry the pipe this table separates cells with, so it is
+# escaped here, at the one boundary where the one-cell-per-column contract lives.
+# The model keeps the estate's own text; only this rendering is escaped.
+def row($cells): "| " + ($cells | map(tostring | gsub("[|]"; "\\|")) | join(" | ")) + " |";
 def header($cells): [row($cells), "|" + ($cells | map(" --- ") | join("|")) + "|"];
 def bullet($text): "- " + $text;
 # A risk list is already ordered worst first, so bounding the rows a reader has
@@ -1069,17 +1080,17 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "",
   "Definitions, which are the same in every report:",
   "",
-  bullet("Commits are commits on each repository's default branch with an author date inside the window. Merge commits are counted separately and excluded from authorship, revert, and concentration figures, because a merge is not an authored change."),
+  bullet("Commits are commits on each repository's default branch that landed inside the window, counted by committer date, which is the date GitHub's own commit list filters on. Work that was rebased, amended, cherry-picked, or squashed therefore counts in the window it landed in, not the window it was written in. Merge commits are counted separately and excluded from authorship, revert, and concentration figures, because a merge is not an authored change."),
   bullet("A person is a GitHub account. A commit whose author GitHub could not link to an account is attributed to `unlinked:<email>` and never merged into an account by name, because matching people by name is a guess."),
   bullet("An automation account is marked as such and its counts are kept in every total, because a bot's merged pull requests really did land. The only identity GitHub reports two ways is an app's account, given as `name[bot]` by one endpoint and `name` by another; that suffix is folded so one actor is one row, and nothing else is."),
-  bullet("Pull requests merged, opened, and closed are counted by the date of that event falling inside the window."),
-  bullet("Cycle time is the hours from a merged pull request's first commit to its merge. A pull request whose first commit is unreadable is reported as unmeasurable rather than dropped."),
-  bullet("Review latency is the hours from a merged pull request being opened to its first review submitted by an account other than its author. Self-review is not review coverage and is excluded everywhere in this report."),
+  bullet("Pull requests opened, merged, and closed without merging are counted by the date of that event falling inside the window."),
+  bullet("Cycle time is the hours from the commit date of a merged pull request's first commit to its merge. A pull request whose first commit is unreadable is reported as unmeasurable rather than dropped."),
+  bullet("Review latency is the hours from a merged pull request being opened to the first review on it submitted by another identified account, no earlier than the pull request itself. Self-review is not review coverage and is excluded everywhere in this report, and so is a review whose author GitHub no longer reports."),
   bullet("Change size is additions plus deletions on merged pull requests, which is the unit of change a person actually reviews."),
-  bullet("The revert rate is the share of authored commits whose subject begins with `Revert`; the hotfix rate is the share whose subject contains `hotfix` in any case. Both measure what the estate labels, not what actually broke."),
+  bullet("The revert rate is the share of authored commits whose subject opens with `Revert` or `revert` followed by a space, colon, bracket, or quote, which is the shape git's own revert subjects take; the hotfix rate is the share whose subject contains `hotfix` in any case. Both measure what the estate labels, not what actually broke."),
   bullet("The continuous integration latest-attempt pass rate groups GitHub Actions pull-request runs by workflow and commit, takes the most recent run of each group, and reports the share of them that succeeded out of those that succeeded or failed. A run's conclusion is the conclusion of its latest attempt, because that is what the runs list reports; a run re-run without a new commit therefore counts here as whatever it ended up as. Runs that were cancelled, skipped, or still going are counted as inconclusive and excluded from the rate."),
-  bullet("Accounts covering half the commits is the smallest number of accounts whose combined commits exceed half a repository's authored commits in the window."),
-  bullet("The median is the middle value; p90 is the ninetieth percentile by nearest rank."),
+  bullet("Accounts covering half the commits is the smallest number of accounts whose combined commits exceed half the authored commits in the window of whatever the figure is about, which is one repository in section 7 and the whole estate in section 6.1."),
+  bullet("The median is the middle value, or the mean of the two middle values where there is an even number of them; p90 is the ninetieth percentile by nearest rank."),
   "",
   "## 2. Headline",
   ""
