@@ -260,6 +260,9 @@ Project creation never authorizes an unmentioned remote, and project removal nev
 Load `prep` when the captain invokes `/prep`, or before the first mission against a repository this home has not prepared for the tracker.
 It owns the split between the home half XO performs directly and the project half a worker delivers.
 
+Load `estate` when the captain invokes `/estate`, or asks for a review of an estate, organization, or set of repositories covering who did what, velocity, quality, or risk concentration.
+It owns estate and window selection, the captain-facing summary, and the boundaries that the review never writes to the estate and never ranks people; `bin/xo-estate-review.sh` owns collection and the report's fixed shape.
+
 Load `secondmate-provisioning` before creating, seeding, validating, launching, handing backlog to, recovering, pushing inherited local material into, or retiring a secondmate home, and before editing `data/secondmates.md`.
 Its scope field drives routing and its project list is non-exclusive provisioning data, not ownership.
 Keep `local-only` work in the main home.
