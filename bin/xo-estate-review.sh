@@ -1132,21 +1132,29 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 | $m.selection as $sel
 | ($w.period_labels) as $labels
 | (if $m.scope.kind == "repository" then "repository" else "organization" end) as $scope_word
-# EVERY sentence in this report that says the estate did nothing goes through
-# `observed` and through nothing else. A read that failed contributes no records
-# at all, so an unread estate reaches the derivation looking exactly like a
-# silent one, and a sentence written the ordinary way would state as fact about
-# the window something no read ever saw. This is the one place that knows the
-# difference: it narrows the sentence's scope from the window to what could be
-# read, and names the failed reads, so the reader sees the distinction in the
-# text rather than having to infer it from section 9.2. A new empty surface
-# written without it reintroduces the conflation silently, which is why there is
-# no second way to phrase one.
-| def observed($text): if ($m.unread | length) == 0 then $text
-    else ($text | sub("in this window"; "in what could be read"))
-         + " \($m.unread | length) reads failed; section 9.2 names them." end;
-# A series with no measurement in its last period gets no direction at all, and
-# the reader is told which periods were empty rather than left to infer it.
+# EVERY sentence in this report that says the estate did nothing is composed
+# here and nowhere else. A read that failed contributes no records at all, so an
+# unread estate reaches the derivation looking exactly like a silent one, and a
+# sentence written the ordinary way would state as fact something no read ever
+# saw. A caller supplies only what was absent, what follows from that, and which
+# reads the figure rests on; this is what owns the phrase that says how far the
+# claim reaches. That is why it takes a subject rather than a finished sentence:
+# a helper that edited the caller's wording would silently do nothing to a
+# sentence spelled differently, which is a way to get it wrong once per call site
+# instead of right once here.
+| def readnote($signals): ([$m.unread[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $n
+    | if $n == 0 then ""
+      else " (\(if $n == 1 then "1 read" else "\($n) reads" end) behind this figure failed; section 9.2 names \(if $n == 1 then "it" else "them" end))" end;
+  def absent($subject; $consequence; $clock; $signals):
+    (readnote($signals)) as $note
+    | (if $note != "" then (if $clock == "collection" then "in what could be read, as at collection" else "in what could be read" end)
+       elif $clock == "collection" then "as at collection"
+       else "in this window" end) as $scope
+    | "No \($subject) \($scope)\(if $consequence == "" then "" else ", \($consequence)" end)\($note).";
+  def absent_in_window($subject; $consequence; $signals): absent($subject; $consequence; "window"; $signals);
+  def absent_at_collection($subject; $consequence; $signals): absent($subject; $consequence; "collection"; $signals);
+  # A series with no measurement in its last period gets no direction at all, and
+  # the reader is told which periods were empty rather than left to infer it.
   def empty_periods($series): [range(0; ($series | length)) | select($series[.] == null) | $labels[.]];
   def direction($series; $trend; $rising):
     if $trend == "final-period-unmeasured"
@@ -1169,7 +1177,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories, at most \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests per repository.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
   "Both of those thresholds, and every figure they select over, are measured from when this review collected rather than from inside the window, because they are facts about the estate now rather than events in it: the repository set and each default branch, the archived flag, whether an account is automation, days since last push, the open pull request and open issue counts, the stalled list with its idle and age days, and what section 9 records as read.",
-  "Every one of those is labelled where it appears, in sections 6.2 and 6.3 and in section 7's open, idle, and archived columns; every other figure in this report is bounded by the window.",
+  "Rather than list where each is labelled, the rule holds everywhere: a table column measured that way ends its heading `at collection`, and a column that does not is bounded by the window. Section 9 is the exception and is collection-time throughout, because it records the reads themselves.",
   "A direction is never drawn from a period that ended before the window did: where the last period holds no measurement, no direction is reported and the empty periods are named.",
   "Section 6's lists show \(if $o.max_listed == 0 then "every" else "at most \($o.max_listed)" end) worst-first rows and state how many there are in total; the counts are always complete even where the rows are bounded.",
   "",
@@ -1195,7 +1203,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 + [
   "",
   (if $m.quality.commits.total == 0 and ($m.people | length) == 0 and $m.quality.ci.runs == 0
-   then observed("No commit, pull request, review, or workflow run fell in this window, so every measure above is zero or unmeasurable rather than low.")
+   then absent_in_window("commit, pull request, review, or workflow run"; "so every measure above is zero or unmeasurable rather than low"; ["commits", "pull_requests", "open_pull_requests", "ci_runs", "issues"])
    else "A rising cycle time means work is getting slower; a rising merged count means more is landing." end),
   "",
   "## 3. Who did what",
@@ -1206,8 +1214,8 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "This table is a record of participation, not a ranking, and the counts carry no judgement about anyone's effort, difficulty of work, or worth.",
   ""
   ]
-+ (if ($m.people | length) == 0 then [observed("No account committed, opened a pull request, or reviewed one in this window.")]
-   else header(["Account", "Automation", "Commits", "Pull requests opened", "Pull requests merged", "Reviews submitted", "Pull requests reviewed", "Repositories touched"])
++ (if ($m.people | length) == 0 then [absent_in_window("account committed, opened a pull request, or reviewed one"; ""; ["commits"] + ["pull_requests", "open_pull_requests"])]
+   else header(["Account", "Automation, at collection", "Commits", "Pull requests opened", "Pull requests merged", "Reviews submitted", "Pull requests reviewed", "Repositories touched"])
         + [$m.people[] | row([.person, yn(.automation), .commits, .prs_opened, .prs_merged, .reviews_submitted, .prs_reviewed, .repos])]
         + ["",
            "Automation accounts in this table: \($m.people | map(select(.automation)) | length) of \($m.people | length)."]
@@ -1221,11 +1229,11 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ]
 + (($m.people | map(select(.reviews_submitted > 0))) as $reviewers
    | if ($reviewers | length) == 0
-     then [observed("No account submitted a review of another account's pull request in this window."),
+     then [absent_in_window("account submitted a review of another account's pull request"; ""; ["pull_requests", "open_pull_requests"]),
            "",
            "Of \($m.quality.review.merged) merged pull requests, \($m.quality.review.with_review_by_another_account) carried a review by another account.",
            "That is a fact about this estate's recorded review activity, not evidence that the work went unexamined: review can happen in a channel GitHub never sees."]
-     else header(["Account", "Automation", "Reviews submitted", "Pull requests reviewed"])
+     else header(["Account", "Automation, at collection", "Reviews submitted", "Pull requests reviewed"])
           + [$reviewers[] | row([.person, yn(.automation), .reviews_submitted, .prs_reviewed])]
           + ["",
              "\($m.quality.review.with_review_by_another_account) of \($m.quality.review.merged) merged pull requests carried a review by an account other than the author (\($m.quality.review.coverage_pct | pc))."]
@@ -1246,14 +1254,14 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 + [
   "",
   (if ($m.quality.commits.total == 0) and (($m.velocity.merged.per_period | add) == 0)
-   then observed("Nothing was committed or merged in this window.")
+   then absent_in_window("commit or merge landed"; ""; ["commits"] + ["pull_requests", "open_pull_requests"])
    else "Direction compares the last period against the mean of the earlier ones." end),
   "",
   "### 4.2 Cycle time, first commit to merge",
   ""
   ]
 + (if $m.velocity.cycle_hours.measured == 0
-   then [observed("No merged pull request in this window had a readable first commit, so cycle time is unmeasurable here."),
+   then [absent_in_window("merged pull request with a readable first commit"; "so cycle time is unmeasurable here"; ["pull_requests", "open_pull_requests"]),
          "\($m.velocity.cycle_hours.unmeasurable) merged pull requests were excluded for that reason."]
    else [bullet("Median: \($m.velocity.cycle_hours.median | hrs) over \($m.velocity.cycle_hours.measured) merged pull requests"),
          bullet("p90: \($m.velocity.cycle_hours.p90 | hrs)"),
@@ -1269,7 +1277,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if $m.velocity.review_latency_hours.measured == 0
-   then [observed("No merged pull request in this window received a review from another account, so review latency is unmeasurable here."),
+   then [absent_in_window("merged pull request with a review from another account"; "so review latency is unmeasurable here"; ["pull_requests", "open_pull_requests"]),
          "That is the same fact section 3.2 reports, stated as a waiting time rather than as coverage."]
    else [bullet("Median: \($m.velocity.review_latency_hours.median | hrs) over \($m.velocity.review_latency_hours.measured) merged pull requests"),
          bullet("p90: \($m.velocity.review_latency_hours.p90 | hrs)"),
@@ -1290,7 +1298,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if $m.quality.commits.commits == 0
-   then [observed("No authored commit landed on a default branch in this window, so there is no revert or hotfix rate to report.")]
+   then [absent_in_window("authored commit landed on a default branch"; "so there is no revert or hotfix rate to report"; ["commits"])]
    else [bullet("Reverts: \($m.quality.commits.reverts) of \($m.quality.commits.commits) authored commits (\($m.quality.commits.revert_rate_pct | pc))"),
          bullet("Hotfixes: \($m.quality.commits.hotfixes) of \($m.quality.commits.commits) authored commits (\($m.quality.commits.hotfix_rate_pct | pc))"),
          "",
@@ -1303,7 +1311,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if $m.quality.size.measured == 0
-   then [observed("No pull request merged in this window, so there is no change-size distribution to report.")]
+   then [absent_in_window("pull request merged"; "so there is no change-size distribution to report"; ["pull_requests", "open_pull_requests"])]
    else [bullet("Median merged pull request: \($m.quality.size.median_lines | num) lines changed"),
          bullet("p90 merged pull request: \($m.quality.size.p90_lines | num) lines changed"),
          ""]
@@ -1323,7 +1331,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if $m.quality.review.merged == 0
-   then [observed("No pull request merged in this window, so there is no review depth to report.")]
+   then [absent_in_window("pull request merged"; "so there is no review depth to report"; ["pull_requests", "open_pull_requests"])]
    else [bullet("Merged pull requests reviewed by another account: \($m.quality.review.with_review_by_another_account) of \($m.quality.review.merged) (\($m.quality.review.coverage_pct | pc))"),
          bullet("Median review threads per merged pull request: \($m.quality.review.review_threads_median | num)"),
          bullet("Total review threads on merged pull requests: \($m.quality.review.review_threads_total)"),
@@ -1337,7 +1345,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if $m.quality.ci.runs == 0
-   then [observed("No GitHub Actions pull-request run happened in this window, so there is no latest-attempt pass rate to report."),
+   then [absent_in_window("GitHub Actions pull-request run"; "so there is no latest-attempt pass rate to report"; ["ci_runs"]),
          "An estate whose checks run outside GitHub Actions will always read this way here, because this report does not see those checks."]
    else [bullet("Latest-attempt pass rate: \($m.quality.ci.latest_attempt_pass_rate_pct | pc) (\($m.quality.ci.passed) passed, \($m.quality.ci.failed) failed)"),
          bullet("Inconclusive runs excluded from the rate: \($m.quality.ci.inconclusive)"),
@@ -1355,13 +1363,13 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if $m.risk.concentration.commits == 0
-   then [observed("No authored commit landed in this window, so concentration is unmeasurable.")]
+   then [absent_in_window("authored commit landed"; "so concentration is unmeasurable"; ["commits"])]
    else [bullet("Accounts that authored commits: \($m.risk.concentration.authors)"),
          bullet("Accounts covering half the estate's authored commits: \($m.risk.concentration.accounts_covering_half | num)"),
          bullet("Largest single share: \($m.risk.concentration.top | dash) at \($m.risk.concentration.top_share_pct | pc)"),
          ""]
         + (if ($m.risk.concentrated_repositories | length) == 0
-           then ["No repository has more than half its authored commits from a single account."]
+           then [absent_in_window("repository has more than half its authored commits from a single account"; ""; ["commits"])]
            else ["Repositories where one account authored more than half the commits in this window: \($m.risk.concentrated_repositories | length).",
                  ""]
                 + header(["Repository", "Account", "Share", "Authors", "Authored commits"])
@@ -1382,7 +1390,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
    then ["No reviewed repository is archived or had gone \($o.unmaintained_days) days without a push when this review collected."]
    else ["Repositories archived or unpushed for \($o.unmaintained_days) days or more as at \($m.generated_at): \($m.risk.unmaintained | length).",
          ""]
-        + header(["Repository", "Days since last push, at collection", "Archived", "Commits in window"])
+        + header(["Repository", "Days since last push, at collection", "Archived, at collection", "Commits in window"])
         + [listed($m.risk.unmaintained; $o.max_listed)[] | row([.repo, (.idle_days | num), yn(.archived), .commits_in_window])]
         + remainder($m.risk.unmaintained; $o.max_listed; "repositories")
    end)
@@ -1390,17 +1398,17 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "",
   "### 6.3 Stalled work, as at collection",
   "",
-  observed("Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at \($m.generated_at)."),
+  "Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at \($m.generated_at).",
   ""
   ]
-+ [bullet("Open pull requests: \($m.risk.open_pull_requests)"),
-   bullet("Open issues: \($m.risk.open_issues)"),
++ [bullet("Open pull requests: \($m.risk.open_pull_requests)\(readnote(["pull_requests", "open_pull_requests"]))"),
+   bullet("Open issues: \($m.risk.open_issues)\(readnote(["issues"]))"),
    ""]
 + (if ($m.risk.stalled_pull_requests | length) == 0
-   then [observed("No open pull request has been idle for \($o.stalled_days) days or more.")]
+   then [absent_at_collection("open pull request has been idle for \($o.stalled_days) days or more"; ""; ["open_pull_requests"])]
    else ["Open pull requests idle for \($o.stalled_days) days or more: \($m.risk.stalled_pull_requests | length), longest idle first.",
          ""]
-        + header(["Repository", "Number", "Idle days", "Age days", "Author", "Draft", "Title"])
+        + header(["Repository", "Number", "Idle days, at collection", "Age days, at collection", "Author", "Draft", "Title"])
         + [listed($m.risk.stalled_pull_requests; $o.max_listed)[]
            | row([.repo, .number, .idle_days, .age_days, (.author | dash), yn(.draft), .title])]
         + remainder($m.risk.stalled_pull_requests; $o.max_listed; "pull requests")

@@ -404,8 +404,8 @@ test_an_estate_with_no_data_still_emits_every_section() {
   assert_grep "so concentration is unmeasurable" "$root/empty.md" "the concentration section states its emptiness"
   assert_grep "No reviewed repository is archived or had gone" "$root/empty.md" "the unmaintained section states its emptiness"
   assert_grep "No open pull request has been idle" "$root/empty.md" "the stalled section states its emptiness"
-  assert_grep "No commit, pull request, review, or workflow run fell in this window" "$root/empty.md" "the headline says the window was silent rather than reading as low activity"
-  assert_no_grep "reads failed; section 9.2 names them" "$root/empty.md" "an estate that was read completely is not told its reads failed"
+  assert_grep "No commit, pull request, review, or workflow run in this window" "$root/empty.md" "the headline says the window was silent rather than reading as low activity"
+  assert_no_grep "behind this figure failed" "$root/empty.md" "an estate that was read completely is not told its reads failed"
   assert_no_grep "A rising cycle time means work is getting slower" "$root/empty.md" "an empty estate is not given the reading note for a report with figures in it"
   # And the limits still get stated, because that is what the reader acts on.
   assert_grep "They do not measure anyone's productivity" "$root/empty.md" "the limits section survives an empty estate"
@@ -425,7 +425,22 @@ test_a_repository_the_tooling_cannot_read_is_named_not_dropped() {
   assert_grep "Named gaps" "$root/report.md" "the report names its gaps"
   assert_grep "| acme/attic | commits |" "$root/report.md" "the unreadable repository is named in the collection log"
   assert_grep "| acme/attic |" "$root/report.md" "the unreadable repository still has a row of its own"
-  pass "a repository the tooling cannot read is named as unread and still appears, never silently dropped"
+  # One failed read among many still has to reach the surfaces it fed. Section
+  # 6.1's list renders its empty sentence here because the repositories that did
+  # read have no single-account majority, and that sentence ranges over every
+  # reviewed repository - including the one whose commits were never read.
+  local claimed
+  claimed=$(grep -nE '^(No |Nothing )' "$root/report.md" | grep -F "in this window" || true)
+  [ -z "$claimed" ] ||
+    fail "a partly unread estate claimed the window in an empty-surface sentence:
+$claimed"
+  assert_grep "No repository has more than half its authored commits from a single account in what could be read" "$root/report.md"     "a surface fed by the failed read says how far its claim reaches"
+  assert_grep "(1 read behind this figure failed; section 9.2 names it)" "$root/report.md"     "a single failed read is counted in the singular"
+  # And a figure the failure did not feed is left alone: the open counts come
+  # from reads that succeeded, so they carry no warning.
+  assert_grep "- Open pull requests: 1" "$root/report.md" "a figure no failed read fed carries no notice"
+  assert_grep "- Open issues: 2" "$root/report.md" "the open issue count is not warned about a commits failure"
+  pass "a repository the tooling cannot read is named as unread, still appears, and reaches only the figures its failed read fed"
 }
 
 test_an_estate_nothing_could_be_read_from_never_reads_as_a_quiet_one() {
@@ -459,16 +474,22 @@ test_an_estate_nothing_could_be_read_from_never_reads_as_a_quiet_one() {
 $claimed"
   # And the same sentences must say what they do range over, in every section.
   local surface
-  for surface in "No commit, pull request, review, or workflow run fell in what could be read" \
+  for surface in "No commit, pull request, review, or workflow run in what could be read" \
     "No account committed, opened a pull request, or reviewed one in what could be read" \
-    "Nothing was committed or merged in what could be read" \
+    "No commit or merge landed in what could be read" \
     "No authored commit landed on a default branch in what could be read" \
     "No pull request merged in what could be read" \
-    "No GitHub Actions pull-request run happened in what could be read" \
-    "No authored commit landed in what could be read"; do
+    "No GitHub Actions pull-request run in what could be read" \
+    "No authored commit landed in what could be read" \
+    "No open pull request has been idle for 14 days or more in what could be read"; do
     assert_grep "$surface" "$root/report.md" "an unread estate reports '$surface'"
   done
-  assert_equals "13" "$(grep -c 'reads failed; section 9.2 names them' "$root/report.md")"     "every empty surface, and the collection-time subsection, names the reads that failed behind its zeros"
+  # The notice counts the reads behind the figure it sits on, not every read in
+  # the run, so a figure fed by four failed reads says four and the open-issue
+  # count beside it says two.
+  assert_grep "Open pull requests: 0 (4 reads behind this figure failed" "$root/report.md"     "the open pull request count names the reads that fed it"
+  assert_grep "Open issues: 0 (2 reads behind this figure failed" "$root/report.md"     "the open issue count names its own reads rather than every failure in the run"
+  assert_equals "14" "$(grep -c 'behind this figure failed' "$root/report.md")"     "every figure a failed read fed says so"
   pass "an estate whose reads all failed states in every section that it could not be read, never that it was quiet"
 }
 
@@ -495,19 +516,21 @@ test_push_recency_is_measured_from_collection_not_from_the_window_end() {
   ! grep -Eq '\| -[0-9]' "$root/report.md" ||
     fail "the report printed a negative day count over a historical window"
   assert_grep "Days since last push, at collection" "$root/report.md"     "section 6.2 says which clock its days are measured on"
-  # Section 7 mixes window figures and collection-time state in one row, so every
-  # column carrying estate state has to name its clock in the rendered header.
+  # Section 1 states one rule for the whole report: a column measured at
+  # collection ends its heading "at collection", and section 9 is the only
+  # exception. Check that rule over every table before section 9, so a column
+  # reporting the state of the estate cannot arrive unlabelled in any section.
   local cell
   while IFS= read -r cell; do
     case $cell in
-      *Open* | *Idle* | *Archived*)
+      *Open* | *Idle* | *Age* | *Archived* | *Automation* | *push*)
         case $cell in
           *"at collection"*) ;;
-          *) fail "section 7's '$cell' column reports the state of the estate without saying it is measured at collection" ;;
+          *) fail "the '$cell' column reports the state of the estate without saying it is measured at collection" ;;
         esac
         ;;
     esac
-  done < <(sed -n '/^## 7\./,/^## 8\./p' "$root/report.md" | grep -m 1 '^| Repository |' | tr '|' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$')
+  done < <(sed -n '/^## 2\./,/^## 9\./p' "$root/report.md" | grep '^| ' | grep -v '^| --- ' | tr '|' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$')
   pass "push recency and the unmaintained list are measured from the collection clock and labelled as such"
 }
 
@@ -828,7 +851,7 @@ test_a_table_cell_carrying_a_pipe_stays_one_cell() {
   # cell separator. The row has to keep the column count its header declares, or
   # a Markdown reader silently drops the overflow and shows a shortened title.
   cells_of() { printf '%s' "$1" | sed 's/\\|//g' | awk -F'|' '{print NF - 2}'; }
-  header_cells=$(cells_of "$(grep -F '| Repository | Number | Idle days |' "$report")")
+  header_cells=$(cells_of "$(grep -F '| Repository | Number | Idle days, at collection |' "$report")")
   row_cells=$(cells_of "$(grep -F '| acme/widgets | 5 |' "$report")")
   assert_equals "7" "$header_cells" "the stalled-work header declares seven columns"
   assert_equals "$header_cells" "$row_cells" "the row with a pipe in its title has the columns its header declares"

@@ -41,10 +41,11 @@ A pull-request title carrying a pipe keeps the column count its header declares 
 One case pins the `--from-json` contract, which is what makes the report's own instruction to raise `--max-listed` true.
 A flag the stored model can satisfy is honoured and written into the model the report is rendered from, and every flag that would need a fresh collection is refused by name with exit 2 rather than accepted and dropped.
 
-Two cases pin the distinction the live guard exists to protect, in the two places it can be lost.
-An estate whose every repository read is refused yields exactly what a silent estate yields - no commits, no people, no runs - so the whole rendered report is searched for the rule rather than for a list of sentences: no statement about what the estate did may range over the window, every such sentence must instead range over what could be read, and each must name the reads that failed.
+Three cases pin the distinction the live guard exists to protect, in the places it can be lost.
+An estate whose every repository read is refused yields exactly what a silent estate yields - no commits, no people, no runs - so the whole rendered report is searched for the rule rather than for a list of sentences: no statement about what the estate did may range over the window, every such sentence must instead range over what could be read, and each must name the reads behind that figure that failed.
 A surface added later that skips that boundary fails the same assertion.
-A historical window whose end predates the last push is asserted to age push recency from the collection clock rather than the window end, so no day count renders negative, the unmaintained test still selects, and the rendered section 7 header is checked column by column: any column reporting the state of the estate rather than a window figure must name its clock.
+One failed read among many is checked the same way, and the notice is asserted to reach the surfaces that read fed and no others: section 6.1's list says how far its claim reaches and counts the single failure in the singular, while the open pull request and open issue counts, which came from reads that succeeded, carry no warning at all.
+A historical window whose end predates the last push is asserted to age push recency from the collection clock rather than the window end, so no day count renders negative, the unmaintained test still selects, and every table before section 9 is checked column by column against the rule section 1 states: a column reporting the state of the estate ends its heading `at collection`.
 
 ## Live guard
 
