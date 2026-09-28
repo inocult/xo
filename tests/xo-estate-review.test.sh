@@ -194,6 +194,25 @@ case $MODE in
       /repos/acme/attic/commits*) printf 'gh: HTTP 451 reading the repository\n' >&2; exit 1 ;;
     esac
     ;;
+  deny-commits)
+    case $path in */commits*) printf 'gh: HTTP 403 reading commits\n' >&2; exit 1 ;; esac
+    ;;
+  deny-pull-requests)
+    case $path in
+      graphql) grep -q 'states:OPEN' "$input" || { printf 'gh: HTTP 403 reading pull requests\n' >&2; exit 1; } ;;
+    esac
+    ;;
+  deny-open-pull-requests)
+    case $path in
+      graphql) ! grep -q 'states:OPEN' "$input" || { printf 'gh: HTTP 403 reading open pull requests\n' >&2; exit 1; } ;;
+    esac
+    ;;
+  deny-ci-runs)
+    case $path in */actions/runs*) printf 'gh: HTTP 403 reading workflow runs\n' >&2; exit 1 ;; esac
+    ;;
+  deny-issues)
+    case $path in */issues*) printf 'gh: HTTP 410 issues are disabled\n' >&2; exit 1 ;; esac
+    ;;
   deny-repository-reads)
     # A token that can list an organization but is refused on every repository,
     # which is what a SAML-restricted token looks like.
@@ -272,6 +291,46 @@ $seen"
     "### 6.3 Stalled work, as at collection" "### 9.1 Commands" "### 9.2 What was read"; do
     grep -Fqx "$sub" "$report" || fail "$label: the report dropped the subsection '$sub'"
   done
+  assert_every_column_states_its_clock "$report"
+}
+
+# Section 1 states one rule for the whole report: a column carrying a figure
+# measured at collection ends its heading "at collection", a column carrying a
+# figure that does not is window-bounded, a column that only names something
+# carries no clock, and section 9 is the exception. This checks that rule over
+# the header row of every table before section 9 - found structurally, as the
+# line above a `| --- |` separator, so no table can be missed - and it classifies
+# every cell it meets. A heading it cannot classify FAILS rather than being
+# skipped, which is what makes a column added later break this until someone
+# decides which clock it is on.
+assert_every_column_states_its_clock() {  # <report>
+  local report=$1 header cell
+  while IFS= read -r header; do
+    while IFS= read -r cell; do
+      case $cell in
+        # Figures the estate's state supplies, which must name the collection clock.
+        "Automation, at collection" | "Open now, at collection" | "Idle days, at collection" |\
+          "Age days, at collection" | "Archived, at collection" | "Draft, at collection" |\
+          "Days since last push, at collection" | "Gaps, at collection") ;;
+        # Figures the window bounds, which must not claim the collection clock.
+        "Value" | "Direction" | "Direction over the window" | "Commits" | "Commits in window" |\
+          "Merged" | "Merged pull requests" | "Median cycle" | "Median hours" | "Reviewed" |\
+          "Latest-attempt CI" | "Authors" | "Authored commits" | "Share" |\
+          "Pull requests opened" | "Pull requests merged" | "Pull requests reviewed" |\
+          "Reviews submitted" | "Repositories touched" | [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
+          case $cell in
+            *"at collection"*) fail "the '$cell' column is bounded by the window but claims the collection clock" ;;
+          esac
+          ;;
+        # Columns that name rather than measure, so they carry no clock at all.
+        "Repository" | "Account" | "Author" | "Title" | "Number" | "Measure" | "Unit" |\
+          "Period beginning" | "Lines changed") ;;
+        *)
+          fail "the '$cell' column is on no known clock: classify it as window-bounded, as collection-time and label it 'at collection', or as a column that only names something"
+          ;;
+      esac
+    done < <(printf '%s\n' "$header" | tr '|' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$')
+  done < <(sed -n '/^## 2\./,/^## 9\./p' "$report" | awk '/^\| --- /{print prev} {prev=$0}')
 }
 
 test_collection_derives_the_documented_figures() {
@@ -493,6 +552,39 @@ $claimed"
   pass "an estate whose reads all failed states in every section that it could not be read, never that it was quiet"
 }
 
+test_a_read_failure_reaches_the_figures_it_fed_and_no_others() {
+  local root bin model signal expected seen
+  # One read at a time, against an estate that is otherwise silent so every
+  # surface renders its empty sentence and is therefore eligible for a notice.
+  # What the case proves is the whole rule in both directions: the sections a
+  # failed read fed all say so, and no section it did not feed says anything.
+  # A surface that named a read it does not rest on fails here as loudly as one
+  # that dropped a read it does.
+  while IFS='|' read -r signal expected; do
+    root=$(xo_test_tmproot "xo-estate-review-$signal") || fail "no fixture root"
+    bin=$(xo_fakebin "$root")
+    write_fixtures "$root/fixtures"
+    jq -n '[{full_name: "acme/quiet", name: "quiet", owner: {login: "acme"}, default_branch: "main",
+             archived: false, fork: false, pushed_at: "2026-03-30T00:00:00Z", private: false}]' \
+      > "$root/fixtures/repos.json" || fail "could not write the silent estate"
+    install_fake_gh_axi "$bin" "$root/fixtures" "deny-$signal"
+    model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+      fail "a review with the $signal read denied did not produce a model"
+    printf '%s' "$model" > "$root/model.json"
+    "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+    seen=$(awk '/^#+ [0-9]/ { section = $2; sub(/\.$/, "", section) }
+                /behind this figure failed/ { print section }' "$root/report.md" | sort -u | tr '\n' ' ')
+    assert_equals "$expected " "$seen" "a failed $signal read reaches exactly the sections its figures rest on"
+  done <<'CASES'
+commits|2 3.1 4.1 5.1 6.1
+pull-requests|2 3.1 3.2 4.1 4.2 4.3 5.2 5.3 6.3
+open-pull-requests|2 3.1 3.2 6.3
+ci-runs|2 5.4
+issues|6.3
+CASES
+  pass "a failed read is named on every figure it fed and on no figure it did not"
+}
+
 test_push_recency_is_measured_from_collection_not_from_the_window_end() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-clock) || fail "no fixture root"
@@ -516,21 +608,7 @@ test_push_recency_is_measured_from_collection_not_from_the_window_end() {
   ! grep -Eq '\| -[0-9]' "$root/report.md" ||
     fail "the report printed a negative day count over a historical window"
   assert_grep "Days since last push, at collection" "$root/report.md"     "section 6.2 says which clock its days are measured on"
-  # Section 1 states one rule for the whole report: a column measured at
-  # collection ends its heading "at collection", and section 9 is the only
-  # exception. Check that rule over every table before section 9, so a column
-  # reporting the state of the estate cannot arrive unlabelled in any section.
-  local cell
-  while IFS= read -r cell; do
-    case $cell in
-      *Open* | *Idle* | *Age* | *Archived* | *Automation* | *push*)
-        case $cell in
-          *"at collection"*) ;;
-          *) fail "the '$cell' column reports the state of the estate without saying it is measured at collection" ;;
-        esac
-        ;;
-    esac
-  done < <(sed -n '/^## 2\./,/^## 9\./p' "$root/report.md" | grep '^| ' | grep -v '^| --- ' | tr '|' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$')
+  assert_every_column_states_its_clock "$root/report.md"
   pass "push recency and the unmaintained list are measured from the collection clock and labelled as such"
 }
 
@@ -1070,6 +1148,7 @@ test_an_estate_with_no_data_still_emits_every_section
 test_a_repository_the_tooling_cannot_read_is_named_not_dropped
 test_an_estate_nothing_could_be_read_from_never_reads_as_a_quiet_one
 test_push_recency_is_measured_from_collection_not_from_the_window_end
+test_a_read_failure_reaches_the_figures_it_fed_and_no_others
 test_rendering_the_same_model_twice_is_byte_identical
 test_a_changed_gh_axi_envelope_refuses_instead_of_reporting_an_empty_estate
 test_collection_makes_no_state_changing_call
