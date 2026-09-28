@@ -194,6 +194,13 @@ case $MODE in
       /repos/acme/attic/commits*) printf 'gh: HTTP 451 reading the repository\n' >&2; exit 1 ;;
     esac
     ;;
+  deny-repository-reads)
+    # A token that can list an organization but is refused on every repository,
+    # which is what a SAML-restricted token looks like.
+    case $path in
+      /repos/* | graphql) printf 'gh: HTTP 403 Resource protected by organization SAML enforcement\n' >&2; exit 1 ;;
+    esac
+    ;;
   owner-not-found)
     # gh-axi renders its own failures as a document on STDOUT, not stderr.
     case $path in
@@ -261,8 +268,8 @@ $seen"
     "### 4.3 Review latency, opened to first review by another account" \
     "### 5.1 Reverts and hotfixes" "### 5.2 Change size" "### 5.3 Review depth" \
     "### 5.4 Continuous integration latest-attempt pass rate" \
-    "### 6.1 Knowledge concentration" "### 6.2 Unmaintained repositories" \
-    "### 6.3 Stalled work" "### 9.1 Commands" "### 9.2 What was read"; do
+    "### 6.1 Knowledge concentration" "### 6.2 Unmaintained repositories, as at collection" \
+    "### 6.3 Stalled work, as at collection" "### 9.1 Commands" "### 9.2 What was read"; do
     grep -Fqx "$sub" "$report" || fail "$label: the report dropped the subsection '$sub'"
   done
 }
@@ -395,7 +402,7 @@ test_an_estate_with_no_data_still_emits_every_section() {
   assert_grep "there is no review depth to report" "$root/empty.md" "the review-depth section states its emptiness"
   assert_grep "there is no latest-attempt pass rate to report" "$root/empty.md" "the CI section states its emptiness"
   assert_grep "so concentration is unmeasurable" "$root/empty.md" "the concentration section states its emptiness"
-  assert_grep "No reviewed repository is archived or has gone" "$root/empty.md" "the unmaintained section states its emptiness"
+  assert_grep "No reviewed repository is archived or had gone" "$root/empty.md" "the unmaintained section states its emptiness"
   assert_grep "No open pull request has been idle" "$root/empty.md" "the stalled section states its emptiness"
   assert_grep "No commit, pull request, review, or workflow run fell inside this window" "$root/empty.md" "the headline says the window was silent rather than reading as low activity"
   assert_no_grep "A rising cycle time means work is getting slower" "$root/empty.md" "an empty estate is not given the reading note for a report with figures in it"
@@ -418,6 +425,59 @@ test_a_repository_the_tooling_cannot_read_is_named_not_dropped() {
   assert_grep "| acme/attic | commits |" "$root/report.md" "the unreadable repository is named in the collection log"
   assert_grep "| acme/attic |" "$root/report.md" "the unreadable repository still has a row of its own"
   pass "a repository the tooling cannot read is named as unread and still appears, never silently dropped"
+}
+
+test_an_estate_nothing_could_be_read_from_never_reads_as_a_quiet_one() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-denied) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  install_fake_gh_axi "$bin" "$root/fixtures" deny-repository-reads
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "a review whose repository reads all fail did not produce a model"
+  printf '%s' "$model" > "$root/model.json"
+  # Every read failed, so the derivation sees exactly what a silent estate gives
+  # it: no records at all. The difference between the two is the gap list, and it
+  # is the difference the captain acts on.
+  assert_equals "0" "$(jq -r '.quality.commits.total' "$root/model.json")" "a denied estate yields no commits"
+  assert_equals "0" "$(jq -r '.people | length' "$root/model.json")" "a denied estate attributes work to nobody"
+  assert_equals "0" "$(jq -r '.quality.ci.runs' "$root/model.json")" "a denied estate yields no runs"
+  assert_equals "2" "$(jq -r '.selection.partially_read' "$root/model.json")" "both repositories are counted as partially read"
+
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "an estate nothing could be read from"
+  assert_no_grep "No commit, pull request, review, or workflow run fell inside this window" "$root/report.md"     "an unreadable estate is never given the sentence reserved for a quiet one"
+  assert_no_grep "Nothing was committed or merged in this window." "$root/report.md"     "section 4.1 does not report silence it cannot have observed"
+  assert_grep "cannot tell a silent estate from an unread one" "$root/report.md"     "the headline says the figures rest on reads that failed"
+  assert_grep "section 9.2 names them" "$root/report.md" "section 4.1 points at the gaps behind its zeros"
+  pass "an estate whose reads all failed states that it could not be read, never that it was quiet"
+}
+
+test_push_recency_is_measured_from_collection_not_from_the_window_end() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-clock) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  # A historical window that ended long before the last push. Whether a repository
+  # is alive is a fact about now, not about the window, so ageing it against the
+  # window end would report a repository pushed two days ago as idle for minus
+  # three hundred days and would make the unmaintained test unsatisfiable.
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW \
+    "$REVIEW" acme --since 2025-01-01 --until 2025-06-01 --periods 3 --json) ||
+    fail "collection over a historical window failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "2" "$(jq -r '.repositories[] | select(.name == "acme/widgets") | .idle_days' "$root/model.json")"     "a repository pushed two days before collection reads as two days idle"
+  assert_equals "821" "$(jq -r '.repositories[] | select(.name == "acme/attic") | .idle_days' "$root/model.json")"     "a long-abandoned repository keeps its real age"
+  assert_equals "acme/attic" "$(jq -r '.risk.unmaintained[0].repo' "$root/model.json")"     "the unmaintained test still selects over a historical window"
+
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "a historical window"
+  ! grep -Eq '\| -[0-9]' "$root/report.md" ||
+    fail "the report printed a negative day count over a historical window"
+  assert_grep "Days since last push, at collection" "$root/report.md"     "section 6.2 says which clock its days are measured on"
+  assert_grep "Idle days at collection" "$root/report.md" "section 7 says which clock its idle column is measured on"
+  pass "push recency and the unmaintained list are measured from the collection clock and labelled as such"
 }
 
 test_rendering_the_same_model_twice_is_byte_identical() {
@@ -954,6 +1014,8 @@ test_an_unreadable_estate_stops_the_run_with_gh_axis_own_words
 test_every_run_emits_the_same_nine_sections
 test_an_estate_with_no_data_still_emits_every_section
 test_a_repository_the_tooling_cannot_read_is_named_not_dropped
+test_an_estate_nothing_could_be_read_from_never_reads_as_a_quiet_one
+test_push_recency_is_measured_from_collection_not_from_the_window_end
 test_rendering_the_same_model_twice_is_byte_identical
 test_a_changed_gh_axi_envelope_refuses_instead_of_reporting_an_empty_estate
 test_collection_makes_no_state_changing_call

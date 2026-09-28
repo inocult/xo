@@ -84,6 +84,43 @@
 # expose is reported as not exposed, and every collection bound this run hit is
 # named in section 9.2 rather than quietly shortening a figure.
 #
+# WHICH CLOCK EVERY FIGURE IS MEASURED AGAINST. Two clocks exist here and they
+# are not interchangeable: the WINDOW, which bounds events by when they happened,
+# and COLLECTION (XO_ESTATE_REVIEW_NOW, printed as the report's Generated line),
+# which is when the estate was read. An event has a date and belongs to the
+# window. A state - what is open, what has been pushed, what is archived - is
+# only true as of the read, so measuring it against the window end would produce
+# a negative age on any window that ended before today. Every figure the report
+# prints is below, with the clock it uses and where its label says so.
+#
+#   Figure                                             Clock       Labelled where
+#   Repositories matched / reviewed / read             collection  header bullet
+#   Generated at                                       collection  header bullet
+#   Window since, until, days, periods                 window      header bullet
+#   Headline: merged, cycle time, reviewed share,      window      section 1
+#     CI latest-attempt rate, concentrated repos
+#   Person counts: commits, opened, merged, reviews    window      section 1, 3.1
+#     submitted, pull requests reviewed, repositories
+#   Automation flag                                    collection  section 1
+#   Per-period commit / opened / merged tallies        window      section 4.1
+#   Cycle time and review latency, all statistics      window      sections 4.2, 4.3
+#   Reverts, hotfixes, and their denominator           window      section 5.1
+#   Change size and its distribution                   window      section 5.2
+#   Review coverage and review threads                 window      section 5.3
+#   CI runs, pass rate, attempts                       window      section 5.4
+#   Concentration, accounts covering half              window      sections 1, 6.1
+#   Days since last push, archived flag                collection  sections 1, 6.2, 7
+#   Open pull request and open issue counts            collection  sections 1, 6.3, 7
+#   Stalled set, its idle days and age days            collection  sections 1, 6.3
+#   Oldest open issue age (model only)                 collection  this table
+#   Repository set, default branch, read statuses,     collection  section 9
+#     caps, and the recorded commands
+#
+# The stalled list and the unmaintained list are collection-time throughout: the
+# set is what GitHub reports open or unpushed when the read runs, so its ages are
+# measured from the same read rather than from the window end, and their sections
+# say so rather than sitting unlabelled beside the window figures.
+#
 # gh-axi ENVELOPE COUPLING. gh-axi renders every response for an agent to read,
 # so this script asks for a shaped tab-separated payload with --jq and decodes the
 # one rendered envelope field that carries it. That coupling lives in exactly one
@@ -761,6 +798,7 @@ def is_bot($login; $type): ($login != null and $login != "-" and ($login | endsw
 
 $win as $w
 | $opt as $o
+| ($now | fromdateiso8601) as $nowe
 | ($w.period_edges) as $edges
 | ($w.periods) as $np
 | def bucket_of($e): if $e == null then -1
@@ -912,11 +950,16 @@ $win as $w
    | ($g | sort_by(.run, .attempt) | .[-1]) as $latest
    | { repo: $latest.repo, conclusion: $latest.conclusion, at: $latest.at,
        max_attempt: ($g | map(.attempt) | max) })) as $ci_groups
-| ($w.until_epoch - ($o.stalled_days * 86400)) as $stale_before
+# A pull request is open as of the moment collection ran, not as of the window
+# end, so how long it has been sitting is measured from the same clock its
+# openness was read on. Ageing a collection-time set against a historical window
+# end would understate every wait and, for a window that ended before today,
+# could not select a stalled pull request at all.
+| ($nowe - ($o.stalled_days * 86400)) as $stale_before
 | ($open_now | map(select(.updated != null and .updated < $stale_before))
    | map({repo: .repo, number: .number, title: .title, author: .author, draft: .draft,
-          age_days: ((($w.until_epoch - .created) / 86400) | floor),
-          idle_days: ((($w.until_epoch - .updated) / 86400) | floor)})
+          age_days: ((($nowe - .created) / 86400) | floor),
+          idle_days: ((($nowe - .updated) / 86400) | floor)})
    | sort_by(-.idle_days, .repo, .number)) as $stalled
 | ($repos | map(. as $r
     | ($commits | map(select(.repo == $r.name))) as $rc
@@ -934,7 +977,7 @@ $win as $w
     | ($r.pushed_at | ep) as $pushed_epoch
     | $r + {
         signals: $rs,
-        idle_days: (if $pushed_epoch == null then null else ((($w.until_epoch - $pushed_epoch) / 86400) | floor) end),
+        idle_days: (if $pushed_epoch == null then null else ((($nowe - $pushed_epoch) / 86400) | floor) end),
         commits: (revert_of($ra) + {
           total: ($rc | length), merges: (($rc | length) - ($ra | length)),
           unlinked_accounts: ($ra | map(select(.linked | not)) | length),
@@ -950,7 +993,7 @@ $win as $w
         ci: ci_of($rci),
         size: size_of($rm),
         issues: { open: ($ri | length),
-                  oldest_open_days: ($ri | map(select(.created != null) | (($w.until_epoch - .created) / 86400) | floor) | max) },
+                  oldest_open_days: ($ri | map(select(.created != null) | (($nowe - .created) / 86400) | floor) | max) },
         concentration: concentration_of($ra) })
    | sort_by(.name)) as $repo_models
 | ($repo_models | map(select(.idle_days != null and .idle_days >= $o.unmaintained_days or .archived)
@@ -1106,6 +1149,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "",
   "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories, at most \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests per repository.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
+  "Those first two are the only figures in this report measured from when it collected rather than from inside the window, because what is open and what has been pushed are facts about the estate now; sections 6.2, 6.3, and section 7's open and idle columns say so where they appear.",
   "A direction is never drawn from a period that ended before the window did: where the last period holds no measurement, no direction is reported and the empty periods are named.",
   "Section 6's lists show \(if $o.max_listed == 0 then "every" else "at most \($o.max_listed)" end) worst-first rows and state how many there are in total; the counts are always complete even where the rows are bounded.",
   "",
@@ -1130,8 +1174,10 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 + [$m.headline[] | row([.metric, (.value | num), .unit, (.trend | trendword)])]
 + [
   "",
-  (if $m.quality.commits.total == 0 and ($m.people | length) == 0 and $m.quality.ci.runs == 0
+  (if $m.quality.commits.total == 0 and ($m.people | length) == 0 and $m.quality.ci.runs == 0 and ($m.unread | length) == 0
    then "No commit, pull request, review, or workflow run fell inside this window, so every measure above is zero or unmeasurable rather than low."
+   elif ($m.unread | length) > 0 and $m.quality.commits.total == 0 and ($m.people | length) == 0 and $m.quality.ci.runs == 0
+   then "Every figure above is zero or unmeasurable, and \($m.unread | length) reads failed, so this report cannot tell a silent estate from an unread one; section 9.2 names every gap."
    else "A rising cycle time means work is getting slower; a rising merged count means more is landing." end),
   "",
   "## 3. Who did what",
@@ -1182,7 +1228,8 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 + [
   "",
   (if ($m.quality.commits.total == 0) and (($m.velocity.merged.per_period | add) == 0)
-   then "Nothing was committed or merged in this window."
+   then (if ($m.unread | length) == 0 then "Nothing was committed or merged in this window."
+         else "Nothing was committed or merged in what could be read; \($m.unread | length) reads failed and section 9.2 names them." end)
    else "Direction compares the last period against the mean of the earlier ones." end),
   "",
   "### 4.2 Cycle time, first commit to merge",
@@ -1311,20 +1358,22 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
    end)
 + [
   "",
-  "### 6.2 Unmaintained repositories",
+  "### 6.2 Unmaintained repositories, as at collection",
   ""
   ]
 + (if ($m.risk.unmaintained | length) == 0
-   then ["No reviewed repository is archived or has gone \($o.unmaintained_days) days without a push."]
-   else ["Repositories archived or unpushed for \($o.unmaintained_days) days or more: \($m.risk.unmaintained | length).",
+   then ["No reviewed repository is archived or had gone \($o.unmaintained_days) days without a push when this review collected."]
+   else ["Repositories archived or unpushed for \($o.unmaintained_days) days or more as at \($m.generated_at): \($m.risk.unmaintained | length).",
          ""]
-        + header(["Repository", "Days since last push", "Archived", "Commits in window"])
+        + header(["Repository", "Days since last push, at collection", "Archived", "Commits in window"])
         + [listed($m.risk.unmaintained; $o.max_listed)[] | row([.repo, (.idle_days | num), yn(.archived), .commits_in_window])]
         + remainder($m.risk.unmaintained; $o.max_listed; "repositories")
    end)
 + [
   "",
-  "### 6.3 Stalled work",
+  "### 6.3 Stalled work, as at collection",
+  "",
+  "Unlike every figure above, this subsection is the state of the estate when this review collected, not a quantity inside the window: what is open now, and how long it has been sitting as at \($m.generated_at).",
   ""
   ]
 + [bullet("Open pull requests: \($m.risk.open_pull_requests)"),
@@ -1347,7 +1396,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "An organization review is this table plus the aggregate above; a single-repository review is the same report with one row here.",
   ""
   ]
-+ header(["Repository", "Commits", "Merged", "Open", "Median cycle", "Reviewed", "Latest-attempt CI", "Authors", "Idle days", "Archived", "Gaps"])
++ header(["Repository", "Commits", "Merged", "Open", "Median cycle", "Reviewed", "Latest-attempt CI", "Authors", "Idle days at collection", "Archived", "Gaps"])
 + [$m.repositories[] | row([
     .name, .commits.total, .pull_requests.merged, .pull_requests.open_now,
     (.pull_requests.cycle_hours.median | hrs), (.review.coverage_pct | pc),

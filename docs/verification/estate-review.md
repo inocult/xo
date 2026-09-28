@@ -26,7 +26,7 @@ That distinction is the whole point of the guard: an empty estate and an unreada
 
 ## Portable suite
 
-`tests/xo-estate-review.test.sh` (27 assertions) runs with no network and no credentials.
+`tests/xo-estate-review.test.sh` (29 assertions) runs with no network and no credentials.
 Its fake gh-axi is not a stub of the answer: it holds real GitHub-shaped JSON, applies the script's own `--jq` programs to it, and renders the envelope gh-axi renders, so the collection path under test is the real one.
 
 It covers the derived figures against a hand-computed fixture estate (commits with a merge and a revert excluded from authorship, cycle time from first commit to merge, review latency that excludes the author's own review, the latest-attempt CI pass rate over workflow-and-commit groups with a run that took two attempts on one commit, change-size distribution, concentration, unmaintained and stalled detection, and open issues with pull requests filtered out); the identity rule that folds an app account's `name[bot]` spelling into one marked row while never matching two accounts by name; the fixed nine sections and fourteen subsections on an active estate, on a single-repository estate, and on an estate collected from a repository whose every read comes back empty, where each empty surface states in a sentence that it is empty and the headline says the window was silent rather than reading as low activity; an unreadable repository named as a gap and still carrying its own row; byte-identical re-rendering of one model; the three unknown-envelope refusals, each naming the gh-axi version and producing no model; an unreadable estate owner stopping the run while quoting gh-axi's own diagnostic, and a non-organization owner refused with the type GitHub reported; a call log proving the only write verb the estate ever sees is the POST that carries a GraphQL read; the recorded command templates with the window substituted; estate free text containing a tab neutralized rather than shifting every later field while the model keeps the text's own pipe; selection excluding forks by default and disclosing a repository cap, and a repository listing that stopped at its page bound named as a cap in section 9.2 rather than reading as a complete estate; the person table ordered by account name rather than by volume; a bounded risk list stating its complete count and how many rows it did not show, and raising `--max-listed` on the stored model showing every row it kept; and the window and period settings bounding what is counted.
@@ -40,6 +40,10 @@ A pull-request title carrying a pipe keeps the column count its header declares 
 
 One case pins the `--from-json` contract, which is what makes the report's own instruction to raise `--max-listed` true.
 A flag the stored model can satisfy is honoured and written into the model the report is rendered from, and every flag that would need a fresh collection is refused by name with exit 2 rather than accepted and dropped.
+
+Two cases pin the distinction the live guard exists to protect, in the two places it can be lost.
+An estate whose every repository read is refused yields exactly what a silent estate yields - no commits, no people, no runs - so the report is asserted to withhold both silence sentences and to say instead that it cannot tell a silent estate from an unread one.
+A historical window whose end predates the last push is asserted to age push recency from the collection clock rather than the window end, so no day count renders negative, the unmaintained test still selects, and both places the figure appears say which clock it is measured on.
 
 ## Live guard
 
