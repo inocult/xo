@@ -28,14 +28,18 @@ WINDOW=(--since 2026-01-01 --until 2026-04-01 --periods 3)
 
 # --- fixtures ---------------------------------------------------------------
 # One organization: an active repository with two people, one unlinked commit
-# author, two automation accounts, a revert, a failing CI run that later went
-# green on the same commit, and one long-idle open pull request; plus an archived
-# repository with nothing in it, which is what proves an empty row still appears.
+# author, two automation accounts, a revert, a workflow run that needed a second
+# attempt on the same commit, and one long-idle open pull request that carries a
+# review from another account; plus an archived repository with nothing in it,
+# which is what proves an empty row still appears.
 write_fixtures() {
   local dir=$1
   mkdir -p "$dir"
   cat > "$dir/owner.json" <<'JSON'
 {"login":"acme","type":"Organization"}
+JSON
+  cat > "$dir/owner-user.json" <<'JSON'
+{"login":"acme","type":"User"}
 JSON
   cat > "$dir/repos.json" <<'JSON'
 [
@@ -54,13 +58,18 @@ JSON
  {"sha":"c7","author":{"login":"brooke","type":"User"},"parents":[{"sha":"c6"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-03-12T00:00:00Z"},"message":"Revert \"feat: add gadget\""}}
 ]
 JSON
+  # The runs list returns one entry per run carrying that run's CURRENT attempt:
+  # a re-run increments run_attempt on the same entry rather than adding another,
+  # so run 2 below is the shape GitHub gives a check that failed and was re-run to
+  # green on one commit. Two entries sharing a head_sha with different run_numbers
+  # would not be that shape, and a fixture that invented one would confirm the
+  # code rather than the claim.
   cat > "$dir/runs-widgets.json" <<'JSON'
 {"workflow_runs":[
  {"workflow_id":1,"head_sha":"s1","run_number":1,"run_attempt":1,"conclusion":"success","created_at":"2026-01-06T00:00:00Z"},
- {"workflow_id":1,"head_sha":"s2","run_number":2,"run_attempt":1,"conclusion":"failure","created_at":"2026-02-03T00:00:00Z"},
- {"workflow_id":1,"head_sha":"s2","run_number":3,"run_attempt":1,"conclusion":"success","created_at":"2026-02-03T01:00:00Z"},
- {"workflow_id":1,"head_sha":"s3","run_number":4,"run_attempt":1,"conclusion":"failure","created_at":"2026-03-06T00:00:00Z"},
- {"workflow_id":1,"head_sha":"s4","run_number":5,"run_attempt":1,"conclusion":"cancelled","created_at":"2026-03-09T00:00:00Z"}
+ {"workflow_id":1,"head_sha":"s2","run_number":2,"run_attempt":2,"conclusion":"success","created_at":"2026-02-03T00:00:00Z"},
+ {"workflow_id":1,"head_sha":"s3","run_number":3,"run_attempt":1,"conclusion":"failure","created_at":"2026-03-06T00:00:00Z"},
+ {"workflow_id":1,"head_sha":"s4","run_number":4,"run_attempt":1,"conclusion":"cancelled","created_at":"2026-03-09T00:00:00Z"}
 ]}
 JSON
   cat > "$dir/issues-widgets.json" <<'JSON'
@@ -76,7 +85,7 @@ JSON
  {"number":2,"state":"MERGED","isDraft":false,"createdAt":"2026-02-01T00:00:00Z","updatedAt":"2026-02-03T00:00:00Z","mergedAt":"2026-02-03T00:00:00Z","closedAt":"2026-02-03T00:00:00Z","additions":200,"deletions":100,"changedFiles":9,"headRefName":"f/2","title":"add gadget","author":{"login":"brooke","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-02-01T00:00:00Z"}}]},"reviews":{"totalCount":2,"nodes":[{"author":{"login":"brooke","__typename":"User"},"submittedAt":"2026-02-02T00:00:00Z","state":"COMMENTED"},{"author":{"login":"ada","__typename":"User"},"submittedAt":"2026-02-02T06:00:00Z","state":"APPROVED"}]},"reviewThreads":{"totalCount":5}},
  {"number":3,"state":"MERGED","isDraft":false,"createdAt":"2026-03-05T00:00:00Z","updatedAt":"2026-03-06T00:00:00Z","mergedAt":"2026-03-06T00:00:00Z","closedAt":"2026-03-06T00:00:00Z","additions":5,"deletions":2,"changedFiles":1,"headRefName":"f/3","title":"tidy","author":{"login":"ada","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-03-04T00:00:00Z"}}]},"reviews":{"totalCount":0,"nodes":[]},"reviewThreads":{"totalCount":0}},
  {"number":4,"state":"MERGED","isDraft":false,"createdAt":"2026-03-08T00:00:00Z","updatedAt":"2026-03-09T00:00:00Z","mergedAt":"2026-03-09T00:00:00Z","closedAt":"2026-03-09T00:00:00Z","additions":2,"deletions":2,"changedFiles":1,"headRefName":"f/4","title":"bump lib","author":{"login":"dependabot","__typename":"Bot"},"commits":{"nodes":[{"commit":{"committedDate":"2026-03-08T00:00:00Z"}}]},"reviews":{"totalCount":1,"nodes":[{"author":{"login":"copilot-pull-request-reviewer","__typename":"Bot"},"submittedAt":"2026-03-08T01:00:00Z","state":"COMMENTED"}]},"reviewThreads":{"totalCount":0}},
- {"number":5,"state":"OPEN","isDraft":false,"createdAt":"2026-01-15T00:00:00Z","updatedAt":"2026-01-16T00:00:00Z","mergedAt":null,"closedAt":null,"additions":10,"deletions":0,"changedFiles":1,"headRefName":"f/5","title":"spike\twith a tab","author":{"login":"brooke","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-01-15T00:00:00Z"}}]},"reviews":{"totalCount":0,"nodes":[]},"reviewThreads":{"totalCount":0}},
+ {"number":5,"state":"OPEN","isDraft":false,"createdAt":"2026-01-15T00:00:00Z","updatedAt":"2026-01-16T00:00:00Z","mergedAt":null,"closedAt":null,"additions":10,"deletions":0,"changedFiles":1,"headRefName":"f/5","title":"spike\twith a tab","author":{"login":"brooke","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-01-15T00:00:00Z"}}]},"reviews":{"totalCount":1,"nodes":[{"author":{"login":"ada","__typename":"User"},"submittedAt":"2026-01-16T00:00:00Z","state":"APPROVED"}]},"reviewThreads":{"totalCount":0}},
  {"number":6,"state":"CLOSED","isDraft":false,"createdAt":"2026-02-20T00:00:00Z","updatedAt":"2026-02-21T00:00:00Z","mergedAt":null,"closedAt":"2026-02-21T00:00:00Z","additions":1,"deletions":1,"changedFiles":1,"headRefName":"f/6","title":"abandoned","author":{"login":"ada","__typename":"User"},"commits":{"nodes":[{"commit":{"committedDate":"2026-02-20T00:00:00Z"}}]},"reviews":{"totalCount":0,"nodes":[]},"reviewThreads":{"totalCount":0}}
 ]}}}}
 JSON
@@ -146,10 +155,22 @@ esac
 if [ "$page" -gt 1 ]; then
   case $path in
     */actions/runs*) fixture=$FIXTURES/empty-runs.json ;;
+    */issues*)
+      # A later page exists only where a fixture provides one, which is how a
+      # multi-page read is modelled without a second fake.
+      paged=${path#/repos/acme/}
+      paged=$FIXTURES/issues-${paged%%/issues*}-page$page.json
+      if [ -f "$paged" ]; then fixture=$paged; else fixture=$FIXTURES/empty-array.json; fi
+      ;;
     *) fixture=$FIXTURES/empty-array.json ;;
   esac
 fi
 case $MODE in
+  owner-is-user)
+    case $path in
+      /users/*) fixture=$FIXTURES/owner-user.json ;;
+    esac
+    ;;
   fail-attic-commits)
     case $path in
       /repos/acme/attic/commits*) printf 'gh: HTTP 451 reading the repository\n' >&2; exit 1 ;;
@@ -216,7 +237,7 @@ $seen"
     "### 4.1 Throughput" "### 4.2 Cycle time, first commit to merge" \
     "### 4.3 Review latency, opened to first review by another account" \
     "### 5.1 Reverts and hotfixes" "### 5.2 Change size" "### 5.3 Review depth" \
-    "### 5.4 Continuous integration first-run pass rate" \
+    "### 5.4 Continuous integration latest-attempt pass rate" \
     "### 6.1 Knowledge concentration" "### 6.2 Unmaintained repositories" \
     "### 6.3 Stalled work" "### 9.1 Commands" "### 9.2 What was read"; do
     grep -Fqx "$sub" "$report" || fail "$label: the report dropped the subsection '$sub'"
@@ -255,12 +276,14 @@ test_collection_derives_the_documented_figures() {
   assert_equals "3" "$(jq -r '.quality.review.with_review_by_another_account' "$root/model.json")" "reviewed by another"
   assert_equals "75" "$(jq -r '.quality.review.coverage_pct' "$root/model.json")" "review coverage"
 
-  # CI first runs: one passed, two failed, one cancelled, one went green on a
-  # retry of the same commit.
-  assert_equals "4" "$(jq -r '.quality.ci.first_runs' "$root/model.json")" "ci groups"
-  assert_equals "33.3" "$(jq -r '.quality.ci.pass_rate_pct' "$root/model.json")" "ci pass rate"
+  # CI: four runs, of which two ended in success, one in failure, one cancelled.
+  # The rate is over the latest attempt of each run, which is what the runs list
+  # reports, so the run that took two attempts on one commit counts as the pass
+  # it ended as - and is also counted as having needed a second attempt.
+  assert_equals "4" "$(jq -r '.quality.ci.runs' "$root/model.json")" "ci runs"
+  assert_equals "66.7" "$(jq -r '.quality.ci.latest_attempt_pass_rate_pct' "$root/model.json")" "ci latest-attempt pass rate"
   assert_equals "1" "$(jq -r '.quality.ci.inconclusive' "$root/model.json")" "ci inconclusive"
-  assert_equals "1" "$(jq -r '.quality.ci.recovered_without_a_new_commit' "$root/model.json")" "ci retry recovery"
+  assert_equals "1" "$(jq -r '.quality.ci.needed_more_than_one_attempt' "$root/model.json")" "ci second attempts"
 
   # Change size comes from merged pull requests.
   assert_equals "23.5" "$(jq -r '.quality.size.median_lines' "$root/model.json")" "median size"
@@ -330,7 +353,7 @@ test_an_estate_with_no_data_still_emits_every_section() {
       | .commits.per_period = [0,0,0]
       | .pull_requests.merged = 0 | .pull_requests.opened = 0 | .pull_requests.open_now = 0
       | .review.merged = 0 | .review.with_review_by_another_account = 0 | .review.coverage_pct = null
-      | .ci.first_runs = 0 | .ci.pass_rate_pct = null | .concentration.commits = 0
+      | .ci.runs = 0 | .ci.latest_attempt_pass_rate_pct = null | .concentration.commits = 0
       | .concentration.authors = 0 | .concentration.top = null | .concentration.top_share_pct = null
       | .concentration.accounts_covering_half = null)
     | .people = [] | .headline |= map(.value = null)
@@ -341,9 +364,8 @@ test_an_estate_with_no_data_still_emits_every_section() {
     | .velocity.review_latency_hours = {measured: 0, unmeasurable: 0, median: null, p90: null, per_period_median: [null,null,null], trend: "insufficient-history"}
     | .quality.commits.commits = 0 | .quality.commits.total = 0
     | .quality.size = {measured: 0, median_lines: null, p90_lines: null, distribution: {under_10: 0, from_10_to_49: 0, from_50_to_249: 0, from_250_to_999: 0, at_least_1000: 0}}
-    | .quality.commit_size = {measured: 0, median_lines: null, p90_lines: null}
     | .quality.review = {merged: 0, with_review_by_another_account: 0, coverage_pct: null, review_threads_median: null, review_threads_total: 0}
-    | .quality.ci = {first_runs: 0, passed: 0, failed: 0, inconclusive: 0, recovered_without_a_new_commit: 0, pass_rate_pct: null}
+    | .quality.ci = {runs: 0, passed: 0, failed: 0, inconclusive: 0, needed_more_than_one_attempt: 0, latest_attempt_pass_rate_pct: null}
     | .risk.concentration = {authors: 0, commits: 0, top: null, top_share_pct: null, accounts_covering_half: null, breakdown: []}
     | .risk.concentrated_repositories = [] | .risk.unmaintained = []
     | .risk.stalled_pull_requests = [] | .risk.open_pull_requests = 0 | .risk.open_issues = 0' > "$empty"
@@ -356,7 +378,7 @@ test_an_estate_with_no_data_still_emits_every_section() {
   assert_grep "there is no revert or hotfix rate to report" "$root/empty.md" "the revert section states its emptiness"
   assert_grep "there is no change-size distribution to report" "$root/empty.md" "the size section states its emptiness"
   assert_grep "there is no review depth to report" "$root/empty.md" "the review-depth section states its emptiness"
-  assert_grep "there is no first-run pass rate to report" "$root/empty.md" "the CI section states its emptiness"
+  assert_grep "there is no latest-attempt pass rate to report" "$root/empty.md" "the CI section states its emptiness"
   assert_grep "so concentration is unmeasurable" "$root/empty.md" "the concentration section states its emptiness"
   assert_grep "No reviewed repository is archived or has gone" "$root/empty.md" "the unmaintained section states its emptiness"
   assert_grep "No open pull request has been idle" "$root/empty.md" "the stalled section states its emptiness"
@@ -444,7 +466,6 @@ test_the_report_records_the_commands_that_produced_it() {
   assert_grep "gh-axi api /orgs/acme/repos" "$root/report.md" "the repository listing command is recorded"
   assert_grep "since=2026-01-01T00:00:00Z&until=2026-04-01T00:00:00Z" "$root/report.md" "the window is substituted into the recorded commands"
   assert_grep "created=2026-01-01..2026-04-01" "$root/report.md" "the check-run window is recorded"
-  assert_no_grep "git clone --bare" "$root/report.md" "a run without --git-history records no git command"
   pass "the report records the command templates with this run's window substituted, so a figure can be re-derived"
 }
 
@@ -496,6 +517,16 @@ test_scope_and_argument_validation_refuses_rather_than_guessing() {
   out=$(PATH="$bin:$PATH" "$REVIEW" acme --nonsense 2>&1) && code=0 || code=$?
   assert_equals "2" "$code" "an unknown flag exits 2"
 
+  # An estate is an organization or one of its repositories. An owner GitHub
+  # reports as anything else is refused with the type it reported, rather than
+  # reviewed through a second acceptance path.
+  install_fake_gh_axi "$bin" "$root/fixtures" owner-is-user
+  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json 2>&1) && code=0 || code=$?
+  assert_equals "2" "$code" "a non-organization owner exits 2"
+  assert_contains "$out" "type 'User'" "the refusal names the type GitHub reported"
+  assert_not_contains "$out" "xo-estate-review.v1" "a non-organization owner produced no model"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
   out=$(PATH="$bin:$PATH" "$REVIEW" --from-json "$root/fixtures/repos.json" 2>&1) && code=0 || code=$?
   [ "$code" != 0 ] || fail "--from-json accepted a file that is not a review model"
   assert_contains "$out" "is not a xo-estate-review.v1 model" "a foreign model file is refused"
@@ -540,11 +571,108 @@ test_repository_selection_excludes_forks_and_honours_the_filter() {
     fail "collection with a repository filter failed"
   assert_equals "acme/widgets" "$(printf '%s' "$model" | jq -r '.repositories[].name')" "--repo narrows the estate"
 
+  # One spelling, the one --help documents: the bare repository name.
+  local out code
+  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --repo acme/widgets --json 2>&1) && code=0 || code=$?
+  [ "$code" != 0 ] || fail "--repo accepted an owner-qualified name as well as the bare one"
+  assert_contains "$out" "matched the selection" "an unmatched --repo value is refused rather than quietly reviewing everything"
+
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --include-forks --max-repos 1 --json) ||
     fail "collection with a repository cap failed"
   assert_equals "true" "$(printf '%s' "$model" | jq -r '.selection.capped')" "the repository cap is recorded"
   assert_equals "2" "$(printf '%s' "$model" | jq -r '.selection.matched')" "the matched count survives the cap"
   pass "selection excludes forks by default, honours --repo, and discloses a repository cap"
+}
+
+test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-issue-page) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # GitHub answers /issues with pull requests alongside issues, and the read
+  # drops them. A full page whose surviving records are few is the case that
+  # decides whether paging follows the endpoint or the filter: the estate has
+  # five open issues, but only three of them are on the full first page.
+  jq -n '[range(0; 100) | {number: (200 + .), created_at: "2026-02-01T00:00:00Z",
+            updated_at: "2026-02-01T00:00:00Z"}
+          | if (.number - 200) < 97 then . + {pull_request: {url: "x"}} else . end]' \
+    > "$root/fixtures/issues-widgets.json" || fail "could not write the full first page"
+  jq -n '[range(0; 2) | {number: (400 + .), created_at: "2026-02-02T00:00:00Z",
+            updated_at: "2026-02-02T00:00:00Z"}]' \
+    > "$root/fixtures/issues-widgets-page2.json" || fail "could not write the second page"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "5" "$(jq -r '.risk.open_issues' "$root/model.json")" "both pages of open issues are counted"
+  assert_equals "0" "$(jq -r '[.caps[] | select(.signal == "issues")] | length' "$root/model.json")"     "a walk that ended on a short page reports no cap"
+  pass "a full page whose pull requests are filtered out does not end the open-issue walk with the rest unread"
+}
+
+test_a_review_on_an_open_pull_request_is_counted_once() {
+  local root model
+  root=$(xo_test_tmproot xo-estate-review-dupe) || fail "no fixture root"
+  model=$(collect_model "$root/fixtures" ok) || fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  # Pull request 5 is open and was updated inside the window, so it comes back
+  # from both pull-request passes, carrying ada's review each time. One review
+  # submission is one act of participation however many passes saw it.
+  assert_equals "4" "$(jq -r '[.repositories[] | select(.name == "acme/widgets") | .reviews_received] | add' "$root/model.json")"     "the repository counts four reviews by another account, the open pull request's among them once"
+  assert_equals "2" "$(jq -r '.people[] | select(.person == "ada") | .reviews_submitted' "$root/model.json")"     "ada's review of the open pull request is counted once, alongside her review of a merged one"
+  assert_equals "2" "$(jq -r '.people[] | select(.person == "ada") | .prs_reviewed' "$root/model.json")"     "reviews submitted and pull requests reviewed agree"
+  pass "a review on a pull request both collection passes return is counted once, not twice"
+}
+
+test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-revcap) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # The reviews of one pull request are read in a single page. A pull request
+  # whose totalCount exceeds the nodes returned is a shortened review count, and
+  # every other bound in this report is disclosed, so this one is too.
+  jq '.data.repository.pullRequests.nodes |= map(if .number == 1
+        then .reviews.totalCount = 60 else . end)' \
+    "$root/fixtures/prs-widgets.json" > "$root/fixtures/prs.tmp" ||
+    fail "could not widen the review count"
+  mv "$root/fixtures/prs.tmp" "$root/fixtures/prs-widgets.json" || fail "could not install the widened fixture"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "1" "$(jq -r '[.caps[] | select(.repo == "acme/widgets" and .signal == "pull_requests")] | length' "$root/model.json")"     "the review page bound is recorded as a cap"
+  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_requests") | .detail' "$root/model.json")"     "carry more than 50 reviews" "the cap says what was shortened"
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "an estate with a heavily reviewed pull request"
+  assert_grep "Reads that hit a cap" "$root/report.md" "section 9.2 surfaces the bound to the reader"
+  assert_grep "carry more than 50 reviews" "$root/report.md" "the reader is told which bound shortened the figures"
+  pass "a pull request carrying more reviews than one page holds is disclosed as a cap rather than silently shortening a review count"
+}
+
+test_a_last_period_with_no_measurement_reports_no_direction() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-sparse) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  # Six months in three periods: everything merged in the first four months, so
+  # the last period holds no measured pull request at all. A direction drawn
+  # from the earlier ones would describe a time that ended before the window did.
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=2026-07-01T00:00:00Z \
+    "$REVIEW" acme --since 2026-01-01 --until 2026-07-01 --periods 3 --json) || fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "null" "$(jq -r '.velocity.cycle_hours.per_period_median[2]' "$root/model.json")"     "the last period has no measured cycle time"
+  assert_equals "final-period-unmeasured" "$(jq -r '.velocity.cycle_hours.trend' "$root/model.json")"     "no direction is derived from the earlier periods"
+  assert_equals "final-period-unmeasured" \
+    "$(jq -r '.headline[] | select(.metric | startswith("Cycle time")) | .trend' "$root/model.json")"     "the headline row carries the same absence the model does"
+
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "an estate whose last period is empty"
+  assert_grep "not reported: the last period has no measurement" "$root/report.md"     "the headline row states that no direction is reported"
+  assert_grep "Direction: not reported, because the last period has no measurement; periods beginning 2026-05-01 had none" "$root/report.md"     "section 4.2 names the period that had no measurement"
+  pass "a median series whose last period has no measurement reports no direction and names the empty periods"
 }
 
 test_a_person_table_is_ordered_by_account_not_by_volume() {
@@ -638,5 +766,9 @@ test_repository_selection_excludes_forks_and_honours_the_filter
 test_a_person_table_is_ordered_by_account_not_by_volume
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show
 test_the_window_and_periods_bound_what_is_counted
+test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk
+test_a_review_on_an_open_pull_request_is_counted_once
+test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound
+test_a_last_period_with_no_measurement_reports_no_direction
 
 echo "# xo-estate-review.test.sh: all assertions passed"

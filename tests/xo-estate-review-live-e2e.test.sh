@@ -38,6 +38,7 @@ fi
 REVIEW="$ROOT/bin/xo-estate-review.sh"
 ESTATE=${XO_ESTATE_REVIEW_LIVE_ESTATE:-jqlang}
 REPO=${XO_ESTATE_REVIEW_LIVE_REPO:-jq}
+WINDOW=(--since 2025-05-01 --until 2025-07-01 --periods 3 --max-prs 0)
 GH_AXI_VERSION=$(gh-axi --version 2>/dev/null | head -n 1)
 [ -n "$GH_AXI_VERSION" ] || GH_AXI_VERSION="unknown"
 
@@ -99,9 +100,13 @@ test_a_live_review_produces_the_fixed_report_and_a_matching_model() {
   local report model
   report=$ROOT_DIR/report.md
   model=$ROOT_DIR/model.json
-  "$REVIEW" "$ESTATE" --window 45 --periods 3 --max-prs 40 --repo "$REPO" > "$report" ||
+  # A fixed historical window, not a rolling one. What this case proves is that a
+  # live collection still reads real work; a quiet month upstream is not a defect
+  # in this repository, and a window whose counts are already settled cannot
+  # become one. jq 1.8.0 shipped inside this window, so the work is there.
+  "$REVIEW" "$ESTATE" "${WINDOW[@]}" --repo "$REPO" > "$report" ||
     fail "a live review of $ESTATE/$REPO failed"
-  "$REVIEW" "$ESTATE" --window 45 --periods 3 --max-prs 40 --repo "$REPO" --json > "$model" ||
+  "$REVIEW" "$ESTATE" "${WINDOW[@]}" --repo "$REPO" --json > "$model" ||
     fail "a live review of $ESTATE/$REPO could not produce its model"
 
   local seen expected
@@ -120,16 +125,16 @@ $seen"
   jq -e '[.unread[]] | length == 0' "$model" > /dev/null ||
     fail "the live review reported a gap: $(jq -c '.unread' "$model")"
 
-  # A public repository this active must expose real work in the window. A live
-  # review that read cleanly and still found nothing means the collection stopped
-  # working, which is the failure a fake can never show.
+  # This window's work is history and cannot go away. A live review that read
+  # cleanly and still found nothing in it means the collection stopped working,
+  # which is the failure a fake can never show.
   jq -e '.quality.commits.total > 0' "$model" > /dev/null ||
-    fail "the live review read no commit at all from $ESTATE/$REPO"
+    fail "the live review read no commit at all from $ESTATE/$REPO in the pinned window"
   jq -e '[.repositories[].pull_requests.merged] | add > 0' "$model" > /dev/null ||
-    fail "the live review read no merged pull request from $ESTATE/$REPO"
+    fail "the live review read no merged pull request from $ESTATE/$REPO in the pinned window"
   jq -e '(.people | length) > 0' "$model" > /dev/null ||
     fail "the live review attributed no work to any account"
-  pass "a live review of $ESTATE/$REPO emits the fixed nine sections and a model carrying real commits, merges, and accounts"
+  pass "a live review of $ESTATE/$REPO over a settled historical window emits the fixed nine sections and a model carrying real commits, merges, and accounts"
 }
 
 test_the_real_gh_axi_envelope_still_carries_a_shaped_payload

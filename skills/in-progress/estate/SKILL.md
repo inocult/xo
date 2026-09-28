@@ -1,7 +1,7 @@
 ---
 name: estate
 description: >-
-  Review an engineering estate - a GitHub organization, a user account, or one repository - and report who did what, how fast work is moving, whether quality is holding, and where risk is concentrated.
+  Review an engineering estate - a GitHub organization or one of its repositories - and report who did what, how fast work is moving, whether quality is holding, and where risk is concentrated.
   Use when the captain invokes /estate or asks for an estate review, an engineering review of an organization, a contribution or velocity or quality report across repositories, or "who has been doing what" across a set of repositories.
   Plain /estate answers in chat; /estate file also writes the dated report artifact under data/.
   The report has the same shape on every run against every estate, which is what makes two of them comparable.
@@ -20,9 +20,10 @@ This skill owns which estate and window to point it at, what the captain hears b
 ## 1. Resolve the estate and the window
 
 An estate is an organization by default, because that is the unit a captain asks about.
-The command also accepts a user account or a single `owner/repo`, and an organization review is the per-repository review plus an aggregate.
+The command also accepts a single `owner/repo`, and an organization review is the per-repository review plus an aggregate.
+It accepts nothing else: an owner GitHub reports as anything but an organization is refused with the type it reported.
 
-- The captain named an organization, account, or repository: use it.
+- The captain named an organization or repository: use it.
 - The captain named no estate: ask one concise question naming the candidates you can see, which are the owners of the projects in `data/projects.md`.
   Do not guess, and do not review every organization the account can reach.
 - The captain asked about "our repos" or similar in a home with exactly one project owner: use that owner and name it in your answer so a wrong reading is cheap to correct.
@@ -37,7 +38,6 @@ Never silently change a window between two reports of the same estate: the compa
 bin/xo-estate-review.sh <estate> [--window <days>] [--periods <n>]
 ```
 
-Add `--git-history` when the captain wants commit-level change size; it adds lines to section 5.2 and changes no other figure.
 Add `--json` when you need the numbers for something other than reading, and `--from-json` to re-render a stored model without touching the network.
 
 A large organization is the one case worth bounding before you start.

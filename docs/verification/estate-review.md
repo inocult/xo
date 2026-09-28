@@ -26,16 +26,19 @@ That distinction is the whole point of the guard: an empty estate and an unreada
 
 ## Portable suite
 
-`tests/xo-estate-review.test.sh` (17 assertions) runs with no network and no credentials.
+`tests/xo-estate-review.test.sh` (21 assertions) runs with no network and no credentials.
 Its fake gh-axi is not a stub of the answer: it holds real GitHub-shaped JSON, applies the script's own `--jq` programs to it, and renders the envelope gh-axi renders, so the collection path under test is the real one.
 
-It covers the derived figures against a hand-computed fixture estate (commits with a merge and a revert excluded from authorship, cycle time from first commit to merge, review latency that excludes the author's own review, first-run CI over workflow-and-commit groups with a same-commit retry recovery, change-size distribution, concentration, unmaintained and stalled detection, and open issues with pull requests filtered out); the identity rule that folds an app account's `name[bot]` spelling into one marked row while never matching two accounts by name; the fixed nine sections and fourteen subsections on an active estate, on a single-repository estate, and on an estate with nothing in it at all, where every empty surface states in a sentence that it is empty; an unreadable repository named as a gap and still carrying its own row; byte-identical re-rendering of one model; the three unknown-envelope refusals, each naming the gh-axi version and producing no model; an unreadable estate owner stopping the run while quoting gh-axi's own diagnostic; a call log proving the only write verb the estate ever sees is the POST that carries a GraphQL read; the recorded command templates with the window substituted; estate free text containing a tab neutralized rather than shifting every later field; selection excluding forks by default and disclosing a repository cap; the person table ordered by account name rather than by volume; a bounded risk list stating its complete count and how many rows it did not show while the model keeps them all; and the window and period settings bounding what is counted.
+It covers the derived figures against a hand-computed fixture estate (commits with a merge and a revert excluded from authorship, cycle time from first commit to merge, review latency that excludes the author's own review, the latest-attempt CI pass rate over workflow-and-commit groups with a run that took two attempts on one commit, change-size distribution, concentration, unmaintained and stalled detection, and open issues with pull requests filtered out); the identity rule that folds an app account's `name[bot]` spelling into one marked row while never matching two accounts by name; the fixed nine sections and fourteen subsections on an active estate, on a single-repository estate, and on an estate with nothing in it at all, where every empty surface states in a sentence that it is empty; an unreadable repository named as a gap and still carrying its own row; byte-identical re-rendering of one model; the three unknown-envelope refusals, each naming the gh-axi version and producing no model; an unreadable estate owner stopping the run while quoting gh-axi's own diagnostic, and a non-organization owner refused with the type GitHub reported; a call log proving the only write verb the estate ever sees is the POST that carries a GraphQL read; the recorded command templates with the window substituted; estate free text containing a tab neutralized rather than shifting every later field; selection excluding forks by default, accepting `--repo` only as the bare repository name, and disclosing a repository cap; the person table ordered by account name rather than by volume; a bounded risk list stating its complete count and how many rows it did not show while the model keeps them all; and the window and period settings bounding what is counted.
+
+Four cases pin the bounds where a figure could quietly become wrong: an open-issue read whose full first page is almost all pull requests still walks to the second page, because page completeness follows the endpoint's item count rather than the records the filter kept; a review on an open pull request that both collection passes return is counted once; a pull request carrying more reviews than one page holds is disclosed as a cap in section 9.2 rather than shortening a review count in silence; and a median series whose last period holds no measurement reports no direction at all and names the empty periods, rather than describing a period that ended before the window did.
 
 ## Live guard
 
 `tests/xo-estate-review-live-e2e.test.sh` (3 assertions) exercises the real gh-axi and real GitHub against the small public `jqlang` organization.
 The estate is public deliberately: the guard prints report fragments, and a report names the accounts that contributed.
 It spends no model tokens, so it runs by default wherever gh-axi, gh, and jq are installed; an unauthenticated host reports a capability skip instead of failing, while an explicitly requested run on an unusable host fails rather than passing over the thing under test.
+The review case reads a fixed historical window, 2025-05-01 to 2025-07-01, whose counts are settled, so a quiet month upstream cannot fail a suite about this repository.
 
 ```console
 $ bash tests/xo-estate-review.test.sh | tail -1
@@ -43,7 +46,7 @@ $ bash tests/xo-estate-review.test.sh | tail -1
 $ bash tests/xo-estate-review-live-e2e.test.sh
 ok - gh-axi 0.1.35 still renders one quoted api_response body carrying an untruncated tab-separated payload
 ok - the live GraphQL read returns the collector's own shaped record under an explicit POST, __typename included
-ok - a live review of jqlang/jq emits the fixed nine sections and a model carrying real commits, merges, and accounts
+ok - a live review of jqlang/jq over a settled historical window emits the fixed nine sections and a model carrying real commits, merges, and accounts
 # xo-estate-review-live-e2e.test.sh: all assertions passed
 ```
 

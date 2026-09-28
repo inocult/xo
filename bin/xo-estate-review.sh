@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # xo-estate-review.sh - read-only estate review with a fixed report shape.
 #
-# Reviews an engineering estate - a GitHub organization, a user account, or one
-# repository - over a bounded collection window and prints a status report whose
+# Reviews an engineering estate - a GitHub organization or one of its
+# repositories - over a bounded collection window and prints a status report whose
 # sections, headings, and order are identical on every run against every estate.
 # That fixed shape is the point: a reader who has read one of these reports can
 # read any other without re-learning where to look, and two reports of the same
@@ -18,8 +18,7 @@
 #
 # READ-ONLY. It observes an estate and never writes to one: no push, no comment,
 # no label, no issue, no merge. The only filesystem writes are inside a private
-# temporary directory this script creates and removes, used for request bodies
-# and, under --git-history, for shallow bare mirrors.
+# temporary directory this script creates and removes, used for request bodies.
 #
 # It reports on people, and stays factual about the work: contribution counts,
 # review participation, and ownership concentration. It does not rank individuals,
@@ -29,7 +28,6 @@
 #
 # Usage:
 #   bin/xo-estate-review.sh <org> [flags]              every repository the org owns
-#   bin/xo-estate-review.sh <user> [flags]             every repository the account owns
 #   bin/xo-estate-review.sh <owner>/<repo> [flags]     one repository
 #   bin/xo-estate-review.sh --from-json <file>         render a stored model, no network
 #
@@ -46,10 +44,9 @@
 #   --max-repos <n>          cap repositories reviewed, 0 for no cap (default 100)
 #   --max-prs <n>            cap pull requests read per repository, 0 for no cap (default 300)
 #   --max-listed <n>         cap rows in the risk lists, 0 for no cap (default 15)
-#   --repo <name>            restrict an org or user estate to this repository (repeatable)
+#   --repo <name>            restrict an organization estate to this repository (repeatable)
 #   --include-forks          include forked repositories (default: excluded)
 #   --exclude-archived       drop archived repositories (default: included and labeled)
-#   --git-history            also collect commit-level change size with plain git
 #   --json                   print the derived model instead of the report
 #   --from-json <file>       render the report from a stored model, making no network call
 #   -h, --help               usage
@@ -65,12 +62,9 @@
 #   gh-axi api                 repository metadata, commits on the default branch,
 #                              open issues, and GitHub Actions workflow runs
 #   gh-axi api POST graphql    pull requests with their reviews and review threads
-#   git (--git-history only)   commit-level insertions and deletions from a shallow
-#                              bare mirror bounded by the collection window
-# Every headline figure is API-sourced and identical with or without --git-history;
-# that flag only adds the commit-level change-size lines, which the report states
-# as uncollected when it is absent. No figure is ever estimated or extrapolated:
-# a surface the estate does not expose is reported as not exposed.
+# No figure is ever estimated or extrapolated: a surface the estate does not
+# expose is reported as not exposed, and every collection bound this run hit is
+# named in section 9.2 rather than quietly shortening a figure.
 #
 # gh-axi ENVELOPE COUPLING. gh-axi renders every response for an agent to read,
 # so this script asks for a shaped tab-separated payload with --jq and decodes the
@@ -91,7 +85,7 @@ die() {
 
 usage() {
   cat <<'EOF'
-usage: xo-estate-review.sh <org|user|owner/repo> [flags]
+usage: xo-estate-review.sh <org|owner/repo> [flags]
        xo-estate-review.sh --from-json <file>
 
 Read-only estate review. Prints the same nine sections in the same order for
@@ -106,10 +100,9 @@ every estate; a surface with no data is stated as empty, never omitted.
   --max-repos <n>          cap repositories reviewed, 0 for no cap (default 100)
   --max-prs <n>            cap pull requests read per repository, 0 for no cap (default 300)
   --max-listed <n>         cap rows in the risk lists, 0 for no cap (default 15)
-  --repo <name>            restrict an org or user estate to this repository (repeatable)
+  --repo <name>            restrict an organization estate to this repository (repeatable)
   --include-forks          include forked repositories (default: excluded)
   --exclude-archived       drop archived repositories (default: included and labeled)
-  --git-history            also collect commit-level change size with plain git
   --json                   print the derived model (contract xo-estate-review.v1)
   --from-json <file>       render the report from a stored model, making no network call
   -h, --help               this usage
@@ -130,7 +123,6 @@ MAX_PRS=300
 MAX_LISTED=15
 INCLUDE_FORKS=0
 EXCLUDE_ARCHIVED=0
-GIT_HISTORY=0
 OUTPUT=report
 FROM_JSON=
 REPO_FILTER=()
@@ -228,7 +220,6 @@ while [ $# -gt 0 ]; do
       ;;
     --include-forks) INCLUDE_FORKS=1 ;;
     --exclude-archived) EXCLUDE_ARCHIVED=1 ;;
-    --git-history) GIT_HISTORY=1 ;;
     -*) die "unknown flag '$1' (see --help)" 2 ;;
     *)
       [ -z "$SCOPE_ARG" ] || die "only one estate scope is accepted, got '$SCOPE_ARG' and '$1'" 2
@@ -246,7 +237,7 @@ if [ -n "$FROM_JSON" ]; then
 else
   [ -n "$SCOPE_ARG" ] || {
     usage >&2
-    die "an estate scope is required: an organization, a user account, or owner/repo" 2
+    die "an estate scope is required: an organization or owner/repo" 2
   }
 fi
 
@@ -399,8 +390,12 @@ resolve_window() {
 # ---------------------------------------------------------------------------
 # Each REST read is paged by hand rather than through gh-axi's --paginate so the
 # work is bounded and a hit cap is disclosed instead of silently truncating an
-# estate's history. Every --jq program must emit exactly one tab-separated line
-# per record, which is what lets the page loop see a short page and stop.
+# estate's history. Every --jq program must open its payload with an `items` line
+# carrying the number of items the endpoint returned, before any record line.
+# Page completeness is decided from that count and never from the records kept: a
+# program that filters items out - the open-issue read drops the pull requests
+# GitHub returns alongside issues - would otherwise make a full page look short
+# and stop the walk with the rest of the history unread and undisclosed.
 REST_PER_PAGE=100
 REST_MAX_PAGES=${XO_ESTATE_REVIEW_MAX_PAGES:-30}
 validate_uint XO_ESTATE_REVIEW_MAX_PAGES "$REST_MAX_PAGES" 1
@@ -409,7 +404,7 @@ REST_CAPPED=0
 # rest_pages <path_with_query> <jq_program>: 0 with the records in $GH_RECORDS
 # and REST_CAPPED set, or 1 with the reason in $GH_READ_ERROR.
 rest_pages() {
-  local path=$1 program=$2 page=1 count sep
+  local path=$1 program=$2 page=1 items sep
   REST_CAPPED=0
   : > "$GH_RECORDS"
   case $path in
@@ -418,9 +413,12 @@ rest_pages() {
   esac
   while [ "$page" -le "$REST_MAX_PAGES" ]; do
     gh_read "${path}${sep}per_page=${REST_PER_PAGE}&page=${page}" --full --jq "$program" || return 1
-    count=$(grep -c '' < "$GH_PAYLOAD") || count=0
-    [ "$count" = 0 ] || cat "$GH_PAYLOAD" >> "$GH_RECORDS"
-    [ "$count" -ge "$REST_PER_PAGE" ] || return 0
+    items=$(awk -F'\t' '$1 == "items" { print $2; exit }' "$GH_PAYLOAD")
+    case ${items:-} in
+      '' | *[!0-9]*) items=0 ;;
+    esac
+    awk -F'\t' '$1 != "items"' "$GH_PAYLOAD" >> "$GH_RECORDS"
+    [ "$items" -ge "$REST_PER_PAGE" ] || return 0
     page=$((page + 1))
   done
   REST_CAPPED=1
@@ -435,7 +433,7 @@ SCOPE_NAME=
 resolve_scope() {
   local owner_type
   case $SCOPE_ARG in
-    */*/*) die "'$SCOPE_ARG' is not an estate scope: give an organization, a user account, or owner/repo" 2 ;;
+    */*/*) die "'$SCOPE_ARG' is not an estate scope: give an organization or owner/repo" 2 ;;
     */) die "'$SCOPE_ARG' is not an estate scope: a repository needs owner/repo" 2 ;;
     */*)
       SCOPE_KIND=repository
@@ -445,17 +443,15 @@ resolve_scope() {
     *)
       gh_read_required "the owner '$SCOPE_ARG'" "/users/$SCOPE_ARG" --full --jq '[.type]|@tsv'
       owner_type=$(head -n 1 "$GH_PAYLOAD")
-      case $owner_type in
-        Organization) SCOPE_KIND=organization ;;
-        User) SCOPE_KIND=user ;;
-        *) die "GitHub reports owner '$SCOPE_ARG' as type '${owner_type:-none}', which is neither an organization nor a user account" ;;
-      esac
+      [ "$owner_type" = Organization ] ||
+        die "GitHub reports owner '$SCOPE_ARG' as type '${owner_type:-none}', not an organization; an estate is an organization or one of its repositories as owner/repo" 2
+      SCOPE_KIND=organization
       SCOPE_NAME=$SCOPE_ARG
       ;;
   esac
 }
 
-REPO_LIST_JQ='[.[]|["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv]|join("\n")'
+REPO_LIST_JQ='(["items\t" + (length|tostring)] + [.[]|["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv])|join("\n")'
 REPO_ONE_JQ='["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv'
 
 # list_repos: leaves the estate's repo records in $REPOS_FILE.
@@ -472,20 +468,25 @@ list_repos() {
         die "could not list the repositories of organization $SCOPE_NAME: $GH_READ_ERROR"
       cp "$GH_RECORDS" "$REPOS_FILE"
       ;;
-    user)
-      rest_pages "/users/$SCOPE_NAME/repos?type=owner&sort=full_name" "$REPO_LIST_JQ" ||
-        die "could not list the repositories of account $SCOPE_NAME: $GH_READ_ERROR"
-      cp "$GH_RECORDS" "$REPOS_FILE"
-      ;;
   esac
 }
 
 # ---------------------------------------------------------------------------
 # Per-repository reads.
 # ---------------------------------------------------------------------------
-COMMITS_JQ='[.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.author.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")[0]|gsub("[\\t\\r]";" "))]|@tsv]|join("\n")'
-RUNS_JQ='[.workflow_runs[]|["run",(.workflow_id|tostring),(.head_sha//"-"),(.run_number|tostring),(.run_attempt|tostring),(.conclusion//"-"),(.created_at//"-")]|@tsv]|join("\n")'
-ISSUES_JQ='[.[]|select(.pull_request==null)|["issue",(.number|tostring),(.created_at//"-"),(.updated_at//"-")]|@tsv]|join("\n")'
+COMMITS_JQ='(["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.author.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")[0]|gsub("[\\t\\r]";" "))]|@tsv])|join("\n")'
+RUNS_JQ='(["items\t" + (.workflow_runs|length|tostring)] + [.workflow_runs[]|["run",(.workflow_id|tostring),(.head_sha//"-"),(.run_number|tostring),(.run_attempt|tostring),(.conclusion//"-"),(.created_at//"-")]|@tsv])|join("\n")'
+# The open-issue read is the one program that drops items GitHub returned: the
+# endpoint answers with pull requests alongside issues. The `items` count is the
+# unfiltered page length, so dropping them cannot end the walk early.
+ISSUES_JQ='(["items\t" + (length|tostring)] + [.[]|select(.pull_request==null)|["issue",(.number|tostring),(.created_at//"-"),(.updated_at//"-")]|@tsv])|join("\n")'
+
+# One pull request's reviews are read in a single page rather than walked by
+# cursor. The bound is stated here once and compared against each pull request's
+# own `reviews.totalCount` during collection, so a pull request that carries more
+# reviews than this is disclosed as a cap in section 9.2 the way every other
+# bound in this report is, rather than silently shortening a review count.
+REVIEWS_PER_PR=50
 
 # shellcheck disable=SC2016  # GraphQL variables are literal query syntax.
 PR_QUERY='query($owner:String!,$name:String!,$cursor:String,$page:Int!){
@@ -495,7 +496,7 @@ PR_QUERY='query($owner:String!,$name:String!,$cursor:String,$page:Int!){
       nodes{ number state isDraft createdAt updatedAt mergedAt closedAt additions deletions changedFiles headRefName title
         author{login __typename}
         commits(first:1){nodes{commit{committedDate}}}
-        reviews(first:50){totalCount nodes{author{login __typename} submittedAt state}}
+        reviews(first:'"$REVIEWS_PER_PR"'){totalCount nodes{author{login __typename} submittedAt state}}
         reviewThreads(first:1){totalCount} } } } }'
 
 # shellcheck disable=SC2016  # GraphQL variables are literal query syntax.
@@ -506,7 +507,7 @@ OPEN_PR_QUERY='query($owner:String!,$name:String!,$cursor:String,$page:Int!){
       nodes{ number state isDraft createdAt updatedAt mergedAt closedAt additions deletions changedFiles headRefName title
         author{login __typename}
         commits(first:1){nodes{commit{committedDate}}}
-        reviews(first:50){totalCount nodes{author{login __typename} submittedAt state}}
+        reviews(first:'"$REVIEWS_PER_PR"'){totalCount nodes{author{login __typename} submittedAt state}}
         reviewThreads(first:1){totalCount} } } } }'
 
 # shellcheck disable=SC2016  # jq owns every $ in this program.
@@ -572,44 +573,22 @@ read_prs() {
   done
 }
 
-# ---------------------------------------------------------------------------
-# Commit-level change size with plain git (--git-history).
-# ---------------------------------------------------------------------------
-# A shallow bare mirror cut a little before the window start, so the commits the
-# report measures all have parents and their diffs are real rather than an
-# artifact of the graft boundary. Nothing is written to the estate: the mirror is
-# a clone into this run's private temporary directory and goes away with it.
-GIT_CLONE_TIMEOUT=${XO_ESTATE_REVIEW_GIT_TIMEOUT:-180}
-validate_uint XO_ESTATE_REVIEW_GIT_TIMEOUT "$GIT_CLONE_TIMEOUT" 1
-GIT_HISTORY_ERROR=
-
-# read_git_history <full_name> <default_branch> <graft_date> <since> <until>:
-# leaves gitcommit records in $GH_RECORDS.
-read_git_history() {
-  local full=$1 branch=$2 graft=$3 since=$4 until=$5 dir status
-  GIT_HISTORY_ERROR=
-  : > "$GH_RECORDS"
-  dir=$GH_SCRATCH/mirror
-  rm -rf "$dir"
-  if ! xo_run_timed "$GIT_CLONE_TIMEOUT" git clone --bare --quiet \
-    --shallow-since="$graft" --single-branch --branch "$branch" \
-    "https://github.com/$full.git" "$dir" > /dev/null 2>&1; then
-    status=$?
-    GIT_HISTORY_ERROR="git clone exited $status"
-    return 1
+# pr_detail <cap-message>: the disclosure for a pull-request read that succeeded,
+# which is "complete" only when neither the pull-request cap nor the per-pull-
+# request review page bound was reached. Both bounds shorten what the figures
+# describe, so both belong in section 9.2 rather than in this script alone.
+pr_detail() {
+  local detail=complete over
+  [ "$PR_CAPPED" = 0 ] || detail=$1
+  over=$(awk -F'\t' -v cap="$REVIEWS_PER_PR" '$1 == "pr" && ($15 + 0) > cap { n++ } END { print n + 0 }' "$GH_RECORDS")
+  if [ "$over" != 0 ]; then
+    if [ "$detail" = complete ]; then
+      detail="$over pull requests carry more than $REVIEWS_PER_PR reviews; only the first $REVIEWS_PER_PR of each were read"
+    else
+      detail="$detail; $over pull requests carry more than $REVIEWS_PER_PR reviews, of which only the first $REVIEWS_PER_PR were read"
+    fi
   fi
-  if ! xo_run_timed "$GIT_CLONE_TIMEOUT" git -C "$dir" log --no-merges \
-    --since="$since" --until="$until" --numstat --format='%x01%H' 2> /dev/null |
-    awk -v repo="$full" '
-      /^\x01/ { if (sha != "") print "gitcommit\t" repo "\t" sha "\t" ins "\t" del; sha = substr($0, 2); ins = 0; del = 0; next }
-      NF == 3 { if ($1 != "-") ins += $1; if ($2 != "-") del += $2 }
-      END { if (sha != "") print "gitcommit\t" repo "\t" sha "\t" ins "\t" del }' > "$GH_RECORDS"; then
-    GIT_HISTORY_ERROR="git log failed"
-    rm -rf "$dir"
-    return 1
-  fi
-  rm -rf "$dir"
-  return 0
+  printf '%s' "$detail"
 }
 
 # ---------------------------------------------------------------------------
@@ -617,12 +596,11 @@ read_git_history() {
 # ---------------------------------------------------------------------------
 RECORDS=
 collect() {
-  local since until since_date until_date graft_date selected=0 capped_repos=0
+  local since until since_date until_date selected=0 capped_repos=0
   since=$(printf '%s' "$WINDOW_JSON" | jq -r .since)
   until=$(printf '%s' "$WINDOW_JSON" | jq -r .until)
   since_date=${since%%T*}
   until_date=${until%%T*}
-  graft_date=$(printf '%s' "$WINDOW_JSON" | jq -r '(.since_epoch - 172800) | strftime("%Y-%m-%d")')
 
   list_repos
 
@@ -636,7 +614,7 @@ collect() {
     if [ "${#REPO_FILTER[@]}" -gt 0 ]; then
       wanted=0
       for candidate in "${REPO_FILTER[@]}"; do
-        if [ "$candidate" = "$full" ] || [ "$candidate" = "$name" ]; then wanted=1; fi
+        if [ "$candidate" = "$name" ]; then wanted=1; fi
       done
       [ "$wanted" = 1 ] || continue
     fi
@@ -675,13 +653,11 @@ collect() {
     fi
 
     if read_prs "$owner" "$name" "$PR_QUERY" "$since" 1; then
-      detail=complete
-      [ "$PR_CAPPED" = 0 ] || detail="capped at $MAX_PRS pull requests"
+      detail=$(pr_detail "capped at $MAX_PRS pull requests")
       printf 'signal\t%s\tpull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
       sed -e "s|^pr\t|pr\t$full\t|" -e "s|^review\t|review\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
       if read_prs "$owner" "$name" "$OPEN_PR_QUERY" "$since" 0; then
-        detail=complete
-        [ "$PR_CAPPED" = 0 ] || detail="capped at $MAX_PRS open pull requests, so the open and stalled counts describe the oldest $MAX_PRS"
+        detail=$(pr_detail "capped at $MAX_PRS open pull requests, so the open and stalled counts describe the oldest $MAX_PRS")
         printf 'signal\t%s\topen_pull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
         sed -e "s|^pr\t|pr\t$full\t|" -e "s|^review\t|review\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
       else
@@ -708,17 +684,6 @@ collect() {
       sed "s|^issue\t|issue\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
     else
       printf 'signal\t%s\tissues\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
-    fi
-
-    if [ "$GIT_HISTORY" = 0 ]; then
-      printf 'signal\t%s\tgit_history\tskipped\tnot requested; pass --git-history to collect it\n' "$full" >> "$RECORDS"
-    elif [ "$branch" = "-" ]; then
-      printf 'signal\t%s\tgit_history\tunread\tthe repository reports no default branch\n' "$full" >> "$RECORDS"
-    elif read_git_history "$full" "$branch" "$graft_date" "$since" "$until"; then
-      printf 'signal\t%s\tgit_history\tread\tcomplete\n' "$full" >> "$RECORDS"
-      cat "$GH_RECORDS" >> "$RECORDS"
-    else
-      printf 'signal\t%s\tgit_history\tunread\t%s\n' "$full" "$GIT_HISTORY_ERROR" >> "$RECORDS"
     fi
   done
 }
@@ -775,15 +740,28 @@ $win as $w
       end
     end;
   def as_series($values): { per_period: $values, trend: trend($values) };
-  def trend_sparse($values): trend([$values[] | select(. != null)]);
+  # A direction is a statement about the window's end. When the last period holds
+  # no measurement, the last MEASURED period ended before the window did, and a
+  # direction drawn from it would describe a time the reader is not asking about.
+  # That case reports no direction at all; the report names the empty periods.
+  def trend_sparse($values): if ($values | length) == 0 or ($values[-1] == null)
+    then "final-period-unmeasured"
+    else trend([$values[] | select(. != null)]) end;
   def period_medians($pairs): [range(0; $np) as $b | [$pairs[] | select(.[0] == $b) | .[1]] | median | r1];
-  def ci_of($groups): ($groups | map(select(.first == "success")) | length) as $passed
-    | ($groups | map(select(.first == "failure" or .first == "timed_out" or .first == "startup_failure")) | length) as $failed
+  # The workflow-runs list returns one entry per run carrying that run's CURRENT
+  # attempt: a re-run increments run_attempt on the same entry rather than adding
+  # a second one, and earlier attempts are only reachable through another
+  # endpoint this script does not read. So what a conclusion here evidences is the
+  # latest attempt, and that is what this reports. `run_attempt > 1` says the run
+  # was attempted more than once on the same commit, which is reported as exactly
+  # that and as nothing more.
+  def ci_of($groups): ($groups | map(select(.conclusion == "success")) | length) as $passed
+    | ($groups | map(select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "startup_failure")) | length) as $failed
     | ($groups | length) as $total
-    | { first_runs: $total, passed: $passed, failed: $failed,
+    | { runs: $total, passed: $passed, failed: $failed,
         inconclusive: ($total - $passed - $failed),
-        recovered_without_a_new_commit: ($groups | map(select(.recovered)) | length),
-        pass_rate_pct: share($passed; ($passed + $failed)) };
+        needed_more_than_one_attempt: ($groups | map(select(.attempt > 1)) | length),
+        latest_attempt_pass_rate_pct: share($passed; ($passed + $failed)) };
   def size_of($population): ($population | map(.additions + .deletions)) as $s
     | { measured: ($s | length), median_lines: ($s | median | r1), p90_lines: ($s | p90 | r1),
         distribution: {
@@ -792,8 +770,6 @@ $win as $w
           from_50_to_249: ($s | map(select(. >= 50 and . < 250)) | length),
           from_250_to_999: ($s | map(select(. >= 250 and . < 1000)) | length),
           at_least_1000: ($s | map(select(. >= 1000)) | length) } };
-  def git_size_of($gits): ($gits | map(.insertions + .deletions)) as $s
-    | { measured: ($s | length), median_lines: ($s | median | r1), p90_lines: ($s | p90 | r1) };
   def concentration_of($authored): ($authored | group_by(.person)
       | map({person: .[0].person, commits: length}) | sort_by(-.commits, .person)) as $by
     | ($authored | length) as $total
@@ -862,13 +838,17 @@ $win as $w
     repo: .[1], number: (.[2] | tonumber),
     person: (if .[3] == "-" then "unattributed" else (.[3] | account) end),
     bot: is_bot(.[3]; .[4]),
-    at: (.[5] | ep), state: .[6] })) as $reviews_raw
+    at: (.[5] | ep), state: .[6] })
+   # Collection makes two pull-request passes and a pull request that is open and
+   # was updated inside the window appears in both, so one review submission can
+   # arrive twice. A review is identified by its pull request, its author, its
+   # submission time, and its state; counting it twice would inflate a person's
+   # recorded participation, which is the one figure this report must not overstate.
+   | unique_by([.repo, .number, .person, .at, .state])) as $reviews_raw
 | ($rows | map(select(.[0] == "run")) | map({
     repo: .[1], workflow: .[2], sha: .[3], run: (.[4] | tonumber),
     attempt: (.[5] | tonumber), conclusion: .[6], at: (.[7] | ep) })) as $runs
 | ($rows | map(select(.[0] == "issue")) | map({repo: .[1], number: (.[2] | tonumber), created: (.[3] | ep)})) as $issues
-| ($rows | map(select(.[0] == "gitcommit")) | map({
-    repo: .[1], sha: .[2], insertions: (.[3] | tonumber), deletions: (.[4] | tonumber) })) as $gitcommits
 | ($prs | map({key: (.repo + "#" + (.number | tostring)), value: .author}) | from_entries) as $pr_author
 | ($reviews_raw | map(. + {pr_author: ($pr_author[.repo + "#" + (.number | tostring)] // "unattributed")})
    | map(select(.person != .pr_author and .person != "unattributed"))
@@ -883,9 +863,8 @@ $win as $w
 | ($prs | map(select(.state == "OPEN"))) as $open_now
 | ($prs | map(select(.state == "CLOSED" and in_window(.closed)))) as $closed_unmerged
 | ($commits | map(select(.merge | not))) as $authored
-| ($runs | map(select(in_window(.at))) | group_by([.repo, .workflow, .sha]) | map(sort_by(.run, .attempt) | {
-    repo: .[0].repo, first: .[0].conclusion, at: .[0].at,
-    recovered: ((.[0].conclusion != "success") and (any(.[]; .conclusion == "success"))) })) as $ci_groups
+| ($runs | map(select(in_window(.at))) | group_by([.repo, .workflow, .sha]) | map(sort_by(.run, .attempt) | .[-1] | {
+    repo: .repo, conclusion: .conclusion, attempt: .attempt, at: .at })) as $ci_groups
 | ($w.until_epoch - ($o.stalled_days * 86400)) as $stale_before
 | ($open_now | map(select(.updated != null and .updated < $stale_before))
    | map({repo: .repo, number: .number, title: .title, author: .author, draft: .draft,
@@ -902,7 +881,6 @@ $win as $w
     | ($reviews | map(select(.repo == $r.name))) as $rrv
     | ($ci_groups | map(select(.repo == $r.name))) as $rci
     | ($issues | map(select(.repo == $r.name))) as $ri
-    | ($gitcommits | map(select(.repo == $r.name))) as $rg
     | ($rm | map(select(.first_commit != null) | (.merged - .first_commit) / 3600)) as $cycle
     | ($signals | map(select(.repo == $r.name))
        | map({(.signal): {status: .status, detail: .detail}}) | add // {}) as $rs
@@ -924,7 +902,6 @@ $win as $w
         reviews_received: ($rrv | length),
         ci: ci_of($rci),
         size: size_of($rm),
-        commit_size: git_size_of($rg),
         issues: { open: ($ri | length),
                   oldest_open_days: ($ri | map(select(.created != null) | (($w.until_epoch - .created) / 86400) | floor) | max) },
         concentration: concentration_of($ra) })
@@ -965,8 +942,8 @@ $win as $w
       { metric: "Merged pull requests reviewed by another account",
         value: (share(($merged | map(select(.first_review != null)) | length); ($merged | length))),
         unit: "percent", trend: "not-tracked" },
-      { metric: "Continuous integration first-run pass rate",
-        value: (ci_of($ci_groups) | .pass_rate_pct), unit: "percent", trend: "not-tracked" },
+      { metric: "Continuous integration latest-attempt pass rate",
+        value: (ci_of($ci_groups) | .latest_attempt_pass_rate_pct), unit: "percent", trend: "not-tracked" },
       { metric: "Repositories where one account authored over half the commits",
         value: ($concentrated | length), unit: "repositories", trend: "not-tracked" }
     ],
@@ -988,7 +965,6 @@ $win as $w
     quality: {
       commits: $estate_commits,
       size: size_of($merged),
-      commit_size: git_size_of($gitcommits),
       review: review_of($merged),
       ci: ci_of($ci_groups) },
     risk: {
@@ -1000,7 +976,6 @@ $win as $w
       open_issues: ($repo_models | map(.issues.open) | add // 0) },
     repositories: $repo_models,
     unread: [$signals[] | select(.status == "unread") | {repo: .repo, signal: .signal, reason: .detail}],
-    skipped: [$signals[] | select(.status == "skipped") | {repo: .repo, signal: .signal, reason: .detail}],
     caps: [$signals[] | select(.status == "read" and .detail != "complete") | {repo: .repo, signal: .signal, detail: .detail}]
   }
 JQ
@@ -1038,6 +1013,7 @@ def trendword: if . == "rising" then "rising"
   elif . == "falling" then "falling"
   elif . == "flat" then "flat"
   elif . == "not-tracked" then "not tracked over periods"
+  elif . == "final-period-unmeasured" then "not reported: the last period has no measurement"
   else "not enough history" end;
 def row($cells): "| " + ($cells | map(tostring) | join(" | ")) + " |";
 def header($cells): [row($cells), "|" + ($cells | map(" --- ") | join("|")) + "|"];
@@ -1055,10 +1031,15 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 | $m.options as $o
 | $m.selection as $sel
 | ($w.period_labels) as $labels
-| (if $m.scope.kind == "repository" then "repository"
-   elif $m.scope.kind == "organization" then "organization"
-   else "user account" end) as $scope_word
-| [
+| (if $m.scope.kind == "repository" then "repository" else "organization" end) as $scope_word
+# A series with no measurement in its last period gets no direction at all, and
+# the reader is told which periods were empty rather than left to infer it.
+| def empty_periods($series): [range(0; ($series | length)) | select($series[.] == null) | $labels[.]];
+  def direction($series; $trend; $rising):
+    if $trend == "final-period-unmeasured"
+    then "Direction: not reported, because the last period has no measurement; periods beginning \(empty_periods($series) | join(", ")) had none"
+    else "Direction: \($trend | trendword) (\($rising))" end;
+  [
   "# Estate review: \($m.scope.name)",
   "",
   bullet("Estate: \($scope_word) `\($m.scope.name)`"),
@@ -1074,6 +1055,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "",
   "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories, at most \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests per repository.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
+  "A direction is never drawn from a period that ended before the window did: where the last period holds no measurement, no direction is reported and the empty periods are named.",
   "Section 6's lists show \(if $o.max_listed == 0 then "every" else "at most \($o.max_listed)" end) worst-first rows and state how many there are in total; the counts are always complete even where the rows are bounded.",
   "",
   "Definitions, which are the same in every report:",
@@ -1086,7 +1068,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   bullet("Review latency is the hours from a merged pull request being opened to its first review submitted by an account other than its author. Self-review is not review coverage and is excluded everywhere in this report."),
   bullet("Change size is additions plus deletions on merged pull requests, which is the unit of change a person actually reviews."),
   bullet("The revert rate is the share of authored commits whose subject begins with `Revert`; the hotfix rate is the share whose subject contains `hotfix` in any case. Both measure what the estate labels, not what actually broke."),
-  bullet("The continuous integration first-run pass rate groups GitHub Actions pull-request runs by workflow and commit, takes the earliest run of each group, and reports the share of those first runs that succeeded out of those that succeeded or failed. Runs that were cancelled, skipped, or still going are counted as inconclusive and excluded from the rate."),
+  bullet("The continuous integration latest-attempt pass rate groups GitHub Actions pull-request runs by workflow and commit, takes the most recent run of each group, and reports the share of them that succeeded out of those that succeeded or failed. A run's conclusion is the conclusion of its latest attempt, because that is what the runs list reports; a run re-run without a new commit therefore counts here as whatever it ended up as. Runs that were cancelled, skipped, or still going are counted as inconclusive and excluded from the rate."),
   bullet("Accounts covering half the commits is the smallest number of accounts whose combined commits exceed half a repository's authored commits in the window."),
   bullet("The median is the middle value; p90 is the ninetieth percentile by nearest rank."),
   "",
@@ -1160,7 +1142,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
          "\($m.velocity.cycle_hours.unmeasurable) merged pull requests were excluded for that reason."]
    else [bullet("Median: \($m.velocity.cycle_hours.median | hrs) over \($m.velocity.cycle_hours.measured) merged pull requests"),
          bullet("p90: \($m.velocity.cycle_hours.p90 | hrs)"),
-         bullet("Direction: \($m.velocity.cycle_hours.trend | trendword) (rising means slower)"),
+         bullet(direction($m.velocity.cycle_hours.per_period_median; $m.velocity.cycle_hours.trend; "rising means slower")),
          bullet("Unmeasurable: \($m.velocity.cycle_hours.unmeasurable) merged pull requests had no readable first commit"),
          ""]
         + header(["Period beginning"] + $labels)
@@ -1176,7 +1158,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
          "That is the same fact section 3.2 reports, stated as a waiting time rather than as coverage."]
    else [bullet("Median: \($m.velocity.review_latency_hours.median | hrs) over \($m.velocity.review_latency_hours.measured) merged pull requests"),
          bullet("p90: \($m.velocity.review_latency_hours.p90 | hrs)"),
-         bullet("Direction: \($m.velocity.review_latency_hours.trend | trendword) (rising means longer waits)"),
+         bullet(direction($m.velocity.review_latency_hours.per_period_median; $m.velocity.review_latency_hours.trend; "rising means longer waits")),
          bullet("Not included: \($m.velocity.review_latency_hours.unmeasurable) merged pull requests had no review from another account"),
          ""]
         + header(["Period beginning"] + $labels)
@@ -1220,15 +1202,6 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
            "Size evidences how much a reviewer was asked to hold at once.",
            "It does not evidence difficulty or risk: a one-line change can be the dangerous one, and a large generated diff can be trivial."]
    end)
-+ [""]
-+ (if ($o.git_history | not)
-   then ["Commit-level change size was not collected.",
-         "Pass `--git-history` to add it; every figure above and below is unaffected by that flag."]
-   elif $m.quality.commit_size.measured == 0
-   then ["Commit-level change size was requested with `--git-history` but no commit history could be read; section 9.2 names each repository it failed for."]
-   else [bullet("Commit-level median: \($m.quality.commit_size.median_lines | num) lines changed over \($m.quality.commit_size.measured) commits, read with plain git"),
-         bullet("Commit-level p90: \($m.quality.commit_size.p90_lines | num) lines changed")]
-   end)
 + [
   "",
   "### 5.3 Review depth",
@@ -1245,19 +1218,19 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
    end)
 + [
   "",
-  "### 5.4 Continuous integration first-run pass rate",
+  "### 5.4 Continuous integration latest-attempt pass rate",
   ""
   ]
-+ (if $m.quality.ci.first_runs == 0
-   then ["No GitHub Actions pull-request run happened inside this window, so there is no first-run pass rate to report.",
++ (if $m.quality.ci.runs == 0
+   then ["No GitHub Actions pull-request run happened inside this window, so there is no latest-attempt pass rate to report.",
          "An estate whose checks run outside GitHub Actions will always read this way here, because this report does not see those checks."]
-   else [bullet("First-run pass rate: \($m.quality.ci.pass_rate_pct | pc) (\($m.quality.ci.passed) passed, \($m.quality.ci.failed) failed)"),
-         bullet("Inconclusive first runs excluded from the rate: \($m.quality.ci.inconclusive)"),
-         bullet("Groups that went green on a retry with no new commit: \($m.quality.ci.recovered_without_a_new_commit)"),
+   else [bullet("Latest-attempt pass rate: \($m.quality.ci.latest_attempt_pass_rate_pct | pc) (\($m.quality.ci.passed) passed, \($m.quality.ci.failed) failed)"),
+         bullet("Inconclusive runs excluded from the rate: \($m.quality.ci.inconclusive)"),
+         bullet("Checks that needed more than one attempt on the same commit: \($m.quality.ci.needed_more_than_one_attempt)"),
          "",
-         "This evidences how often checks pass without a second push.",
+         "This evidences how a check ended up, not how it started: the runs list reports each run's latest attempt, so a check that failed and was re-run to green on the same commit counts as a pass here.",
          "It cannot separate a real defect from a flaky job, and it sees only GitHub Actions: checks reported by any other system are invisible to it.",
-         "The retry count is the closest available signal for flakiness, because a run that goes green on the same commit did not need a code change."]
+         "The attempt count says only that a check was run more than once on one commit; it does not say why."]
    end)
 + [
   "",
@@ -1323,11 +1296,11 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "An organization review is this table plus the aggregate above; a single-repository review is the same report with one row here.",
   ""
   ]
-+ header(["Repository", "Commits", "Merged", "Open", "Median cycle", "Reviewed", "First-run CI", "Authors", "Idle days", "Archived", "Gaps"])
++ header(["Repository", "Commits", "Merged", "Open", "Median cycle", "Reviewed", "Latest-attempt CI", "Authors", "Idle days", "Archived", "Gaps"])
 + [$m.repositories[] | row([
     .name, .commits.total, .pull_requests.merged, .pull_requests.open_now,
     (.pull_requests.cycle_hours.median | hrs), (.review.coverage_pct | pc),
-    (.ci.pass_rate_pct | pc), .concentration.authors, (.idle_days | num), yn(.archived),
+    (.ci.latest_attempt_pass_rate_pct | pc), .concentration.authors, (.idle_days | num), yn(.archived),
     ([.signals | to_entries[] | select(.value.status == "unread") | .key] | if length == 0 then "none" else join(", ") end)])]
 + [
   "",
@@ -1355,14 +1328,13 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "### 9.2 What was read",
   ""
   ]
-+ header(["Repository", "Commits", "Pull requests", "Open pull requests", "CI runs", "Issues", "Commit history"])
++ header(["Repository", "Commits", "Pull requests", "Open pull requests", "CI runs", "Issues"])
 + [$m.repositories[] | row([.name,
     (.signals.commits.status // "not attempted"),
     (.signals.pull_requests.status // "not attempted"),
     (.signals.open_pull_requests.status // "not attempted"),
     (.signals.ci_runs.status // "not attempted"),
-    (.signals.issues.status // "not attempted"),
-    (.signals.git_history.status // "not attempted")])]
+    (.signals.issues.status // "not attempted")])]
 + [""]
 + (if ($m.unread | length) == 0
    then ["Every reviewed repository was read completely for every signal this report uses."]
@@ -1408,12 +1380,6 @@ fi
 
 command -v gh-axi > /dev/null 2>&1 || die "gh-axi is required for estate collection"
 command -v gh > /dev/null 2>&1 || die "gh is required: gh-axi wraps the GitHub CLI"
-if [ "$GIT_HISTORY" = 1 ]; then
-  command -v git > /dev/null 2>&1 || die "git is required for --git-history"
-  # shellcheck source=bin/xo-timeout-lib.sh
-  # shellcheck disable=SC1091
-  . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/xo-timeout-lib.sh"
-fi
 
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/xo-estate-review.XXXXXX") || die "could not create a working directory"
 gh_scratch_init
@@ -1428,12 +1394,12 @@ OPTIONS_JSON=$(jq -n \
   --argjson max_repos "$MAX_REPOS" --argjson max_prs "$MAX_PRS" \
   --argjson max_listed "$MAX_LISTED" \
   --argjson include_forks "$INCLUDE_FORKS" --argjson exclude_archived "$EXCLUDE_ARCHIVED" \
-  --argjson git_history "$GIT_HISTORY" --argjson max_pages "$REST_MAX_PAGES" \
+  --argjson reviews_per_pr "$REVIEWS_PER_PR" --argjson max_pages "$REST_MAX_PAGES" \
   '{window_days: $window_days, periods: $periods, stalled_days: $stalled_days,
     unmaintained_days: $unmaintained_days, max_repos: $max_repos, max_prs: $max_prs,
     max_listed: $max_listed,
     include_forks: ($include_forks == 1), exclude_archived: ($exclude_archived == 1),
-    git_history: ($git_history == 1), page_limit: $max_pages, trend_band_pct: 15}')
+    reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages, trend_band_pct: 15}')
 
 # The recorded commands are templates with this run's window substituted, one per
 # read the report depends on, rather than one line per page of every repository.
@@ -1442,21 +1408,15 @@ OPTIONS_JSON=$(jq -n \
 COMMANDS_JSON=$(jq -n \
   --arg scope "$SCOPE_NAME" --arg kind "$SCOPE_KIND" \
   --arg since "$SINCE_ISO" --arg until "$UNTIL_ISO" \
-  --arg since_date "${SINCE_ISO%%T*}" --arg until_date "${UNTIL_ISO%%T*}" \
-  --argjson git_history "$GIT_HISTORY" '
+  --arg since_date "${SINCE_ISO%%T*}" --arg until_date "${UNTIL_ISO%%T*}" '
   (if $kind == "organization" then "gh-axi api /orgs/\($scope)/repos?type=all&sort=full_name --paginate"
-   elif $kind == "user" then "gh-axi api /users/\($scope)/repos?type=owner&sort=full_name --paginate"
    else "gh-axi api /repos/\($scope)" end) as $repos
   | [$repos,
      "gh-axi api /repos/<owner>/<repo>/commits?sha=<default_branch>&since=\($since)&until=\($until) --paginate",
      "gh-axi api POST graphql --input <pull-requests-updated-desc-until-\($since)>",
      "gh-axi api POST graphql --input <open-pull-requests-created-asc>",
      "gh-axi api /repos/<owner>/<repo>/actions/runs?event=pull_request&created=\($since_date)..\($until_date) --paginate",
-     "gh-axi api /repos/<owner>/<repo>/issues?state=open --paginate"]
-  + (if $git_history == 1 then
-      ["git clone --bare --shallow-since=<window start minus 2 days> --single-branch --branch <default_branch> https://github.com/<owner>/<repo>.git",
-       "git log --no-merges --since=\($since) --until=\($until) --numstat"]
-     else [] end)')
+     "gh-axi api /repos/<owner>/<repo>/issues?state=open --paginate"]')
 
 collect
 MODEL=$(derive) || die "could not derive the review model from the collected records"
