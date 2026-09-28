@@ -404,7 +404,8 @@ test_an_estate_with_no_data_still_emits_every_section() {
   assert_grep "so concentration is unmeasurable" "$root/empty.md" "the concentration section states its emptiness"
   assert_grep "No reviewed repository is archived or had gone" "$root/empty.md" "the unmaintained section states its emptiness"
   assert_grep "No open pull request has been idle" "$root/empty.md" "the stalled section states its emptiness"
-  assert_grep "No commit, pull request, review, or workflow run fell inside this window" "$root/empty.md" "the headline says the window was silent rather than reading as low activity"
+  assert_grep "No commit, pull request, review, or workflow run fell in this window" "$root/empty.md" "the headline says the window was silent rather than reading as low activity"
+  assert_no_grep "reads failed; section 9.2 names them" "$root/empty.md" "an estate that was read completely is not told its reads failed"
   assert_no_grep "A rising cycle time means work is getting slower" "$root/empty.md" "an empty estate is not given the reading note for a report with figures in it"
   # And the limits still get stated, because that is what the reader acts on.
   assert_grep "They do not measure anyone's productivity" "$root/empty.md" "the limits section survives an empty estate"
@@ -446,11 +447,29 @@ test_an_estate_nothing_could_be_read_from_never_reads_as_a_quiet_one() {
 
   "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
   assert_fixed_shape "$root/report.md" "an estate nothing could be read from"
-  assert_no_grep "No commit, pull request, review, or workflow run fell inside this window" "$root/report.md"     "an unreadable estate is never given the sentence reserved for a quiet one"
-  assert_no_grep "Nothing was committed or merged in this window." "$root/report.md"     "section 4.1 does not report silence it cannot have observed"
-  assert_grep "cannot tell a silent estate from an unread one" "$root/report.md"     "the headline says the figures rest on reads that failed"
-  assert_grep "section 9.2 names them" "$root/report.md" "section 4.1 points at the gaps behind its zeros"
-  pass "an estate whose reads all failed states that it could not be read, never that it was quiet"
+  # The rule, not a list of sentences: no statement about what the estate did may
+  # range over the window when nothing was read. Every such sentence starts a line
+  # of the report, so the rule can be checked over the whole report rather than
+  # over the surfaces that happen to exist today, and a surface added later that
+  # skips the boundary fails here.
+  local claimed
+  claimed=$(grep -nE '^(No |Nothing )' "$root/report.md" | grep -F "in this window" || true)
+  [ -z "$claimed" ] ||
+    fail "an unreadable estate claimed the window in an empty-surface sentence:
+$claimed"
+  # And the same sentences must say what they do range over, in every section.
+  local surface
+  for surface in "No commit, pull request, review, or workflow run fell in what could be read" \
+    "No account committed, opened a pull request, or reviewed one in what could be read" \
+    "Nothing was committed or merged in what could be read" \
+    "No authored commit landed on a default branch in what could be read" \
+    "No pull request merged in what could be read" \
+    "No GitHub Actions pull-request run happened in what could be read" \
+    "No authored commit landed in what could be read"; do
+    assert_grep "$surface" "$root/report.md" "an unread estate reports '$surface'"
+  done
+  assert_equals "13" "$(grep -c 'reads failed; section 9.2 names them' "$root/report.md")"     "every empty surface, and the collection-time subsection, names the reads that failed behind its zeros"
+  pass "an estate whose reads all failed states in every section that it could not be read, never that it was quiet"
 }
 
 test_push_recency_is_measured_from_collection_not_from_the_window_end() {
@@ -476,7 +495,19 @@ test_push_recency_is_measured_from_collection_not_from_the_window_end() {
   ! grep -Eq '\| -[0-9]' "$root/report.md" ||
     fail "the report printed a negative day count over a historical window"
   assert_grep "Days since last push, at collection" "$root/report.md"     "section 6.2 says which clock its days are measured on"
-  assert_grep "Idle days at collection" "$root/report.md" "section 7 says which clock its idle column is measured on"
+  # Section 7 mixes window figures and collection-time state in one row, so every
+  # column carrying estate state has to name its clock in the rendered header.
+  local cell
+  while IFS= read -r cell; do
+    case $cell in
+      *Open* | *Idle* | *Archived*)
+        case $cell in
+          *"at collection"*) ;;
+          *) fail "section 7's '$cell' column reports the state of the estate without saying it is measured at collection" ;;
+        esac
+        ;;
+    esac
+  done < <(sed -n '/^## 7\./,/^## 8\./p' "$root/report.md" | grep -m 1 '^| Repository |' | tr '|' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$')
   pass "push recency and the unmaintained list are measured from the collection clock and labelled as such"
 }
 

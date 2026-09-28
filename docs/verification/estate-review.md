@@ -42,8 +42,9 @@ One case pins the `--from-json` contract, which is what makes the report's own i
 A flag the stored model can satisfy is honoured and written into the model the report is rendered from, and every flag that would need a fresh collection is refused by name with exit 2 rather than accepted and dropped.
 
 Two cases pin the distinction the live guard exists to protect, in the two places it can be lost.
-An estate whose every repository read is refused yields exactly what a silent estate yields - no commits, no people, no runs - so the report is asserted to withhold both silence sentences and to say instead that it cannot tell a silent estate from an unread one.
-A historical window whose end predates the last push is asserted to age push recency from the collection clock rather than the window end, so no day count renders negative, the unmaintained test still selects, and both places the figure appears say which clock it is measured on.
+An estate whose every repository read is refused yields exactly what a silent estate yields - no commits, no people, no runs - so the whole rendered report is searched for the rule rather than for a list of sentences: no statement about what the estate did may range over the window, every such sentence must instead range over what could be read, and each must name the reads that failed.
+A surface added later that skips that boundary fails the same assertion.
+A historical window whose end predates the last push is asserted to age push recency from the collection clock rather than the window end, so no day count renders negative, the unmaintained test still selects, and the rendered section 7 header is checked column by column: any column reporting the state of the estate rather than a window figure must name its clock.
 
 ## Live guard
 
