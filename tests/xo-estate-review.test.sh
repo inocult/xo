@@ -651,6 +651,35 @@ test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound() {
   pass "a pull request carrying more reviews than one page holds is disclosed as a cap rather than silently shortening a review count"
 }
 
+test_a_commit_whose_workflow_ran_twice_counts_every_attempt() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-attempts) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # One commit, one workflow, two runs: the first failed after three attempts,
+  # then the pull request was reopened and the workflow ran again and passed.
+  # The conclusion belongs to the later run, but the commit still needed three
+  # attempts, and a counter read off the retained run alone would say none did.
+  cat > "$root/fixtures/runs-widgets.json" <<'JSON'
+{"workflow_runs":[
+ {"workflow_id":1,"head_sha":"s9","run_number":7,"run_attempt":3,"conclusion":"failure","created_at":"2026-02-01T00:00:00Z"},
+ {"workflow_id":1,"head_sha":"s9","run_number":9,"run_attempt":1,"conclusion":"success","created_at":"2026-02-02T00:00:00Z"}
+]}
+JSON
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "1" "$(jq -r '.quality.ci.runs' "$root/model.json")" "both runs on one commit are one check"
+  assert_equals "1" "$(jq -r '.quality.ci.passed' "$root/model.json")" "the check ended as the later run did"
+  assert_equals "1" "$(jq -r '.quality.ci.needed_more_than_one_attempt' "$root/model.json")"     "the commit whose checks took three attempts is counted"
+
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_grep "Checks that needed more than one attempt on the same commit: 1" "$root/report.md"     "section 5.4 reports what the runs on that commit actually needed"
+  pass "a commit whose workflow ran more than once counts the attempts of every run, not only the last"
+}
+
 test_a_last_period_with_no_measurement_reports_no_direction() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-sparse) || fail "no fixture root"
@@ -770,5 +799,6 @@ test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk
 test_a_review_on_an_open_pull_request_is_counted_once
 test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound
 test_a_last_period_with_no_measurement_reports_no_direction
+test_a_commit_whose_workflow_ran_twice_counts_every_attempt
 
 echo "# xo-estate-review.test.sh: all assertions passed"

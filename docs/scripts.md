@@ -19,7 +19,7 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
 | `xo-fleet-view.sh`       | Render the fleet snapshot as a human Markdown view                                   |
 | `xo-bearings-snapshot.sh` | Project the bounded remote-ledger fleet snapshot to compact TOON; `--include-prs` adds live GitHub enrichment |
 | `xo-bearings-board.sh`   | Build and arm the stable interactive `/bearings lavish` fleet board                  |
-| `xo-estate-review.sh`    | Read-only estate review of an organization, account, or repository, rendered in one fixed report shape (contract `xo-estate-review.v1`) |
+| `xo-estate-review.sh`    | Read-only estate review of an organization or one of its repositories, rendered in one fixed report shape (contract `xo-estate-review.v1`) |
 | `xo-secondmate-reconcile.sh` | Queue Bearings reconcile requests for later supervision delivery and ask each mismatched home through its durable inbox with a per-home cooldown |
 | `xo-update.sh`           | Fast-forward-only self-update of XO and local or remote secondmate homes, classifying every live mate left on the target commit for restart or fallback nudge |
 | `xo-secondmate-restart.sh` | Persist open conversational work, then restart eligible second mates or report the fallback outcome |

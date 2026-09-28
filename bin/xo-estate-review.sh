@@ -77,6 +77,12 @@ set -u
 
 SCRIPT_NAME=xo-estate-review.sh
 CONTRACT=xo-estate-review.v1
+# The record separator, spelled once. `\t` inside a sed or grep expression is a
+# GNU extension that BSD sed reads as a literal `t`, so a pattern written that
+# way matches nothing on macOS and every record passes through unprefixed. This
+# script supports both platforms, so no expression in it spells a tab any other
+# way. jq and awk -F own their own escape and are unaffected.
+TAB=$(printf '\t')
 
 die() {
   printf '%s: %s\n' "$SCRIPT_NAME" "$1" >&2
@@ -397,8 +403,7 @@ resolve_window() {
 # GitHub returns alongside issues - would otherwise make a full page look short
 # and stop the walk with the rest of the history unread and undisclosed.
 REST_PER_PAGE=100
-REST_MAX_PAGES=${XO_ESTATE_REVIEW_MAX_PAGES:-30}
-validate_uint XO_ESTATE_REVIEW_MAX_PAGES "$REST_MAX_PAGES" 1
+REST_MAX_PAGES=30
 REST_CAPPED=0
 
 # rest_pages <path_with_query> <jq_program>: 0 with the records in $GH_RECORDS
@@ -556,10 +561,10 @@ read_prs() {
       return 1
     }
     gh_read POST graphql --input "$body" --full --jq "$PR_SHAPE_JQ" || return 1
-    hasnext=$(sed -n 's/^page\t\([^\t]*\)\t.*$/\1/p' "$GH_PAYLOAD" | head -n 1)
-    endcursor=$(sed -n 's/^page\t[^\t]*\t\(.*\)$/\1/p' "$GH_PAYLOAD" | head -n 1)
-    lines=$(grep -c "^pr$(printf '\t')" "$GH_PAYLOAD") || lines=0
-    grep -v "^page$(printf '\t')" "$GH_PAYLOAD" >> "$GH_RECORDS" || true
+    hasnext=$(sed -n "s/^page${TAB}\\([^${TAB}]*\\)${TAB}.*\$/\\1/p" "$GH_PAYLOAD" | head -n 1)
+    endcursor=$(sed -n "s/^page${TAB}[^${TAB}]*${TAB}\\(.*\\)\$/\\1/p" "$GH_PAYLOAD" | head -n 1)
+    lines=$(grep -c "^pr$TAB" "$GH_PAYLOAD") || lines=0
+    grep -v "^page$TAB" "$GH_PAYLOAD" >> "$GH_RECORDS" || true
     fetched=$((fetched + lines))
     if [ "$stop_on_window" = 1 ] && [ "$lines" -gt 0 ]; then
       oldest=$(awk -F'\t' '$1 == "pr" { print $6 }' "$GH_PAYLOAD" | sort | head -n 1)
@@ -647,7 +652,7 @@ collect() {
       detail=complete
       [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of 100 commits"
       printf 'signal\t%s\tcommits\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
-      sed "s|^commit\t|commit\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
+      sed "s|^commit$TAB|commit$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
     else
       printf 'signal\t%s\tcommits\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
     fi
@@ -655,11 +660,11 @@ collect() {
     if read_prs "$owner" "$name" "$PR_QUERY" "$since" 1; then
       detail=$(pr_detail "capped at $MAX_PRS pull requests")
       printf 'signal\t%s\tpull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
-      sed -e "s|^pr\t|pr\t$full\t|" -e "s|^review\t|review\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
+      sed -e "s|^pr$TAB|pr$TAB$full$TAB|" -e "s|^review$TAB|review$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
       if read_prs "$owner" "$name" "$OPEN_PR_QUERY" "$since" 0; then
         detail=$(pr_detail "capped at $MAX_PRS open pull requests, so the open and stalled counts describe the oldest $MAX_PRS")
         printf 'signal\t%s\topen_pull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
-        sed -e "s|^pr\t|pr\t$full\t|" -e "s|^review\t|review\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
+        sed -e "s|^pr$TAB|pr$TAB$full$TAB|" -e "s|^review$TAB|review$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
       else
         printf 'signal\t%s\topen_pull_requests\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
       fi
@@ -672,7 +677,7 @@ collect() {
       detail=complete
       [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of 100 runs"
       printf 'signal\t%s\tci_runs\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
-      sed "s|^run\t|run\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
+      sed "s|^run$TAB|run$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
     else
       printf 'signal\t%s\tci_runs\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
     fi
@@ -681,7 +686,7 @@ collect() {
       detail=complete
       [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of 100 issues"
       printf 'signal\t%s\tissues\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
-      sed "s|^issue\t|issue\t$full\t|" "$GH_RECORDS" >> "$RECORDS"
+      sed "s|^issue$TAB|issue$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
     else
       printf 'signal\t%s\tissues\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
     fi
@@ -752,15 +757,17 @@ $win as $w
   # attempt: a re-run increments run_attempt on the same entry rather than adding
   # a second one, and earlier attempts are only reachable through another
   # endpoint this script does not read. So what a conclusion here evidences is the
-  # latest attempt, and that is what this reports. `run_attempt > 1` says the run
-  # was attempted more than once on the same commit, which is reported as exactly
-  # that and as nothing more.
+  # latest attempt of the latest run on a commit, and that is what this reports.
+  # A workflow can run more than once on one commit - a reopened pull request
+  # does it - so the attempt count is the highest attempt anywhere in the group,
+  # never just the retained run's, and it says that a check was attempted more
+  # than once on that commit and nothing more.
   def ci_of($groups): ($groups | map(select(.conclusion == "success")) | length) as $passed
     | ($groups | map(select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "startup_failure")) | length) as $failed
     | ($groups | length) as $total
     | { runs: $total, passed: $passed, failed: $failed,
         inconclusive: ($total - $passed - $failed),
-        needed_more_than_one_attempt: ($groups | map(select(.attempt > 1)) | length),
+        needed_more_than_one_attempt: ($groups | map(select(.max_attempt > 1)) | length),
         latest_attempt_pass_rate_pct: share($passed; ($passed + $failed)) };
   def size_of($population): ($population | map(.additions + .deletions)) as $s
     | { measured: ($s | length), median_lines: ($s | median | r1), p90_lines: ($s | p90 | r1),
@@ -863,8 +870,10 @@ $win as $w
 | ($prs | map(select(.state == "OPEN"))) as $open_now
 | ($prs | map(select(.state == "CLOSED" and in_window(.closed)))) as $closed_unmerged
 | ($commits | map(select(.merge | not))) as $authored
-| ($runs | map(select(in_window(.at))) | group_by([.repo, .workflow, .sha]) | map(sort_by(.run, .attempt) | .[-1] | {
-    repo: .repo, conclusion: .conclusion, attempt: .attempt, at: .at })) as $ci_groups
+| ($runs | map(select(in_window(.at))) | group_by([.repo, .workflow, .sha]) | map(. as $g
+   | ($g | sort_by(.run, .attempt) | .[-1]) as $latest
+   | { repo: $latest.repo, conclusion: $latest.conclusion, at: $latest.at,
+       max_attempt: ($g | map(.attempt) | max) })) as $ci_groups
 | ($w.until_epoch - ($o.stalled_days * 86400)) as $stale_before
 | ($open_now | map(select(.updated != null and .updated < $stale_before))
    | map({repo: .repo, number: .number, title: .title, author: .author, draft: .draft,
@@ -1230,7 +1239,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
          "",
          "This evidences how a check ended up, not how it started: the runs list reports each run's latest attempt, so a check that failed and was re-run to green on the same commit counts as a pass here.",
          "It cannot separate a real defect from a flaky job, and it sees only GitHub Actions: checks reported by any other system are invisible to it.",
-         "The attempt count says only that a check was run more than once on one commit; it does not say why."]
+         "The attempt count says only that a check on that commit was attempted more than once; it does not say why."]
    end)
 + [
   "",
