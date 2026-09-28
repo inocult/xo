@@ -143,7 +143,16 @@ case $path in
     [ -f "$fixture" ] || fixture=$FIXTURES/empty-prs.json
     ;;
   /users/*) fixture=$FIXTURES/owner.json ;;
-  /orgs/*/repos*) fixture=$FIXTURES/repos.json ;;
+  /orgs/*/repos*)
+    # An estate that fills every page answers from repos-every-page.json, whose
+    # entries are renamed per page below so the listing is a real walk over
+    # distinct repositories rather than one page repeated.
+    if [ -f "$FIXTURES/repos-every-page.json" ]; then
+      fixture=$FIXTURES/repos-every-page.json
+    else
+      fixture=$FIXTURES/repos.json
+    fi
+    ;;
   */actions/runs*) repo=${path#/repos/acme/}; fixture=$FIXTURES/runs-${repo%%/actions/runs*}.json ;;
   */commits*) repo=${path#/repos/acme/}; fixture=$FIXTURES/commits-${repo%%/commits*}.json ;;
   */issues*) repo=${path#/repos/acme/}; fixture=$FIXTURES/issues-${repo%%/issues*}.json ;;
@@ -157,6 +166,13 @@ esac
 if [ "$page" -gt 1 ]; then
   case $path in
     */actions/runs*) fixture=$FIXTURES/empty-runs.json ;;
+    /orgs/*/repos*)
+      if [ -f "$FIXTURES/repos-every-page.json" ]; then
+        fixture=$FIXTURES/repos-every-page.json
+      else
+        fixture=$FIXTURES/empty-array.json
+      fi
+      ;;
     */issues*)
       # A later page exists only where a fixture provides one, which is how a
       # multi-page read is modelled without a second fake.
@@ -185,6 +201,11 @@ case $MODE in
     esac
     ;;
 esac
+if [ "$fixture" = "$FIXTURES/repos-every-page.json" ]; then
+  jq --arg p "$page" '[.[] | .name = "\(.name)-p\($p)" | .full_name = "\(.owner.login)/\(.name)"]' \
+    "$fixture" > "$FIXTURES/.repos-page.json" || exit 1
+  fixture=$FIXTURES/.repos-page.json
+fi
 payload=$(jq -r "$program" "$fixture") || exit 1
 printf 'api_response:\n'
 case $MODE in
@@ -554,7 +575,7 @@ test_a_single_repository_review_is_the_same_report_with_one_row() {
   pass "a single-repository review emits the same nine sections as an organization review"
 }
 
-test_repository_selection_excludes_forks_and_honours_the_filter() {
+test_repository_selection_excludes_forks_and_discloses_a_cap() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-select) || fail "no fixture root"
   bin=$(xo_fakebin "$root")
@@ -571,21 +592,39 @@ test_repository_selection_excludes_forks_and_honours_the_filter() {
     fail "collection with forks failed"
   assert_equals "2" "$(printf '%s' "$model" | jq -r '.repositories | length')" "--include-forks includes it"
 
-  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --repo widgets --json) ||
-    fail "collection with a repository filter failed"
-  assert_equals "acme/widgets" "$(printf '%s' "$model" | jq -r '.repositories[].name')" "--repo narrows the estate"
-
-  # One spelling, the one --help documents: the bare repository name.
-  local out code
-  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --repo acme/widgets --json 2>&1) && code=0 || code=$?
-  [ "$code" != 0 ] || fail "--repo accepted an owner-qualified name as well as the bare one"
-  assert_contains "$out" "matched the selection" "an unmatched --repo value is refused rather than quietly reviewing everything"
-
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --include-forks --max-repos 1 --json) ||
     fail "collection with a repository cap failed"
   assert_equals "true" "$(printf '%s' "$model" | jq -r '.selection.capped')" "the repository cap is recorded"
   assert_equals "2" "$(printf '%s' "$model" | jq -r '.selection.matched')" "the matched count survives the cap"
-  pass "selection excludes forks by default, honours --repo, and discloses a repository cap"
+  pass "selection excludes forks by default and discloses a repository cap"
+}
+
+test_a_truncated_repository_listing_is_named_as_a_cap() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-listcap) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # An organization whose listing never runs out of pages, which is what an estate
+  # larger than the page walk looks like. The walk stops at its page bound, so the
+  # matched count describes only what it saw, and a report that did not say so
+  # would claim a completeness it does not have.
+  jq -n '[range(0; 100) | {name: "widgets-\(.)", owner: {login: "acme"},
+            default_branch: "main", archived: false, fork: false,
+            pushed_at: "2026-03-30T00:00:00Z", private: false}]' \
+    > "$root/fixtures/repos-every-page.json" || fail "could not write the endless listing"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW \
+    "$REVIEW" acme "${WINDOW[@]}" --max-repos 1 --json) || fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "1" "$(jq -r '[.caps[] | select(.signal == "repository_listing")] | length' "$root/model.json")"     "the truncated listing is recorded as a cap"
+  assert_equals "acme" "$(jq -r '.caps[] | select(.signal == "repository_listing") | .repo' "$root/model.json")"     "the listing cap is keyed to the estate rather than to a repository"
+
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "an estate whose listing was truncated"
+  assert_no_grep "No read hit a collection cap" "$root/report.md"     "a report whose listing stopped short does not claim every read was complete"
+  assert_grep "| acme | repository_listing |" "$root/report.md" "section 9.2 names the listing cap"
+  pass "a repository listing that stopped at its page bound is named as a cap instead of reading as a complete estate"
 }
 
 test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk() {
@@ -880,7 +919,8 @@ test_the_report_records_the_commands_that_produced_it
 test_free_text_from_the_estate_cannot_break_a_record
 test_scope_and_argument_validation_refuses_rather_than_guessing
 test_a_single_repository_review_is_the_same_report_with_one_row
-test_repository_selection_excludes_forks_and_honours_the_filter
+test_repository_selection_excludes_forks_and_discloses_a_cap
+test_a_truncated_repository_listing_is_named_as_a_cap
 test_a_person_table_is_ordered_by_account_not_by_volume
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show
 test_the_window_and_periods_bound_what_is_counted

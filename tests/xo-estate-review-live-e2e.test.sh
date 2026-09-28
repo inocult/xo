@@ -104,9 +104,9 @@ test_a_live_review_produces_the_fixed_report_and_a_matching_model() {
   # live collection still reads real work; a quiet month upstream is not a defect
   # in this repository, and a window whose counts are already settled cannot
   # become one. jq 1.8.0 shipped inside this window, so the work is there.
-  "$REVIEW" "$ESTATE" "${WINDOW[@]}" --repo "$REPO" > "$report" ||
+  "$REVIEW" "$ESTATE/$REPO" "${WINDOW[@]}" > "$report" ||
     fail "a live review of $ESTATE/$REPO failed"
-  "$REVIEW" "$ESTATE" "${WINDOW[@]}" --repo "$REPO" --json > "$model" ||
+  "$REVIEW" "$ESTATE/$REPO" "${WINDOW[@]}" --json > "$model" ||
     fail "a live review of $ESTATE/$REPO could not produce its model"
 
   local seen expected
@@ -121,7 +121,7 @@ $seen"
   jq -e '.contract == "xo-estate-review.v1"' "$model" > /dev/null ||
     fail "the live model does not carry the xo-estate-review.v1 contract"
   jq -e '.selection.reviewed == 1' "$model" > /dev/null ||
-    fail "--repo $REPO did not narrow the live estate to one repository"
+    fail "the $ESTATE/$REPO scope did not bound the live review to one repository"
   jq -e '[.unread[]] | length == 0' "$model" > /dev/null ||
     fail "the live review reported a gap: $(jq -c '.unread' "$model")"
 

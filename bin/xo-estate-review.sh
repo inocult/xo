@@ -44,7 +44,6 @@
 #   --max-repos <n>          cap repositories reviewed, 0 for no cap (default 100)
 #   --max-prs <n>            cap pull requests read per repository, 0 for no cap (default 300)
 #   --max-listed <n>         cap rows in the risk lists, 0 for no cap (default 15)
-#   --repo <name>            restrict an organization estate to this repository (repeatable)
 #   --include-forks          include forked repositories (default: excluded)
 #   --exclude-archived       drop archived repositories (default: included and labeled)
 #   --json                   print the derived model instead of the report
@@ -106,7 +105,6 @@ every estate; a surface with no data is stated as empty, never omitted.
   --max-repos <n>          cap repositories reviewed, 0 for no cap (default 100)
   --max-prs <n>            cap pull requests read per repository, 0 for no cap (default 300)
   --max-listed <n>         cap rows in the risk lists, 0 for no cap (default 15)
-  --repo <name>            restrict an organization estate to this repository (repeatable)
   --include-forks          include forked repositories (default: excluded)
   --exclude-archived       drop archived repositories (default: included and labeled)
   --json                   print the derived model (contract xo-estate-review.v1)
@@ -131,7 +129,6 @@ INCLUDE_FORKS=0
 EXCLUDE_ARCHIVED=0
 OUTPUT=report
 FROM_JSON=
-REPO_FILTER=()
 
 need_value() {
   [ "$2" -gt 1 ] || die "$1 needs a value" 2
@@ -217,11 +214,6 @@ while [ $# -gt 0 ]; do
       need_value --max-listed $#
       validate_uint --max-listed "$2"
       MAX_LISTED=$2
-      shift
-      ;;
-    --repo)
-      need_value --repo $#
-      REPO_FILTER+=("$2")
       shift
       ;;
     --include-forks) INCLUDE_FORKS=1 ;;
@@ -459,10 +451,15 @@ resolve_scope() {
 REPO_LIST_JQ='(["items\t" + (length|tostring)] + [.[]|["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv])|join("\n")'
 REPO_ONE_JQ='["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv'
 
-# list_repos: leaves the estate's repo records in $REPOS_FILE.
+# list_repos: leaves the estate's repo records in $REPOS_FILE, and the listing's
+# own page cap in $REPOS_CAPPED. That flag has to be taken here and kept: it lives
+# in REST_CAPPED, which the first per-repository read overwrites, and a listing
+# that stopped short shortens the matched count and every aggregate under it.
 REPOS_FILE=
+REPOS_CAPPED=0
 list_repos() {
   REPOS_FILE=$GH_SCRATCH/repos
+  REPOS_CAPPED=0
   case $SCOPE_KIND in
     repository)
       gh_read_required "repository $SCOPE_NAME" "/repos/$SCOPE_NAME" --full --jq "$REPO_ONE_JQ"
@@ -471,6 +468,7 @@ list_repos() {
     organization)
       rest_pages "/orgs/$SCOPE_NAME/repos?type=all&sort=full_name" "$REPO_LIST_JQ" ||
         die "could not list the repositories of organization $SCOPE_NAME: $GH_READ_ERROR"
+      REPOS_CAPPED=$REST_CAPPED
       cp "$GH_RECORDS" "$REPOS_FILE"
       ;;
   esac
@@ -614,27 +612,20 @@ collect() {
 
   list_repos
 
-  local line full name owner branch archived fork pushed private wanted candidate detail
+  local line full name owner branch archived fork pushed private detail
   local -a chosen=()
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     case $line in repo*) ;; *) continue ;; esac
     IFS=$'\t' read -r _ full name owner branch archived fork pushed private <<< "$line"
     [ -n "$full" ] || continue
-    if [ "${#REPO_FILTER[@]}" -gt 0 ]; then
-      wanted=0
-      for candidate in "${REPO_FILTER[@]}"; do
-        if [ "$candidate" = "$name" ]; then wanted=1; fi
-      done
-      [ "$wanted" = 1 ] || continue
-    fi
     if [ "$fork" = true ] && [ "$INCLUDE_FORKS" = 0 ]; then continue; fi
     if [ "$archived" = true ] && [ "$EXCLUDE_ARCHIVED" = 1 ]; then continue; fi
     chosen+=("$line")
   done < "$REPOS_FILE"
 
   if [ "${#chosen[@]}" -eq 0 ]; then
-    die "no repository in estate '$SCOPE_NAME' matched the selection; check --repo, --include-forks, and --exclude-archived"
+    die "no repository in estate '$SCOPE_NAME' matched the selection; check --include-forks and --exclude-archived"
   fi
   selected=${#chosen[@]}
   if [ "$MAX_REPOS" -gt 0 ] && [ "$selected" -gt "$MAX_REPOS" ]; then
@@ -645,6 +636,9 @@ collect() {
   RECORDS=$TMPROOT/records.tsv
   : > "$RECORDS"
   printf 'selection\t%s\t%s\t%s\n' "$selected" "${#chosen[@]}" "$capped_repos" >> "$RECORDS"
+  [ "$REPOS_CAPPED" = 0 ] ||
+    printf 'signal\t%s\trepository_listing\tread\tcapped at %s pages of %s repositories, so the matched count describes the first %s the estate lists\n' \
+      "$SCOPE_NAME" "$REST_MAX_PAGES" "$REST_PER_PAGE" "$((REST_MAX_PAGES * REST_PER_PAGE))" >> "$RECORDS"
 
   local entry
   for entry in "${chosen[@]}"; do
@@ -1088,8 +1082,8 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   bullet("Review latency is the hours from a merged pull request being opened to the first review on it submitted by another identified account, no earlier than the pull request itself. Self-review is not review coverage and is excluded everywhere in this report, and so is a review whose author GitHub no longer reports."),
   bullet("Change size is additions plus deletions on merged pull requests, which is the unit of change a person actually reviews."),
   bullet("The revert rate is the share of authored commits whose subject opens with `Revert` or `revert` followed by a space, colon, bracket, or quote, which is the shape git's own revert subjects take; the hotfix rate is the share whose subject contains `hotfix` in any case. Both measure what the estate labels, not what actually broke."),
-  bullet("The continuous integration latest-attempt pass rate groups GitHub Actions pull-request runs by workflow and commit, takes the most recent run of each group, and reports the share of them that succeeded out of those that succeeded or failed. A run's conclusion is the conclusion of its latest attempt, because that is what the runs list reports; a run re-run without a new commit therefore counts here as whatever it ended up as. Runs that were cancelled, skipped, or still going are counted as inconclusive and excluded from the rate."),
-  bullet("Accounts covering half the commits is the smallest number of accounts whose combined commits exceed half the authored commits in the window of whatever the figure is about, which is one repository in section 7 and the whole estate in section 6.1."),
+  bullet("The continuous integration latest-attempt pass rate groups GitHub Actions pull-request runs by workflow and commit, takes the most recent run of each group, and reports the share of them that succeeded out of those that succeeded or failed. A run's conclusion is the conclusion of its latest attempt, because that is what the runs list reports; a run re-run without a new commit therefore counts here as whatever it ended up as. Succeeded means `success`; failed means `failure`, `timed_out`, or `startup_failure`. Every other conclusion is counted as inconclusive and left out of the rate entirely, which covers a cancelled or skipped run, one still going, and the rarer `neutral`, `action_required`, and `stale`."),
+  bullet("Accounts covering half the commits is the smallest number of accounts whose combined commits exceed half the authored commits in the window. Section 6.1 reports it for the estate; its per-repository form is not printed as a figure, and is what decides which repositories section 6.1 lists as concentrated and what the headline count of them is. Section 7's Authors column is a different figure: the number of accounts that authored any commit."),
   bullet("The median is the middle value, or the mean of the two middle values where there is an even number of them; p90 is the ninetieth percentile by nearest rank."),
   "",
   "## 2. Headline",
