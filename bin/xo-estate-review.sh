@@ -13,8 +13,8 @@
 # statement rather than disappearing. A missing section and an empty section read
 # identically to a human and only one of them is honest, so a section is never
 # dropped. Every report states its estate scope, its collection window, and the
-# exact command templates that produced its numbers, so any figure can be
-# re-derived and two reports can be compared line for line.
+# template of every read it made, so a figure can be traced to the read that
+# produced it and two reports can be compared line for line.
 #
 # READ-ONLY. It observes an estate and never writes to one: no push, no comment,
 # no label, no issue, no merge. The only filesystem writes are inside a private
@@ -53,6 +53,25 @@
 # Model contract: `xo-estate-review.v1`. --json prints it; --from-json renders a
 # report from it. The derived model carries every number the report prints, so the
 # renderer performs no arithmetic and a model and its report cannot disagree.
+#
+# WHICH FLAGS --from-json ACCEPTS, and why each one lands where it does. A stored
+# model is a finished collection, so a flag is honoured there only when the model
+# already holds everything it needs and the flag changes nothing but presentation:
+#   --max-listed   honoured; the model keeps every risk row and only the report is
+#                  bounded, so raising it shows rows already in hand
+#   --json         honoured; it re-emits the stored model itself
+# Every other flag is refused by name rather than silently ignored, because each
+# one decides what gets collected or how a figure is derived, and neither can be
+# redone from a model:
+#   --since --until --window --periods       choose the window and its periods, and
+#                                            the per-period tallies are already cut
+#   --max-repos --max-prs                    bound what collection read at all
+#   --include-forks --exclude-archived       choose which repositories were reviewed
+#   --stalled-days                           filtered the stalled list at derivation,
+#                                            so a lower threshold cannot restore rows
+#   --unmaintained-days                      likewise filtered the unmaintained list;
+#                                            re-deriving it here would leave the report
+#                                            disagreeing with the model it came from
 #
 # XO_ESTATE_REVIEW_NOW overrides the collection clock (ISO 8601 UTC), the same
 # injected-clock contract bin/xo-fleet-snapshot.sh uses, so a run is reproducible.
@@ -111,6 +130,10 @@ every estate; a surface with no data is stated as empty, never omitted.
   --from-json <file>       render the report from a stored model, making no network call
   -h, --help               this usage
 
+With --from-json only --max-listed and --json apply, because they change how a
+stored model is presented rather than what was collected. Any other flag is
+refused by name: it needs a fresh collection.
+
 It never writes to the estate it reviews.
 EOF
 }
@@ -129,6 +152,8 @@ INCLUDE_FORKS=0
 EXCLUDE_ARCHIVED=0
 OUTPUT=report
 FROM_JSON=
+FLAGS_GIVEN=()
+MAX_LISTED_GIVEN=0
 
 need_value() {
   [ "$2" -gt 1 ] || die "$1 needs a value" 2
@@ -151,6 +176,9 @@ validate_date() {  # <flag> <value>
 }
 
 while [ $# -gt 0 ]; do
+  # Every flag the caller actually typed, so --from-json can refuse the ones a
+  # stored model cannot satisfy by name instead of accepting and discarding them.
+  case "$1" in -?*) FLAGS_GIVEN+=("$1") ;; esac
   case "$1" in
     -h | --help)
       usage
@@ -232,6 +260,15 @@ command -v jq > /dev/null 2>&1 || die "jq is required"
 if [ -n "$FROM_JSON" ]; then
   [ -z "$SCOPE_ARG" ] || die "--from-json renders a stored model and takes no estate scope" 2
   [ -f "$FROM_JSON" ] || die "no such model file: $FROM_JSON"
+  if [ "${#FLAGS_GIVEN[@]}" -gt 0 ]; then
+    for given in "${FLAGS_GIVEN[@]}"; do
+      case $given in
+        --from-json | --json) ;;
+        --max-listed) MAX_LISTED_GIVEN=1 ;;
+        *) die "$given cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with $given" 2 ;;
+      esac
+    done
+  fi
 else
   [ -n "$SCOPE_ARG" ] || {
     usage >&2
@@ -1038,7 +1075,7 @@ def bullet($text): "- " + $text;
 # are always the complete ones.
 def listed($rows; $cap): if $cap == 0 or ($rows | length) <= $cap then $rows else $rows[0:$cap] end;
 def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then []
-  else ["", "\(($rows | length) - $cap) further \($what) are in this report's model but not listed above; raise `--max-listed` to see them."] end;
+  else ["", "\(($rows | length) - $cap) further \($what) are in this report's model but not listed above; raise `--max-listed` to see them, either on a fresh run or on this report's model with `--from-json`."] end;
 
 . as $m
 | $m.window as $w
@@ -1065,7 +1102,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "",
   "This report has a fixed shape.",
   "The same nine sections appear in the same order for every estate, and a section with no data says so rather than disappearing.",
-  "Two reports of the same estate are therefore comparable line for line, and any figure can be re-derived from the commands in section 9.",
+  "Two reports of the same estate are therefore comparable line for line, and section 9 names the read every figure came from.",
   "",
   "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories, at most \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests per repository.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
@@ -1093,8 +1130,8 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 + [$m.headline[] | row([.metric, (.value | num), .unit, (.trend | trendword)])]
 + [
   "",
-  (if ($m.headline | map(select(.value != null)) | length) == 0
-   then "Every headline measure is unmeasurable in this window, which means the estate exposed no pull request, commit, or workflow activity the collection could read."
+  (if $m.quality.commits.total == 0 and ($m.people | length) == 0 and $m.quality.ci.runs == 0
+   then "No commit, pull request, review, or workflow run fell inside this window, so every measure above is zero or unmeasurable rather than low."
    else "A rising cycle time means work is getting slower; a rising merged count means more is landing." end),
   "",
   "## 3. Who did what",
@@ -1332,8 +1369,9 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "",
   "### 9.1 Commands",
   "",
-  "These are the command templates that produced every figure above, with this run's window substituted.",
-  "Running them again against the same estate and window re-derives the same numbers.",
+  "These are the templates each read was built from, one per surface, with this run's window already substituted.",
+  "They are not a transcript to paste: `<owner>/<repo>` and `<default_branch>` stand for each repository in section 7, and the two GraphQL reads name their query rather than printing its body.",
+  "Filled in that way and run against the same estate and window, they return the data every figure above was derived from.",
   ""
   ]
 + [$m.commands[] | "- `" + . + "`"]
@@ -1384,10 +1422,16 @@ render() {  # reads the model on stdin
 if [ -n "$FROM_JSON" ]; then
   jq -e --arg c "$CONTRACT" '.contract == $c' "$FROM_JSON" > /dev/null 2>&1 ||
     die "$FROM_JSON is not a $CONTRACT model"
+  # A raised --max-listed is written into the model's own options, so the report
+  # and the model it was rendered from state the same bound.
+  stored_model() {
+    jq --argjson listed "$MAX_LISTED" --argjson given "$MAX_LISTED_GIVEN" \
+      'if $given == 1 then .options.max_listed = $listed else . end' "$FROM_JSON"
+  }
   if [ "$OUTPUT" = json ]; then
-    jq . "$FROM_JSON"
+    stored_model
   else
-    render < "$FROM_JSON"
+    stored_model | render
   fi
   exit 0
 fi

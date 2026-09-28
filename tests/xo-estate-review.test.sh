@@ -364,34 +364,26 @@ test_every_run_emits_the_same_nine_sections() {
 }
 
 test_an_estate_with_no_data_still_emits_every_section() {
-  local root model empty
+  local root bin model empty
   root=$(xo_test_tmproot xo-estate-review-empty) || fail "no fixture root"
-  model=$(collect_model "$root/fixtures" ok) || fail "collection failed"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # A real estate that did nothing in the window: one repository whose every read
+  # comes back empty. The model under test is the one the collector produces for
+  # that estate, not a populated model with its figures overwritten - a doctored
+  # model would pass these assertions whatever the renderer did with a real one.
+  jq -n '[{full_name: "acme/quiet", name: "quiet", owner: {login: "acme"}, default_branch: "main",
+           archived: false, fork: false, pushed_at: "2026-03-30T00:00:00Z", private: false}]' \
+    > "$root/fixtures/repos.json" || fail "could not write the silent estate"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
   empty=$root/empty.json
-  # Strip every signal out of a real model, which is what an estate with a
-  # window of total silence produces.
-  printf '%s' "$model" | jq '
-    .repositories |= map(.commits.total = 0 | .commits.commits = 0 | .commits.reverts = 0
-      | .commits.hotfixes = 0 | .commits.revert_rate_pct = null | .commits.hotfix_rate_pct = null
-      | .commits.per_period = [0,0,0]
-      | .pull_requests.merged = 0 | .pull_requests.opened = 0 | .pull_requests.open_now = 0
-      | .review.merged = 0 | .review.with_review_by_another_account = 0 | .review.coverage_pct = null
-      | .ci.runs = 0 | .ci.latest_attempt_pass_rate_pct = null | .concentration.commits = 0
-      | .concentration.authors = 0 | .concentration.top = null | .concentration.top_share_pct = null
-      | .concentration.accounts_covering_half = null)
-    | .people = [] | .headline |= map(.value = null)
-    | .velocity.commits = {per_period: [0,0,0], trend: "insufficient-history"}
-    | .velocity.opened = {per_period: [0,0,0], trend: "insufficient-history"}
-    | .velocity.merged = {per_period: [0,0,0], trend: "insufficient-history"}
-    | .velocity.cycle_hours = {measured: 0, unmeasurable: 0, median: null, p90: null, per_period_median: [null,null,null], trend: "insufficient-history"}
-    | .velocity.review_latency_hours = {measured: 0, unmeasurable: 0, median: null, p90: null, per_period_median: [null,null,null], trend: "insufficient-history"}
-    | .quality.commits.commits = 0 | .quality.commits.total = 0
-    | .quality.size = {measured: 0, median_lines: null, p90_lines: null, distribution: {under_10: 0, from_10_to_49: 0, from_50_to_249: 0, from_250_to_999: 0, at_least_1000: 0}}
-    | .quality.review = {merged: 0, with_review_by_another_account: 0, coverage_pct: null, review_threads_median: null, review_threads_total: 0}
-    | .quality.ci = {runs: 0, passed: 0, failed: 0, inconclusive: 0, needed_more_than_one_attempt: 0, latest_attempt_pass_rate_pct: null}
-    | .risk.concentration = {authors: 0, commits: 0, top: null, top_share_pct: null, accounts_covering_half: null, breakdown: []}
-    | .risk.concentrated_repositories = [] | .risk.unmaintained = []
-    | .risk.stalled_pull_requests = [] | .risk.open_pull_requests = 0 | .risk.open_issues = 0' > "$empty"
+  printf '%s' "$model" > "$empty"
+  assert_equals "0" "$(jq -r '.quality.commits.total' "$empty")" "the estate really did read as empty"
+  assert_equals "0" "$(jq -r '.people | length' "$empty")" "no account appears in an empty window"
+  assert_equals "0" "$(jq -r '.quality.ci.runs' "$empty")" "no workflow run appears in an empty window"
+
   "$REVIEW" --from-json "$empty" > "$root/empty.md" || fail "rendering an empty estate failed"
   assert_fixed_shape "$root/empty.md" "an estate with nothing in it"
   # Every empty surface has to SAY it is empty. A section that vanished would be
@@ -405,7 +397,8 @@ test_an_estate_with_no_data_still_emits_every_section() {
   assert_grep "so concentration is unmeasurable" "$root/empty.md" "the concentration section states its emptiness"
   assert_grep "No reviewed repository is archived or has gone" "$root/empty.md" "the unmaintained section states its emptiness"
   assert_grep "No open pull request has been idle" "$root/empty.md" "the stalled section states its emptiness"
-  assert_grep "Every headline measure is unmeasurable in this window" "$root/empty.md" "the headline states that nothing was measurable"
+  assert_grep "No commit, pull request, review, or workflow run fell inside this window" "$root/empty.md" "the headline says the window was silent rather than reading as low activity"
+  assert_no_grep "A rising cycle time means work is getting slower" "$root/empty.md" "an empty estate is not given the reading note for a report with figures in it"
   # And the limits still get stated, because that is what the reader acts on.
   assert_grep "They do not measure anyone's productivity" "$root/empty.md" "the limits section survives an empty estate"
   pass "an estate with no commits, pull requests, reviews, or checks still emits every section, each stating that it is empty"
@@ -851,26 +844,75 @@ test_a_person_table_is_ordered_by_account_not_by_volume() {
 }
 
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show() {
-  local root model wide
+  local root bin model
   root=$(xo_test_tmproot xo-estate-review-listed) || fail "no fixture root"
-  model=$(collect_model "$root/fixtures" ok) || fail "collection failed"
-  wide=$root/wide.json
-  # Twenty stalled pull requests, which is what a real estate with a long-open
-  # queue looks like. A list that quietly showed the first fifteen would read
-  # exactly like a list of fifteen, so the count and the remainder both have to
-  # be stated.
-  printf '%s' "$model" | jq '.risk.stalled_pull_requests =
-    [range(0; 20) | {repo: "acme/widgets", number: (100 + .), title: "stalled \(.)",
-                     author: "brooke", draft: false, age_days: (200 - .), idle_days: (100 - .)}]' > "$wide"
-  "$REVIEW" --from-json "$wide" > "$root/report.md" || fail "rendering failed"
-  assert_fixed_shape "$root/report.md" "an estate with a long stalled queue"
-  assert_grep "Open pull requests idle for 14 days or more: 20, longest idle first." "$root/report.md"     "the complete stalled count is stated even though the rows are bounded"
-  assert_equals "15" "$(grep -c '^| acme/widgets | 1' "$root/report.md")" "the stalled list is bounded to fifteen rows"
-  assert_grep "5 further pull requests are in this report's model but not listed above" "$root/report.md"     "the rows not shown are disclosed with their count"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # Twenty open pull requests nobody has touched since before the window, which
+  # is what a real estate with a long-open queue looks like. A list that quietly
+  # showed the first fifteen would read exactly like a list of fifteen, so the
+  # count and the remainder both have to be stated.
+  jq '.data.repository.pullRequests.nodes += [range(0; 20) | {
+        number: (100 + .), state: "OPEN", isDraft: false,
+        createdAt: "2025-11-01T00:00:00Z", updatedAt: "2025-12-01T00:00:00Z",
+        mergedAt: null, closedAt: null, additions: 1, deletions: 1, changedFiles: 1,
+        headRefName: "f/\(100 + .)", title: "stalled \(.)",
+        author: {login: "brooke", __typename: "User"},
+        commits: {nodes: [{commit: {committedDate: "2025-11-01T00:00:00Z"}}]},
+        reviews: {totalCount: 0, nodes: []}, reviewThreads: {totalCount: 0}}]' \
+    "$root/fixtures/prs-widgets.json" > "$root/fixtures/prs.tmp" ||
+    fail "could not extend the pull-request fixture"
+  mv "$root/fixtures/prs.tmp" "$root/fixtures/prs-widgets.json" || fail "could not install the queue fixture"
+  jq '.data.repository.pullRequests.nodes |= map(select(.state == "OPEN"))' \
+    "$root/fixtures/prs-widgets.json" > "$root/fixtures/prs-open-widgets.json" ||
+    fail "could not rebuild the open-pull-request fixture"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
 
-  "$REVIEW" --from-json "$wide" --json > "$root/model.json" || fail "re-emitting the model failed"
-  assert_equals "20" "$(jq -r '.risk.stalled_pull_requests | length' "$root/model.json")"     "the model keeps every row; only the report is bounded"
-  pass "a bounded risk list states its complete count and how many rows it did not show, and the model keeps them all"
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "21" "$(jq -r '.risk.stalled_pull_requests | length' "$root/model.json")"     "the model keeps every stalled row"
+
+  stalled_rows() { sed -n '/^### 6.3 Stalled work/,/^## 7\./p' "$1" | grep -c '^| acme/widgets | '; }
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "an estate with a long stalled queue"
+  assert_grep "Open pull requests idle for 14 days or more: 21, longest idle first." "$root/report.md"     "the complete stalled count is stated even though the rows are bounded"
+  assert_equals "15" "$(stalled_rows "$root/report.md")" "the stalled list is bounded to fifteen rows"
+  assert_grep "6 further pull requests are in this report's model but not listed above" "$root/report.md"     "the rows not shown are disclosed with their count"
+
+  # The report tells the reader to raise --max-listed to see them. Following that
+  # instruction against the model in hand has to actually show them.
+  "$REVIEW" --from-json "$root/model.json" --max-listed 0 > "$root/all.md" ||
+    fail "re-rendering with a raised --max-listed failed"
+  assert_equals "21" "$(stalled_rows "$root/all.md")" "raising --max-listed shows every row the model kept"
+  assert_no_grep "further pull requests are in this report's model" "$root/all.md"     "nothing is left undisclosed once every row is listed"
+  pass "a bounded risk list states its complete count and how many rows it did not show, and raising --max-listed on the stored model shows them"
+}
+
+test_from_json_honours_a_presentation_flag_and_refuses_the_rest() {
+  local root model out code flag
+  root=$(xo_test_tmproot xo-estate-review-fromjson) || fail "no fixture root"
+  model=$(collect_model "$root/fixtures" ok) || fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+
+  # A stored model is a finished collection. A flag that only changes how it is
+  # presented is honoured and says so in the model it re-emits.
+  "$REVIEW" --from-json "$root/model.json" --max-listed 3 --json > "$root/re.json" ||
+    fail "--max-listed alongside --from-json was refused"
+  assert_equals "3" "$(jq -r '.options.max_listed' "$root/re.json")"     "the honoured bound is written into the model the report is rendered from"
+  assert_equals "15" "$(jq -r '.options.max_listed' "$root/model.json")"     "the stored model on disk is left alone"
+
+  # Every other flag would need data the model cannot supply, so it is refused by
+  # name rather than accepted and dropped.
+  for flag in "--window 30" "--since 2026-02-01" "--periods 4" "--stalled-days 2" \
+    "--unmaintained-days 10" "--max-repos 1" "--max-prs 10" "--include-forks" "--exclude-archived"; do
+    # shellcheck disable=SC2086  # each entry is a flag and its value.
+    out=$("$REVIEW" --from-json "$root/model.json" $flag 2>&1) && code=0 || code=$?
+    assert_equals "2" "$code" "'$flag' with --from-json exits 2"
+    assert_contains "$out" "${flag%% *} cannot be applied to a stored model" "'$flag' is refused by name"
+    assert_contains "$out" "needs a fresh collection" "'$flag' says what to do instead"
+  done
+  pass "--from-json honours a flag the stored model can satisfy and refuses every other one by name"
 }
 
 test_the_window_and_periods_bound_what_is_counted() {
@@ -923,6 +965,7 @@ test_repository_selection_excludes_forks_and_discloses_a_cap
 test_a_truncated_repository_listing_is_named_as_a_cap
 test_a_person_table_is_ordered_by_account_not_by_volume
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show
+test_from_json_honours_a_presentation_flag_and_refuses_the_rest
 test_the_window_and_periods_bound_what_is_counted
 test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk
 test_a_review_on_an_open_pull_request_is_counted_once

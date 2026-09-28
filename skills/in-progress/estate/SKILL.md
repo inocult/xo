@@ -39,13 +39,14 @@ bin/xo-estate-review.sh <estate> [--window <days>] [--periods <n>]
 ```
 
 Add `--json` when you need the numbers for something other than reading, and `--from-json` to re-render a stored model without touching the network.
+`--from-json` takes only `--max-listed` and `--json` alongside it; every other flag needs a fresh collection and the command says so by name rather than ignoring it.
 
 A large organization is the one case worth bounding before you start.
 The command already caps repositories and pull requests; keep those caps rather than removing them, because a capped read is disclosed in section 9 and an unbounded one can run for a very long time.
 On an estate with more than about thirty repositories, tell the captain roughly how long it will take before you start rather than after.
 
 Do not compute any figure yourself, do not write a second collector, and do not repair a number you disagree with.
-If a figure looks wrong, the report names the exact commands that produced it in section 9; check those.
+If a figure looks wrong, section 9 names the read it came from and what that read could not see; check those.
 
 ## 3. Report it
 
