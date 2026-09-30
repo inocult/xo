@@ -1,0 +1,29 @@
+Figures cross-checked against GitHub independently of the reviewer
+=================================================================
+
+The live single-repository review of jqlang/jq over 2025-05-01 to 2025-07-01
+reported, in section 7:
+
+  | jqlang/jq | 39 | 33 | ... |     commits = 39, merged pull requests = 33
+
+Asked of GitHub directly, by a different route than the reviewer uses:
+
+$ gh api -X GET search/issues -f q="repo:jqlang/jq is:pr is:merged merged:2025-05-01..2025-06-30" --jq .total_count
+  33
+
+$ gh api --paginate "repos/jqlang/jq/commits?sha=master&since=2025-05-01T00:00:00Z&until=2025-07-01T00:00:00Z" --jq ".[].sha" | wc -l
+  39
+
+$ ... --jq ".[]|select(.parents|length>1)|.sha" | wc -l     # merge commits, excluded from authorship
+  0
+
+The report's "not measurable" continuous integration rate on both live estates
+was also checked rather than assumed:
+
+  $ gh api "repos/jqlang/jq/actions/runs?created=2025-05-01..2025-07-01" --jq .total_count
+    0          (no workflow run of any event survives in that window)
+  $ gh api "repos/bincode-org/bincode/actions/runs?created=2026-07-02..2026-09-30" --jq .total_count
+    0
+
+so "No GitHub Actions pull-request run in this window" is what GitHub actually
+reports, not a collection gap.

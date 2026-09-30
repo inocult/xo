@@ -1,0 +1,68 @@
+Every rendered column states its clock, by the rule section 1 states
+====================================================================
+
+Section 1 of every report says: a column carrying a figure measured at
+collection ends its heading `at collection`, a column carrying a window figure
+does not claim that clock, and a column that only names something carries
+neither. Applied below to the header row of every table before section 9 across
+five live reports (jqlang, jqlang/jq, bincode-org, jqlang/bazel_rules_jq, and the
+one-failed-read run).
+
+  WINDOW      2025-05-01
+  WINDOW      2025-05-21
+  WINDOW      2025-06-10
+  WINDOW      2026-07-02
+  WINDOW      2026-07-17
+  WINDOW      2026-08-01
+  WINDOW      2026-08-16
+  WINDOW      2026-08-31
+  WINDOW      2026-09-15
+  NAMES-ONLY  Account
+  COLLECTION  Age days, at collection
+  COLLECTION  Archived, at collection
+  NAMES-ONLY  Author
+  WINDOW      Authored commits
+  WINDOW      Authors
+  COLLECTION  Automation, at collection
+  WINDOW      Commits
+  WINDOW      Commits in window
+  COLLECTION  Days since last push, at collection
+  WINDOW      Direction
+  WINDOW      Direction over the window
+  COLLECTION  Draft, at collection
+  COLLECTION  Gaps, at collection
+  COLLECTION  Idle days, at collection
+  WINDOW      Latest-attempt CI
+  NAMES-ONLY  Lines changed
+  NAMES-ONLY  Measure
+  WINDOW      Median cycle
+  WINDOW      Merged
+  WINDOW      Merged pull requests
+  NAMES-ONLY  Number
+  COLLECTION  Open now, at collection
+  NAMES-ONLY  Period beginning
+  WINDOW      Pull requests merged
+  WINDOW      Pull requests opened
+  WINDOW      Pull requests reviewed
+  WINDOW      Repositories touched
+  NAMES-ONLY  Repository
+  WINDOW      Reviewed
+  WINDOW      Reviews submitted
+  WINDOW      Share
+  NAMES-ONLY  Title
+  NAMES-ONLY  Unit
+  WINDOW      Value
+
+No window column claims the collection clock:
+  matches: 0
+
+The two columns this commit relabelled, rendered by both revisions from the one
+live model collected from jqlang/jq:
+
+  BEFORE - parent commit 33314bd
+    | Repository | Number | Idle days, at collection | Age days, at collection | Author | Draft | Title |
+    | Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps |
+
+  AFTER - target commit ce41e89
+    | Repository | Number | Idle days, at collection | Age days, at collection | Author | Draft, at collection | Title |
+    | Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps, at collection |

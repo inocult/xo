@@ -1,0 +1,59 @@
+The read-only boundary, observed on live estate reviews
+=======================================================
+
+gh-axi was replaced on PATH by a transparent shim that logs every invocation and
+then execs the real gh-axi, so the log below is what the live reviews driven in
+this step (the jqlang organization, jqlang/jq, jqlang/bazel_rules_jq,
+bincode-org, and the two refusal cases) actually asked GitHub for.
+
+  total gh-axi invocations: 612
+  invocations naming a verb other than the default GET:
+         40 api POST 
+
+  every distinct endpoint the estate was asked for (paging params stripped):
+    api /orgs/bincode-org/repos?type=all&sort=full_name
+    api /orgs/jqlang/repos?type=all&sort=full_name
+    api POST graphql
+    api /repos/bincode-org/bincode/actions/runs?event=pull_request&created=2026-07-02..2026-09-30
+    api /repos/bincode-org/bincode/commits?sha=trunk&since=2026-07-02T00:00:00Z&until=2026-09-30T00:00:00Z
+    api /repos/bincode-org/bincode_contrib/actions/runs?event=pull_request&created=2026-07-02..2026-09-30
+    api /repos/bincode-org/bincode_contrib/commits?sha=trunk&since=2026-07-02T00:00:00Z&until=2026-09-30T00:00:00Z
+    api /repos/bincode-org/bincode_contrib/issues?state=open
+    api /repos/bincode-org/bincode-core/actions/runs?event=pull_request&created=2026-07-02..2026-09-30
+    api /repos/bincode-org/bincode-core/commits?sha=master&since=2026-07-02T00:00:00Z&until=2026-09-30T00:00:00Z
+    api /repos/bincode-org/bincode-core/issues?state=open
+    api /repos/bincode-org/bincode/issues?state=open
+    api /repos/bincode-org/unty/actions/runs?event=pull_request&created=2026-07-02..2026-09-30
+    api /repos/bincode-org/unty/commits?sha=trunk&since=2026-07-02T00:00:00Z&until=2026-09-30T00:00:00Z
+    api /repos/bincode-org/unty/issues?state=open
+    api /repos/bincode-org/virtue/actions/runs?event=pull_request&created=2026-07-02..2026-09-30
+    api /repos/bincode-org/virtue/commits?sha=trunk&since=2026-07-02T00:00:00Z&until=2026-09-30T00:00:00Z
+    api /repos/bincode-org/virtue/issues?state=open
+    api /repos/jqlang/awesome-jq/actions/runs?event=pull_request&created=2025-05-01..2025-07-01
+    api /repos/jqlang/awesome-jq/commits?sha=master&since=2025-05-01T00:00:00Z&until=2025-07-01T00:00:00Z
+    api /repos/jqlang/awesome-jq/issues?state=open
+    api /repos/jqlang/bazel_rules_jq
+    api /repos/jqlang/bazel_rules_jq/actions/runs?event=pull_request&created=2025-05-01..2025-07-01
+    api /repos/jqlang/bazel_rules_jq/commits?sha=main&since=2025-05-01T00:00:00Z&until=2025-07-01T00:00:00Z
+    api /repos/jqlang/bazel_rules_jq/issues?state=open
+    api /repos/jqlang/.github/actions/runs?event=pull_request&created=2025-05-01..2025-07-01
+    api /repos/jqlang/.github/commits?sha=main&since=2025-05-01T00:00:00Z&until=2025-07-01T00:00:00Z
+    api /repos/jqlang/.github/issues?state=open
+    api /repos/jqlang/jq
+    api /repos/jqlang/jq/actions/runs?event=pull_request&created=2025-05-01..2025-07-01
+    api /repos/jqlang/jq/commits?sha=master&since=2025-05-01T00:00:00Z&until=2025-07-01T00:00:00Z
+    api /repos/jqlang/jq/issues?state=open
+    api /repos/jqlang/playground/actions/runs?event=pull_request&created=2025-05-01..2025-07-01
+    api /repos/jqlang/playground/commits?sha=main&since=2025-05-01T00:00:00Z&until=2025-07-01T00:00:00Z
+    api /repos/jqlang/playground/issues?state=open
+    api /users/bincode-org
+    api /users/jqlang
+    api /users/torvalds
+    api /users/xo-estate-no-such-org-9f3a2
+
+  The only non-GET is `api POST graphql`, which carries the pull-request read.
+  The GraphQL request bodies were captured on a separate live run and inspected:
+    bodies captured: 20
+    bodies containing the token 'mutation': 0
+    first line of each distinct body, showing the operation type:
+      "query": "query($owner:String!,$name:String!,$cursor:String,$page:Int!){\n

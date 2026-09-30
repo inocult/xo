@@ -1,0 +1,90 @@
+A failed read is named on the figures it fed and on no others
+=============================================================
+
+Public GitHub exposes no per-signal read failure to this token, so the single
+failing read was injected at the gh-axi boundary (HTTP 410, the status GitHub
+returns when issues are disabled) while every other read went to real GitHub.
+Everything else in these runs is live: real repositories, real commits, real
+pull requests, real reviews.
+
+1. Live run, jqlang/jq, issues read failing
+   bin/xo-estate-review.sh jqlang/jq --since 2025-05-01 --until 2025-07-01 --periods 3 --max-prs 0
+
+   Sections carrying a read-failure notice:
+     6.3: - Open issues: 0 (1 read behind this figure failed; section 9.2 names it)
+
+   Section 6.3, in full - the open pull request count above it came from a read
+   that succeeded and carries no warning:
+     ### 6.3 Stalled work, as at collection
+     
+     Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at 2026-09-30T15:47:56Z.
+     
+     - Open pull requests: 102
+     - Open issues: 0 (1 read behind this figure failed; section 9.2 names it)
+     
+     Open pull requests idle for 14 days or more: 91, longest idle first.
+   Section 7 names the gap, section 9.2 quotes the diagnostic:
+     | Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps, at collection |
+     | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+     | jqlang/jq | 39 | 33 | 102 | 27.2 h | 90.9% | not measurable | 13 | 3 | no | issues |
+     
+     ### 9.2 What was read
+     
+     | Repository | Commits | Pull requests | Open pull requests | CI runs | Issues |
+     | --- | --- | --- | --- | --- | --- |
+     | jqlang/jq | read | read | read | read | unread |
+     
+     Named gaps.
+     A repository the tooling could not read is named here and excluded from the figures it could not supply; it is never silently dropped from an aggregate.
+     
+     | Repository | Signal | Reason |
+     | --- | --- | --- |
+     | jqlang/jq | issues | gh: HTTP 410 Issues are disabled for this repo  |
+     
+     Reads that hit a cap, so the figures they feed describe the collected subset rather than the whole window:
+
+2. The same defect, reproduced on the parent commit and fixed on this one
+
+   The section 2 headline sentence only renders when the estate is silent, so the
+   misattribution shows on a silent estate. Model collected live from
+   jqlang/bazel_rules_jq with the issues read failing, then rendered by both
+   revisions of the renderer from that one model:
+
+   unread signals in the live model:
+     [{"repo":"jqlang/bazel_rules_jq","signal":"issues","reason":"gh: HTTP 410 Issues are disabled for this repo "}]
+
+   BEFORE - parent commit 33314bd:
+     2: No commit, pull request, review, or workflow run in what could be read, so every measure above is zero or unmeasurable rather than low (1 read behind this figure failed; section 9.2 names it).
+     6.3: - Open issues: 0 (1 read behind this figure failed; section 9.2 names it)
+
+   AFTER - target commit ce41e89:
+     6.3: - Open issues: 0 (1 read behind this figure failed; section 9.2 names it)
+
+   The headline sentence itself:
+     11c11
+     < No commit, pull request, review, or workflow run in what could be read, so every measure above is zero or unmeasurable rather than low (1 read behind this figure failed; section 9.2 names it).
+     ---
+     > No commit, pull request, review, or workflow run in this window, so every measure above is zero or unmeasurable rather than low.
+
+   No headline figure is issue-derived, so before the fix the headline both
+   hedged a sound claim and asserted that a read behind it had failed. After the
+   fix it claims the window, and only the open-issue count carries the notice.
+
+3. The other direction, driven entirely live with no injection
+
+   bin/xo-estate-review.sh jqlang/bazel_rules_jq --since 2025-05-01 --until 2025-07-01 --periods 3
+   A genuinely silent window where every read succeeded:
+
+   read-failure notices in the report: 0
+   every empty surface claims the window, not what could be read:
+     45:No commit, pull request, review, or workflow run in this window, so every measure above is zero or unmeasurable rather than low.
+     54:No account committed, opened a pull request, or reviewed one in this window.
+     60:No account submitted a review of another account's pull request in this window.
+     77:No commit or merge landed in this window.
+     81:No merged pull request with a readable first commit in this window, so cycle time is unmeasurable here.
+     86:No merged pull request with a review from another account in this window, so review latency is unmeasurable here.
+     96:No authored commit landed on a default branch in this window, so there is no revert or hotfix rate to report.
+     100:No pull request merged in this window, so there is no change-size distribution to report.
+     104:No pull request merged in this window, so there is no review depth to report.
+     108:No GitHub Actions pull-request run in this window, so there is no latest-attempt pass rate to report.
+     115:No authored commit landed in this window, so concentration is unmeasurable.

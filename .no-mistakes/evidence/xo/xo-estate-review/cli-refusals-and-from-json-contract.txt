@@ -1,0 +1,57 @@
+Scope refusals and the --from-json contract, driven live
+========================================================
+
+$ bin/xo-estate-review.sh torvalds
+  xo-estate-review.sh: GitHub reports owner 'torvalds' as type 'User', not an organization; an estate is an organization or one of its repositories as owner/repo
+  exit 2
+
+$ bin/xo-estate-review.sh xo-estate-no-such-org-9f3a2
+  xo-estate-review.sh: could not read the owner 'xo-estate-no-such-org-9f3a2': error: "gh: Not Found (HTTP 404)" code: NOT_FOUND 
+  exit 1
+
+Rendering a stored model, collected live from jqlang/jq:
+
+$ bin/xo-estate-review.sh --from-json live-model.json > a.md
+$ bin/xo-estate-review.sh --from-json live-model.json > b.md
+$ cmp a.md b.md
+  (identical; two reports of the same estate compare line for line)
+
+The one bound the model can satisfy is honoured:
+
+$ bin/xo-estate-review.sh --from-json live-model.json           | grep "further pull requests"
+  76 further pull requests are in this report's model but not listed above; raise `--max-listed` to see them, either on a fresh run or on this report's model with `--from-json`.
+$ bin/xo-estate-review.sh --from-json live-model.json --max-listed 0 | grep -c "further pull requests"
+  0 (every kept row is now listed)
+
+Every flag that would need a fresh collection is refused by name, exit 2:
+
+$ bin/xo-estate-review.sh --from-json live-model.json --since 2025-01-01
+  xo-estate-review.sh: --since cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --since
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --window 30
+  xo-estate-review.sh: --window cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --window
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --max-prs 10
+  xo-estate-review.sh: --max-prs cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --max-prs
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --include-forks
+  xo-estate-review.sh: --include-forks cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --include-forks
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --stalled-days 3
+  xo-estate-review.sh: --stalled-days cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --stalled-days
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --periods 2
+  xo-estate-review.sh: --periods cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --periods
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --exclude-archived
+  xo-estate-review.sh: --exclude-archived cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --exclude-archived
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --max-repos 3
+  xo-estate-review.sh: --max-repos cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --max-repos
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --until 2026-01-01
+  xo-estate-review.sh: --until cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --until
+  exit 2
+$ bin/xo-estate-review.sh --from-json live-model.json --unmaintained-days 9
+  xo-estate-review.sh: --unmaintained-days cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with --unmaintained-days
+  exit 2

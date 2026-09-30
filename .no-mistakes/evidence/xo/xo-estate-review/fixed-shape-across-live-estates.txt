@@ -1,0 +1,50 @@
+Fixed report shape across estates and windows (live GitHub, gh-axi 0.1.35)
+=========================================================================
+
+Three live runs, three different estates, two different windows:
+  A  bin/xo-estate-review.sh jqlang            --since 2025-05-01 --until 2025-07-01 --periods 3 --max-prs 0
+  B  bin/xo-estate-review.sh jqlang/jq         --since 2025-05-01 --until 2025-07-01 --periods 3 --max-prs 0
+  C  bin/xo-estate-review.sh bincode-org       (defaults: 90-day window, 6 periods)
+  D  bin/xo-estate-review.sh jqlang/bazel_rules_jq --since 2025-05-01 --until 2025-07-01 --periods 3   (silent window)
+
+Heading tree of A (the shape every report must have):
+
+# Estate review: jqlang
+## 1. Scope and method
+## 2. Headline
+## 3. Who did what
+### 3.1 Contribution by person
+### 3.2 Review participation
+## 4. Velocity
+### 4.1 Throughput
+### 4.2 Cycle time, first commit to merge
+### 4.3 Review latency, opened to first review by another account
+## 5. Quality
+### 5.1 Reverts and hotfixes
+### 5.2 Change size
+### 5.3 Review depth
+### 5.4 Continuous integration latest-attempt pass rate
+## 6. Risk and concentration
+### 6.1 Knowledge concentration
+### 6.2 Unmaintained repositories, as at collection
+### 6.3 Stalled work, as at collection
+## 7. Per-repository detail
+## 8. What these numbers do not measure
+## 9. Collection log
+### 9.1 Commands
+### 9.2 What was read
+
+diff of heading trees, A vs B (title line excluded):
+  (no differences)
+
+diff of heading trees, A vs C:
+  (no differences)
+
+diff of heading trees, A vs D:
+  (no differences)
+
+Titles, so the four are not the same run:
+# Estate review: jqlang
+# Estate review: jqlang/jq
+# Estate review: bincode-org
+# Estate review: jqlang/bazel_rules_jq
