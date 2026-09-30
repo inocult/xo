@@ -101,7 +101,7 @@
 #     CI latest-attempt rate, concentrated repos
 #   Person counts: commits, opened, merged, reviews    window      section 1, 3.1
 #     submitted, pull requests reviewed, repositories
-#   Automation flag                                    collection  section 1
+#   Automation flag                                    collection  sections 1, 3.1, 3.2
 #   Per-period commit / opened / merged tallies        window      section 4.1
 #   Cycle time and review latency, all statistics      window      sections 4.2, 4.3
 #   Reverts, hotfixes, and their denominator           window      section 5.1
@@ -111,10 +111,11 @@
 #   Concentration, accounts covering half              window      sections 1, 6.1
 #   Days since last push, archived flag                collection  sections 1, 6.2, 7
 #   Open pull request and open issue counts            collection  sections 1, 6.3, 7
-#   Stalled set, its idle days and age days            collection  sections 1, 6.3
+#   Stalled set, its idle and age days, draft flag     collection  sections 1, 6.3
 #   Oldest open issue age (model only)                 collection  this table
-#   Repository set, default branch, read statuses,     collection  section 9
-#     caps, and the recorded commands
+#   Read statuses and the gaps they leave              collection  sections 7, 9
+#   Repository set, default branch, caps, and the      collection  section 9
+#     recorded commands
 #
 # The stalled list and the unmaintained list are collection-time throughout: the
 # set is what GitHub reports open or unpushed when the read runs, so its ages are
