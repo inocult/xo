@@ -1098,8 +1098,12 @@ derive() {  # reads $RECORDS, prints the model
 # still gets a review section, and it says so in a sentence. A section that
 # disappeared when it had no data would be indistinguishable from a section that
 # was never part of the report, and only one of those is honest.
-RENDER_JQ=$(
-  cat <<'JQ'
+# The program is read from a here-document rather than through $( ... ) because
+# it interpolates jq strings: stock macOS Bash 3.2 scans a command substitution
+# for its closing parenthesis without knowing the here-document is data, so the
+# closing parenthesis of a \( ... ) that contains a quoted string ends the
+# substitution early and the rest of the program is parsed as shell.
+IFS= read -r -d '' RENDER_JQ <<'JQ' || :
 def num: if . == null then "not measurable" else tostring end;
 def pc: if . == null then "not measurable" else ((tostring) + "%") end;
 def hrs: if . == null then "not measurable" else ((tostring) + " h") end;
@@ -1495,7 +1499,6 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
    end)
 | join("\n")
 JQ
-)
 
 render() {  # reads the model on stdin
   jq -r "$RENDER_JQ"
