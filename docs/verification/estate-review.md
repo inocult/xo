@@ -78,3 +78,25 @@ $ XO_ESTATE_REVIEW_LIVE=1 bash tests/xo-estate-review-live-e2e.test.sh
 ```
 
 `XO_ESTATE_REVIEW_LIVE_ESTATE` and `XO_ESTATE_REVIEW_LIVE_REPO` point the guard at a different public estate when `jqlang` stops being a useful subject.
+
+## Stock Bash 3.2 parse constraint
+
+The renderer's jq program is read with `IFS= read -r -d '' RENDER_JQ <<'JQ' || :` rather than assigned from `$(cat <<'JQ' ... )`, and that is a correctness constraint rather than a style choice.
+Stock macOS Bash 3.2 scans a command substitution for its closing parenthesis without treating a here-document body inside it as data.
+The renderer interpolates jq strings, so the parenthesis that closes a `\( ... )` containing a quoted string reads to that scanner as the end of the substitution, and the rest of the program is then parsed as shell.
+The observed failure was `bin/xo-estate-review.sh: line 1149: syntax error near unexpected token '('` under `/bin/bash -n`, reported against GNU bash 3.2.57(1)-release (arm64-apple-darwin25).
+
+`DERIVE_JQ` remains an ordinary `$( ... )` assignment because it carries no `\( ... )` interpolation and stays parenthesis-balanced under the same scanner; a future interpolation added there would need the same treatment.
+
+The guard is the stock-Bash parse sweep in `.github/workflows/ci.yml`, which runs `/bin/bash -n` over every file `bin/xo-lint.sh --list-files` reports.
+That sweep is what caught this, and it is the regression cover: no local test can stand in for it, because the defect is a parse-time failure on a shell version this repository's Linux hosts do not have, and asserting it from source text would violate the rule that tests exercise behavior rather than implementation bytes.
+
+Changing how the program is delivered must not change what it prints.
+The check is that one stored model rendered through both forms is byte-identical:
+
+```console
+$ xo-estate-review.sh jqlang --since 2025-05-01 --until 2025-07-01 --json > model.json
+$ xo-estate-review.sh --from-json model.json > report.md
+$ cmp before.md report.md && wc -lc report.md
+     287   18375 report.md
+```
