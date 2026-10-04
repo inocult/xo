@@ -34,44 +34,35 @@
 # An organization review is a per-repository review plus an aggregate; a single
 # repository review is the same report with one repository in it.
 #
-# Flags:
+# Flags. There are five, and choosing the period is the only thing they do:
 #   --since <YYYY-MM-DD>     window start (default: --window days before --until)
 #   --until <YYYY-MM-DD>     window end, exclusive of later data (default: today, UTC)
 #   --window <days>          window length when --since is absent (default 90)
-#   --periods <n>            equal periods the window is split into for trend (default 6)
-#   --stalled-days <n>       an open pull request idle this long is stalled (default 14)
-#   --unmaintained-days <n>  a repository unpushed this long is unmaintained (default 180)
-#   --max-repos <n>          cap repositories reviewed, 0 for no cap (default 100)
-#   --max-prs <n>            cap pull requests read per repository, 0 for no cap (default 300)
-#   --max-listed <n>         cap rows in the risk lists, 0 for no cap (default 15)
-#   --include-forks          include forked repositories (default: excluded)
-#   --exclude-archived       drop archived repositories (default: included and labeled)
 #   --json                   print the derived model instead of the report
 #   --from-json <file>       render the report from a stored model, making no network call
 #   -h, --help               usage
+#
+# WHY THERE ARE NOT MORE. A report whose whole value is that two of them are
+# comparable must not offer the caller ways to make two of them differ for
+# reasons the reader cannot see. So every other setting - the trend periods, the
+# stalled and unmaintained thresholds, the repository, pull-request and risk-row
+# caps, and the fork and archived selection - is a constant, declared once below
+# and disclosed in every report: the period count in the header bullet, the rest
+# in section 1 beside it. A disclosed constant is honest;
+# a hidden one is not, and a flag is a third thing: an invisible difference
+# between two reports that look alike. Changing one of these values is a change
+# to this script, reviewed once, applying to every report after it.
 #
 # Model contract: `xo-estate-review.v1`. --json prints it; --from-json renders a
 # report from it. The derived model carries every number the report prints, so the
 # renderer performs no arithmetic and a model and its report cannot disagree.
 #
-# WHICH FLAGS --from-json ACCEPTS, and why each one lands where it does. A stored
-# model is a finished collection, so a flag is honoured there only when the model
-# already holds everything it needs and the flag changes nothing but presentation:
-#   --max-listed   honoured; the model keeps every risk row and only the report is
-#                  bounded, so raising it shows rows already in hand
-#   --json         honoured; it re-emits the stored model itself
-# Every other flag is refused by name rather than silently ignored, because each
-# one decides what gets collected or how a figure is derived, and neither can be
-# redone from a model:
-#   --since --until --window --periods       choose the window and its periods, and
-#                                            the per-period tallies are already cut
-#   --max-repos --max-prs                    bound what collection read at all
-#   --include-forks --exclude-archived       choose which repositories were reviewed
-#   --stalled-days                           filtered the stalled list at derivation,
-#                                            so a lower threshold cannot restore rows
-#   --unmaintained-days                      likewise filtered the unmaintained list;
-#                                            re-deriving it here would leave the report
-#                                            disagreeing with the model it came from
+# WHICH FLAGS --from-json ACCEPTS. A stored model is a finished collection, so
+# the only flag honoured beside it is --json, which re-emits the model itself.
+# --since, --until and --window are refused by name rather than silently ignored,
+# because they choose the window and the per-period tallies are already cut; a
+# different window needs a fresh collection, and re-deriving one here would leave
+# the report disagreeing with the model it was rendered from.
 #
 # XO_ESTATE_REVIEW_NOW overrides the collection clock (ISO 8601 UTC), the same
 # injected-clock contract bin/xo-fleet-snapshot.sh uses, so a run is reproducible.
@@ -159,24 +150,22 @@ usage: xo-estate-review.sh <org|owner/repo> [flags]
 Read-only estate review. Prints the same nine sections in the same order for
 every estate; a surface with no data is stated as empty, never omitted.
 
-  --since <YYYY-MM-DD>     window start (default: --window days before --until)
-  --until <YYYY-MM-DD>     window end (default: today, UTC)
-  --window <days>          window length when --since is absent (default 90)
-  --periods <n>            equal periods the window is split into for trend (default 6)
-  --stalled-days <n>       an open pull request idle this long is stalled (default 14)
-  --unmaintained-days <n>  a repository unpushed this long is unmaintained (default 180)
-  --max-repos <n>          cap repositories reviewed, 0 for no cap (default 100)
-  --max-prs <n>            cap pull requests read per repository, 0 for no cap (default 300)
-  --max-listed <n>         cap rows in the risk lists, 0 for no cap (default 15)
-  --include-forks          include forked repositories (default: excluded)
-  --exclude-archived       drop archived repositories (default: included and labeled)
-  --json                   print the derived model (contract xo-estate-review.v1)
-  --from-json <file>       render the report from a stored model, making no network call
-  -h, --help               this usage
+  --since <YYYY-MM-DD>  window start (default: --window days before --until)
+  --until <YYYY-MM-DD>  window end (default: today, UTC)
+  --window <days>       window length when --since is absent (default 90)
+  --json                print the derived model (contract xo-estate-review.v1)
+  --from-json <file>    render the report from a stored model, making no network call
+  -h, --help            this usage
 
-With --from-json only --max-listed and --json apply, because they change how a
-stored model is presented rather than what was collected. Any other flag is
-refused by name: it needs a fresh collection.
+Choosing the period is all these flags do. Every other setting - the trend
+periods, the stalled and unmaintained thresholds, the repository, pull-request
+and risk-row caps, and the fork and archived selection - is a constant, so two
+reports cannot differ for a reason the reader cannot see. Every report states
+the value of each one, in its header bullet and section 1.
+
+With --from-json only --json applies. --since, --until and --window are refused
+by name: the window is already cut into the stored model and a different one
+needs a fresh collection.
 
 It never writes to the estate it reviews.
 EOF
@@ -186,28 +175,38 @@ SCOPE_ARG=
 SINCE=
 UNTIL=
 WINDOW_DAYS=90
-PERIODS=6
-STALLED_DAYS=14
-UNMAINTAINED_DAYS=180
-MAX_REPOS=100
-MAX_PRS=300
-MAX_LISTED=15
-INCLUDE_FORKS=0
-EXCLUDE_ARCHIVED=0
 OUTPUT=report
 FROM_JSON=
 FLAGS_GIVEN=()
-MAX_LISTED_GIVEN=0
+
+# The settings no flag reaches. Each one is disclosed in the report - the period
+# count in the header bullet, the rest in section 1 - so a reader can see what
+# produced the numbers without being able to vary it between two runs. They are deliberately not configurable: see WHY
+# THERE ARE NOT MORE above.
+#
+# The three caps keep their "0 means no cap" handling even though no caller can
+# now pass 0, in both the collection guards and the renderer. Editing one of
+# these values is the supported way to change it, so 0 has to keep meaning what
+# it reads as; and the renderer also meets 0 in a stored model collected by an
+# older build, which it must still render rather than bound to nothing.
+PERIODS=6             # equal periods the window is split into for the trend
+STALLED_DAYS=14       # an open pull request idle this long is stalled
+UNMAINTAINED_DAYS=180 # a repository unpushed this long is unmaintained
+MAX_REPOS=100         # repositories reviewed at most
+MAX_PRS=300           # pull requests read per repository at most
+MAX_LISTED=15         # rows shown per risk list; the model keeps every row
+INCLUDE_FORKS=0       # forks are excluded from an organization review
+EXCLUDE_ARCHIVED=0    # archived repositories are reviewed and labelled as archived
 
 need_value() {
   [ "$2" -gt 1 ] || die "$1 needs a value" 2
 }
 
-validate_uint() {  # <flag> <value> [min]
+validate_uint() {  # <flag> <value> <min>
   case "$2" in
     '' | *[!0-9]*) die "$1 must be a non-negative integer, got '$2'" 2 ;;
   esac
-  if [ -n "${3:-}" ] && [ "$2" -lt "$3" ]; then
+  if [ "$2" -lt "$3" ]; then
     die "$1 must be at least $3, got '$2'" 2
   fi
 }
@@ -252,44 +251,6 @@ while [ $# -gt 0 ]; do
       WINDOW_DAYS=$2
       shift
       ;;
-    --periods)
-      need_value --periods $#
-      validate_uint --periods "$2" 2
-      PERIODS=$2
-      shift
-      ;;
-    --stalled-days)
-      need_value --stalled-days $#
-      validate_uint --stalled-days "$2" 1
-      STALLED_DAYS=$2
-      shift
-      ;;
-    --unmaintained-days)
-      need_value --unmaintained-days $#
-      validate_uint --unmaintained-days "$2" 1
-      UNMAINTAINED_DAYS=$2
-      shift
-      ;;
-    --max-repos)
-      need_value --max-repos $#
-      validate_uint --max-repos "$2"
-      MAX_REPOS=$2
-      shift
-      ;;
-    --max-prs)
-      need_value --max-prs $#
-      validate_uint --max-prs "$2"
-      MAX_PRS=$2
-      shift
-      ;;
-    --max-listed)
-      need_value --max-listed $#
-      validate_uint --max-listed "$2"
-      MAX_LISTED=$2
-      shift
-      ;;
-    --include-forks) INCLUDE_FORKS=1 ;;
-    --exclude-archived) EXCLUDE_ARCHIVED=1 ;;
     -*) die "unknown flag '$1' (see --help)" 2 ;;
     *)
       [ -z "$SCOPE_ARG" ] || die "only one estate scope is accepted, got '$SCOPE_ARG' and '$1'" 2
@@ -308,8 +269,7 @@ if [ -n "$FROM_JSON" ]; then
     for given in "${FLAGS_GIVEN[@]}"; do
       case $given in
         --from-json | --json) ;;
-        --max-listed) MAX_LISTED_GIVEN=1 ;;
-        *) die "$given cannot be applied to a stored model: it decides what gets collected or how a figure is derived, so it needs a fresh collection; re-run the review against the estate with $given" 2 ;;
+        *) die "$given cannot be applied to a stored model: it chooses the window, and the stored model's per-period tallies are already cut, so it needs a fresh collection; re-run the review against the estate with $given" 2 ;;
       esac
     done
   fi
@@ -706,7 +666,7 @@ collect() {
   done < "$REPOS_FILE"
 
   if [ "${#chosen[@]}" -eq 0 ]; then
-    die "no repository in estate '$SCOPE_NAME' matched the selection; check --include-forks and --exclude-archived"
+    die "no repository in estate '$SCOPE_NAME' matched the selection: this review excludes forks, so every repository the estate listed is one"
   fi
   selected=${#chosen[@]}
   if [ "$MAX_REPOS" -gt 0 ] && [ "$selected" -gt "$MAX_REPOS" ]; then
@@ -1129,7 +1089,7 @@ def bullet($text): "- " + $text;
 # are always the complete ones.
 def listed($rows; $cap): if $cap == 0 or ($rows | length) <= $cap then $rows else $rows[0:$cap] end;
 def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then []
-  else ["", "\(($rows | length) - $cap) further \($what) are in this report's model but not listed above; raise `--max-listed` to see them, either on a fresh run or on this report's model with `--from-json`."] end;
+  else ["", "\(($rows | length) - $cap) further \($what) are in this report's model but not listed above; `--json` prints the model, which carries every one of them."] end;
 
 . as $m
 | $m.window as $w
@@ -1495,7 +1455,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
    end)
 + [""]
 + (if ($m.selection.capped | not) then []
-   else ["More repositories matched the selection than were reviewed: \($m.selection.matched) matched, \($m.selection.reviewed) reviewed under `--max-repos`.", ""]
+   else ["More repositories matched the selection than were reviewed: \($m.selection.matched) matched, \($m.selection.reviewed) reviewed under this review's cap of \($m.options.max_repos) \(if $m.options.max_repos == 1 then "repository" else "repositories" end).", ""]
    end)
 | join("\n")
 JQ
@@ -1510,16 +1470,13 @@ render() {  # reads the model on stdin
 if [ -n "$FROM_JSON" ]; then
   jq -e --arg c "$CONTRACT" '.contract == $c' "$FROM_JSON" > /dev/null 2>&1 ||
     die "$FROM_JSON is not a $CONTRACT model"
-  # A raised --max-listed is written into the model's own options, so the report
-  # and the model it was rendered from state the same bound.
-  stored_model() {
-    jq --argjson listed "$MAX_LISTED" --argjson given "$MAX_LISTED_GIVEN" \
-      'if $given == 1 then .options.max_listed = $listed else . end' "$FROM_JSON"
-  }
+  # Nothing here can change the model: no flag beside --from-json alters what was
+  # collected or how it is presented, so the report a stored model renders to is
+  # the same report every time, on every machine.
   if [ "$OUTPUT" = json ]; then
-    stored_model
+    cat "$FROM_JSON"
   else
-    stored_model | render
+    render < "$FROM_JSON"
   fi
   exit 0
 fi

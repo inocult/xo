@@ -24,7 +24,7 @@ set -u
 
 REVIEW="$ROOT/bin/xo-estate-review.sh"
 NOW=2026-04-01T00:00:00Z
-WINDOW=(--since 2026-01-01 --until 2026-04-01 --periods 3)
+WINDOW=(--since 2026-01-01 --until 2026-04-01)
 
 # --- fixtures ---------------------------------------------------------------
 # One organization: an active repository with two people, one unlinked commit
@@ -347,15 +347,19 @@ test_collection_derives_the_documented_figures() {
   assert_equals "6" "$(jq -r '.quality.commits.commits' "$root/model.json")" "authored commits"
   assert_equals "1" "$(jq -r '.quality.commits.reverts' "$root/model.json")" "reverts"
   assert_equals "16.7" "$(jq -r '.quality.commits.revert_rate_pct' "$root/model.json")" "revert rate"
-  assert_equals "[2,3,1]" "$(jq -c '.velocity.commits.per_period' "$root/model.json")" "commits per period"
+  assert_equals "[1,1,1,2,1,0]" "$(jq -c '.velocity.commits.per_period' "$root/model.json")" "commits per period"
 
   # Pull requests, and the cycle time the merged ones give.
   assert_equals "4" "$(jq -r '[.repositories[].pull_requests.merged] | add' "$root/model.json")" "merged"
   assert_equals "6" "$(jq -r '[.repositories[].pull_requests.opened] | add' "$root/model.json")" "opened"
   assert_equals "1" "$(jq -r '.risk.open_pull_requests' "$root/model.json")" "open now"
   assert_equals "48" "$(jq -r '.velocity.cycle_hours.median' "$root/model.json")" "median cycle hours"
-  assert_equals "[48,48,36]" "$(jq -c '.velocity.cycle_hours.per_period_median' "$root/model.json")" "cycle per period"
-  assert_equals "falling" "$(jq -r '.velocity.cycle_hours.trend' "$root/model.json")" "cycle trend"
+  assert_equals "[48,null,48,null,36,null]" "$(jq -c '.velocity.cycle_hours.per_period_median' "$root/model.json")"     "cycle per period, with the periods this estate merged nothing in left unmeasured rather than zeroed"
+  # A direction needs a measured last period, which the cycle series does not
+  # have here and the commit series does: a period with no merge in it is an
+  # absence, while a period with no commit in it is a measured zero.
+  assert_equals "final-period-unmeasured" "$(jq -r '.velocity.cycle_hours.trend' "$root/model.json")"     "cycle time reports no direction when its last period measured nothing"
+  assert_equals "falling" "$(jq -r '.velocity.commits.trend' "$root/model.json")" "commit volume reports its direction"
 
   # Review latency counts only reviews by another account, so the self-review on
   # pull request 2 must not become its first review.
@@ -596,7 +600,7 @@ test_push_recency_is_measured_from_collection_not_from_the_window_end() {
   # window end would report a repository pushed two days ago as idle for minus
   # three hundred days and would make the unmaintained test unsatisfiable.
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW \
-    "$REVIEW" acme --since 2025-01-01 --until 2025-06-01 --periods 3 --json) ||
+    "$REVIEW" acme --since 2025-01-01 --until 2025-06-01 --json) ||
     fail "collection over a historical window failed"
   printf '%s' "$model" > "$root/model.json"
   assert_equals "2" "$(jq -r '.repositories[] | select(.name == "acme/widgets") | .idle_days' "$root/model.json")"     "a repository pushed two days before collection reads as two days idle"
@@ -713,9 +717,9 @@ test_scope_and_argument_validation_refuses_rather_than_guessing() {
   assert_equals "2" "$code" "a non-numeric window exits 2"
   assert_contains "$out" "--window must be a non-negative integer" "a non-numeric window is refused"
 
-  out=$(PATH="$bin:$PATH" "$REVIEW" acme --periods 1 2>&1) && code=0 || code=$?
-  assert_equals "2" "$code" "one period exits 2"
-  assert_contains "$out" "--periods must be at least 2" "a single period is refused, because a trend needs two"
+  out=$(PATH="$bin:$PATH" "$REVIEW" acme --window 0 2>&1) && code=0 || code=$?
+  assert_equals "2" "$code" "a zero-day window exits 2"
+  assert_contains "$out" "--window must be at least 1" "a window with no days in it is refused"
 
   out=$(PATH="$bin:$PATH" "$REVIEW" acme --since 2026-13-99 2>&1) && code=0 || code=$?
   assert_equals "2" "$code" "a malformed date exits 2"
@@ -760,8 +764,8 @@ test_a_single_repository_review_is_the_same_report_with_one_row() {
   pass "a single-repository review emits the same nine sections as an organization review"
 }
 
-test_repository_selection_excludes_forks_and_discloses_a_cap() {
-  local root bin model
+test_repository_selection_excludes_forks_and_discloses_it() {
+  local root bin model report
   root=$(xo_test_tmproot xo-estate-review-select) || fail "no fixture root"
   bin=$(xo_fakebin "$root")
   write_fixtures "$root/fixtures"
@@ -771,28 +775,30 @@ test_repository_selection_excludes_forks_and_discloses_a_cap() {
 
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
     fail "collection failed"
-  assert_equals "1" "$(printf '%s' "$model" | jq -r '.repositories | length')" "a fork is excluded by default"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "1" "$(jq -r '.repositories | length' "$root/model.json")" "a fork is not reviewed"
+  assert_equals "false" "$(jq -r '.options.include_forks' "$root/model.json")"     "the model records that forks were excluded"
 
-  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --include-forks --json) ||
-    fail "collection with forks failed"
-  assert_equals "2" "$(printf '%s' "$model" | jq -r '.repositories | length')" "--include-forks includes it"
-
-  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --include-forks --max-repos 1 --json) ||
-    fail "collection with a repository cap failed"
-  assert_equals "true" "$(printf '%s' "$model" | jq -r '.selection.capped')" "the repository cap is recorded"
-  assert_equals "2" "$(printf '%s' "$model" | jq -r '.selection.matched')" "the matched count survives the cap"
-  pass "selection excludes forks by default and discloses a repository cap"
+  # Excluding forks is not configurable, so the report has to say it happened:
+  # an undisclosed exclusion would read as an estate with one repository in it.
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_grep "Selection: forks excluded" "$report" "section 1 discloses that forks were excluded"
+  pass "forks are excluded from an organization review and the report discloses it"
 }
 
-test_a_truncated_repository_listing_is_named_as_a_cap() {
+test_an_estate_larger_than_the_caps_names_both_of_them() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-listcap) || fail "no fixture root"
   bin=$(xo_fakebin "$root")
   write_fixtures "$root/fixtures"
   # An organization whose listing never runs out of pages, which is what an estate
-  # larger than the page walk looks like. The walk stops at its page bound, so the
-  # matched count describes only what it saw, and a report that did not say so
-  # would claim a completeness it does not have.
+  # larger than the review looks like. Two bounds bite here and they are different
+  # facts: the listing walk stops at its page bound, so the matched count describes
+  # only what it saw, and the review then stops at the repository cap, so the
+  # reviewed count describes only part of what it matched. Neither bound is
+  # reachable by a flag any more, so both have to be disclosed or the report
+  # claims a completeness it does not have.
   jq -n '[range(0; 100) | {name: "widgets-\(.)", owner: {login: "acme"},
             default_branch: "main", archived: false, fork: false,
             pushed_at: "2026-03-30T00:00:00Z", private: false}]' \
@@ -800,16 +806,20 @@ test_a_truncated_repository_listing_is_named_as_a_cap() {
   install_fake_gh_axi "$bin" "$root/fixtures" ok
 
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW \
-    "$REVIEW" acme "${WINDOW[@]}" --max-repos 1 --json) || fail "collection failed"
+    "$REVIEW" acme "${WINDOW[@]}" --json) || fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
   assert_equals "1" "$(jq -r '[.caps[] | select(.signal == "repository_listing")] | length' "$root/model.json")"     "the truncated listing is recorded as a cap"
   assert_equals "acme" "$(jq -r '.caps[] | select(.signal == "repository_listing") | .repo' "$root/model.json")"     "the listing cap is keyed to the estate rather than to a repository"
+  assert_equals "true" "$(jq -r '.selection.capped' "$root/model.json")" "the repository cap is recorded"
+  assert_equals "100" "$(jq -r '.selection.reviewed' "$root/model.json")"     "the review stops at the repository cap"
+  assert_equals "3000" "$(jq -r '.selection.matched' "$root/model.json")"     "the matched count survives the cap, so the shortfall is visible"
 
   "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
-  assert_fixed_shape "$root/report.md" "an estate whose listing was truncated"
+  assert_fixed_shape "$root/report.md" "an estate larger than the caps"
   assert_no_grep "No read hit a collection cap" "$root/report.md"     "a report whose listing stopped short does not claim every read was complete"
   assert_grep "| acme | repository_listing |" "$root/report.md" "section 9.2 names the listing cap"
-  pass "a repository listing that stopped at its page bound is named as a cap instead of reading as a complete estate"
+  assert_grep "3000 matched, 100 reviewed under this review's cap of 100 repositories" "$root/report.md"     "section 9.2 states the repository cap as the value that produced the shortfall"
+  pass "an estate larger than the review names the listing page bound and the repository cap, with the value of each"
 }
 
 test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk() {
@@ -959,7 +969,7 @@ test_a_commit_is_counted_in_the_window_it_landed_in() {
     fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
   assert_equals "8" "$(jq -r '.quality.commits.total' "$root/model.json")" "the rebased commit is counted"
-  assert_equals "[2,4,1]" "$(jq -c '.velocity.commits.per_period' "$root/model.json")"     "it falls in the period it landed in, not the one it was written in"
+  assert_equals "[1,1,2,2,1,0]" "$(jq -c '.velocity.commits.per_period' "$root/model.json")"     "it falls in the period it landed in, not the one it was written in"
   assert_equals "3" "$(jq -r '.people[] | select(.person == "brooke") | .commits' "$root/model.json")"     "it is credited to whoever wrote it"
   pass "a commit rebased into the window is counted in the period it landed in and credited to its author"
 }
@@ -999,13 +1009,13 @@ test_a_last_period_with_no_measurement_reports_no_direction() {
   bin=$(xo_fakebin "$root")
   write_fixtures "$root/fixtures"
   install_fake_gh_axi "$bin" "$root/fixtures" ok
-  # Six months in three periods: everything merged in the first four months, so
-  # the last period holds no measured pull request at all. A direction drawn
-  # from the earlier ones would describe a time that ended before the window did.
+  # Six months: everything merged in the first two, so the later periods hold no
+  # measured pull request at all. A direction drawn from the earlier ones would
+  # describe a time that ended before the window did.
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=2026-07-01T00:00:00Z \
-    "$REVIEW" acme --since 2026-01-01 --until 2026-07-01 --periods 3 --json) || fail "collection failed"
+    "$REVIEW" acme --since 2026-01-01 --until 2026-07-01 --json) || fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
-  assert_equals "null" "$(jq -r '.velocity.cycle_hours.per_period_median[2]' "$root/model.json")"     "the last period has no measured cycle time"
+  assert_equals "null" "$(jq -r '.velocity.cycle_hours.per_period_median[-1]' "$root/model.json")"     "the last period has no measured cycle time"
   assert_equals "final-period-unmeasured" "$(jq -r '.velocity.cycle_hours.trend' "$root/model.json")"     "no direction is derived from the earlier periods"
   assert_equals "final-period-unmeasured" \
     "$(jq -r '.headline[] | select(.metric | startswith("Cycle time")) | .trend' "$root/model.json")"     "the headline row carries the same absence the model does"
@@ -1013,7 +1023,7 @@ test_a_last_period_with_no_measurement_reports_no_direction() {
   "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
   assert_fixed_shape "$root/report.md" "an estate whose last period is empty"
   assert_grep "not reported: the last period has no measurement" "$root/report.md"     "the headline row states that no direction is reported"
-  assert_grep "Direction: not reported, because the last period has no measurement; periods beginning 2026-05-01 had none" "$root/report.md"     "section 4.2 names the period that had no measurement"
+  assert_grep "Direction: not reported, because the last period has no measurement; periods beginning 2026-04-01, 2026-05-01, 2026-05-31 had none" "$root/report.md"     "section 4.2 names every period that had no measurement"
   pass "a median series whose last period has no measurement reports no direction and names the empty periods"
 }
 
@@ -1072,42 +1082,56 @@ test_a_bounded_risk_list_states_how_many_rows_it_did_not_show() {
   assert_equals "15" "$(stalled_rows "$root/report.md")" "the stalled list is bounded to fifteen rows"
   assert_grep "6 further pull requests are in this report's model but not listed above" "$root/report.md"     "the rows not shown are disclosed with their count"
 
-  # The report tells the reader to raise --max-listed to see them. Following that
-  # instruction against the model in hand has to actually show them.
-  "$REVIEW" --from-json "$root/model.json" --max-listed 0 > "$root/all.md" ||
-    fail "re-rendering with a raised --max-listed failed"
-  assert_equals "21" "$(stalled_rows "$root/all.md")" "raising --max-listed shows every row the model kept"
-  assert_no_grep "further pull requests are in this report's model" "$root/all.md"     "nothing is left undisclosed once every row is listed"
-  pass "a bounded risk list states its complete count and how many rows it did not show, and raising --max-listed on the stored model shows them"
+  # The report tells the reader that --json carries every row. Following that
+  # instruction against the model in hand has to actually produce them, or the
+  # report is pointing at a way out that does not exist.
+  assert_grep "\`--json\` prints the model, which carries every one of them" "$root/report.md"     "the report names where the rows it did not list can be read"
+  "$REVIEW" --from-json "$root/model.json" --json > "$root/re.json" ||
+    fail "re-emitting the stored model failed"
+  assert_equals "21" "$(jq -r '.risk.stalled_pull_requests | length' "$root/re.json")"     "the model --json prints carries every row the report bounded"
+  pass "a bounded risk list states its complete count and how many rows it did not show, and names where every row can be read"
 }
 
-test_from_json_honours_a_presentation_flag_and_refuses_the_rest() {
+test_from_json_re_emits_the_stored_model_and_refuses_a_different_window() {
   local root model out code flag
   root=$(xo_test_tmproot xo-estate-review-fromjson) || fail "no fixture root"
   model=$(collect_model "$root/fixtures" ok) || fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
 
-  # A stored model is a finished collection. A flag that only changes how it is
-  # presented is honoured and says so in the model it re-emits.
-  "$REVIEW" --from-json "$root/model.json" --max-listed 3 --json > "$root/re.json" ||
-    fail "--max-listed alongside --from-json was refused"
-  assert_equals "3" "$(jq -r '.options.max_listed' "$root/re.json")"     "the honoured bound is written into the model the report is rendered from"
-  assert_equals "15" "$(jq -r '.options.max_listed' "$root/model.json")"     "the stored model on disk is left alone"
+  # A stored model is a finished collection, and nothing beside --from-json can
+  # alter it. --json re-emits exactly what is on disk, which is what makes a
+  # stored model a fixed input: the same model renders the same report anywhere.
+  "$REVIEW" --from-json "$root/model.json" --json > "$root/re.json" ||
+    fail "--json alongside --from-json was refused"
+  assert_equals "$(jq -cS . "$root/model.json")" "$(jq -cS . "$root/re.json")"     "the re-emitted model is the stored model, unchanged"
 
-  # Every other flag would need data the model cannot supply, so it is refused by
-  # name rather than accepted and dropped.
-  for flag in "--window 30" "--since 2026-02-01" "--periods 4" "--stalled-days 2" \
-    "--unmaintained-days 10" "--max-repos 1" "--max-prs 10" "--include-forks" "--exclude-archived"; do
+  # The window flags would need data the model cannot supply, so each is refused
+  # by name rather than accepted and dropped.
+  for flag in "--window 30" "--since 2026-02-01" "--until 2026-03-01"; do
     # shellcheck disable=SC2086  # each entry is a flag and its value.
     out=$("$REVIEW" --from-json "$root/model.json" $flag 2>&1) && code=0 || code=$?
     assert_equals "2" "$code" "'$flag' with --from-json exits 2"
     assert_contains "$out" "${flag%% *} cannot be applied to a stored model" "'$flag' is refused by name"
     assert_contains "$out" "needs a fresh collection" "'$flag' says what to do instead"
   done
-  pass "--from-json honours a flag the stored model can satisfy and refuses every other one by name"
+
+  # A setting that is a constant is not a flag anywhere, so it is refused as an
+  # unknown flag rather than as something a fresh collection could satisfy.
+  for flag in "--periods 4" "--stalled-days 2" "--unmaintained-days 10" "--max-repos 1" \
+    "--max-prs 10" "--max-listed 3" "--include-forks" "--exclude-archived"; do
+    # shellcheck disable=SC2086  # each entry is a flag and its value.
+    out=$("$REVIEW" --from-json "$root/model.json" $flag 2>&1) && code=0 || code=$?
+    assert_equals "2" "$code" "'$flag' exits 2"
+    assert_contains "$out" "unknown flag '${flag%% *}'" "'$flag' is not a flag at all"
+    # shellcheck disable=SC2086
+    out=$("$REVIEW" acme $flag 2>&1) && code=0 || code=$?
+    assert_equals "2" "$code" "'$flag' exits 2 against an estate too"
+    assert_contains "$out" "unknown flag '${flag%% *}'" "'$flag' is not a flag on a fresh collection either"
+  done
+  pass "--from-json re-emits the stored model, refuses a different window by name, and a constant is not a flag anywhere"
 }
 
-test_the_window_and_periods_bound_what_is_counted() {
+test_the_window_bounds_what_is_counted() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-window) || fail "no fixture root"
   bin=$(xo_fakebin "$root")
@@ -1116,14 +1140,13 @@ test_the_window_and_periods_bound_what_is_counted() {
   # February only: the fixture has two authored commits in it (2026-02-05 and
   # 2026-02-15) and one merged pull request (2026-02-03).
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW \
-    "$REVIEW" acme --since 2026-02-01 --until 2026-03-01 --periods 2 --json) || fail "collection failed"
+    "$REVIEW" acme --since 2026-02-01 --until 2026-03-01 --json) || fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
   assert_equals "2" "$(jq -r '.quality.commits.commits' "$root/model.json")" "only in-window commits are authored counts"
   assert_equals "1" "$(jq -r '[.repositories[].pull_requests.merged] | add' "$root/model.json")" "only in-window merges are counted"
-  assert_equals "2" "$(jq -r '.window.periods' "$root/model.json")" "the period count is recorded"
-  assert_equals "14" "$(jq -r '.window.period_days' "$root/model.json")" "the period length is recorded"
+  assert_equals "6" "$(jq -r '.window.periods' "$root/model.json")" "the fixed period count is recorded"
   assert_equals "28" "$(jq -r '.window.days' "$root/model.json")" "the window length is recorded"
-  pass "the window and period settings bound what is counted and are recorded in the model"
+  pass "the window bounds what is counted, and it and the fixed period count are recorded in the model"
 }
 
 test_an_unreadable_estate_stops_the_run_with_gh_axis_own_words() {
@@ -1156,12 +1179,12 @@ test_the_report_records_the_commands_that_produced_it
 test_free_text_from_the_estate_cannot_break_a_record
 test_scope_and_argument_validation_refuses_rather_than_guessing
 test_a_single_repository_review_is_the_same_report_with_one_row
-test_repository_selection_excludes_forks_and_discloses_a_cap
-test_a_truncated_repository_listing_is_named_as_a_cap
+test_repository_selection_excludes_forks_and_discloses_it
+test_an_estate_larger_than_the_caps_names_both_of_them
 test_a_person_table_is_ordered_by_account_not_by_volume
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show
-test_from_json_honours_a_presentation_flag_and_refuses_the_rest
-test_the_window_and_periods_bound_what_is_counted
+test_from_json_re_emits_the_stored_model_and_refuses_a_different_window
+test_the_window_bounds_what_is_counted
 test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk
 test_a_review_on_an_open_pull_request_is_counted_once
 test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound

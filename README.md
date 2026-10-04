@@ -204,6 +204,9 @@ Estate review invocation examples:
 - `/estate acme/widgets` reviews one repository with the same report shape.
 - `/estate acme file` also writes `data/estate-review-acme-<YYYY-MM-DD>.md`.
 
+The period is the only thing a run chooses.
+Every other setting - the trend periods, the stalled and unmaintained thresholds, the repository and pull-request caps, and the fork and archived selection - is fixed and stated in the report itself, so two reports cannot differ for a reason their reader cannot see.
+
 Bearings invocation examples:
 
 - `/bearings` returns the fresh four-section digest in chat only.

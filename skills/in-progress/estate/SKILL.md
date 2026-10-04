@@ -35,14 +35,18 @@ Never silently change a window between two reports of the same estate: the compa
 ## 2. Run it
 
 ```
-bin/xo-estate-review.sh <estate> [--window <days>] [--periods <n>]
+bin/xo-estate-review.sh <estate> [--since <date>] [--until <date>] [--window <days>]
 ```
 
+Choosing the period is all the flags do, and that is deliberate: a report whose value is that two of them are comparable must not offer ways to make two of them differ invisibly.
+The trend periods, the stalled and unmaintained thresholds, the repository and pull-request caps and the fork and archived selection are constants, each disclosed in the report's header bullet or section 1 rather than chosen per run.
+If one of those values is wrong for an estate, that is a change to the command, reviewed once and applying to every report after it - not a flag, and not something to work around.
+
 Add `--json` when you need the numbers for something other than reading, and `--from-json` to re-render a stored model without touching the network.
-`--from-json` takes only `--max-listed` and `--json` alongside it; every other flag needs a fresh collection and the command says so by name rather than ignoring it.
+Only `--json` goes alongside `--from-json`; a different window needs a fresh collection and the command says so by name rather than ignoring it.
 
 A large organization is the one case worth bounding before you start.
-The command already caps repositories and pull requests; keep those caps rather than removing them, because a capped read is disclosed in section 9 and an unbounded one can run for a very long time.
+The command reviews at most 100 repositories and reads at most 300 pull requests in each, and a read that hit either bound is named in section 9.2.
 On an estate with more than about thirty repositories, tell the captain roughly how long it will take before you start rather than after.
 
 Do not compute any figure yourself, do not write a second collector, and do not repair a number you disagree with.

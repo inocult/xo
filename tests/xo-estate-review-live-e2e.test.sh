@@ -38,7 +38,7 @@ fi
 REVIEW="$ROOT/bin/xo-estate-review.sh"
 ESTATE=${XO_ESTATE_REVIEW_LIVE_ESTATE:-jqlang}
 REPO=${XO_ESTATE_REVIEW_LIVE_REPO:-jq}
-WINDOW=(--since 2025-05-01 --until 2025-07-01 --periods 3 --max-prs 0)
+WINDOW=(--since 2025-05-01 --until 2025-07-01)
 GH_AXI_VERSION=$(gh-axi --version 2>/dev/null | head -n 1)
 [ -n "$GH_AXI_VERSION" ] || GH_AXI_VERSION="unknown"
 
