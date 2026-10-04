@@ -31,6 +31,8 @@ It accepts nothing else: an owner GitHub reports as anything but an organization
 Leave the window at its default of 90 days unless the captain asked for a period.
 Widen it when the estate is quiet enough that the default returns almost nothing, and say that you widened it.
 Never silently change a window between two reports of the same estate: the comparison is the point, and a changed window breaks it.
+A window needs at least one day per trend period, so the shortest the command accepts is six days; it refuses anything shorter and names the minimum, because two periods cannot carry the same date.
+When the captain asks about the last day or two, give them the shortest accepted window and say that is what you read.
 
 ## 2. Run it
 

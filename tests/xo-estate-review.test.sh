@@ -104,6 +104,35 @@ JSON
 JSON
 }
 
+# One page of the merged-pull-request walk: <count> pull requests merged at
+# <at>, numbered from <first>, and a pageInfo that either names the cursor of the
+# next page or ends the walk. A page whose next cursor names its own fixture is
+# a repository the walk never runs out of pages on.
+write_pr_page() {  # <file> <at-iso> <count> <first-number> <next-cursor-or-empty>
+  local file=$1 at=$2 count=$3 first=$4 next=$5
+  jq -n --arg at "$at" --argjson count "$count" --argjson first "$first" --arg next "$next" '
+    {data: {repository: {pullRequests: {
+      pageInfo: (if $next == "" then {hasNextPage: false, endCursor: null}
+                 else {hasNextPage: true, endCursor: $next} end),
+      nodes: [range(0; $count) | ($first + .) as $n | {
+        number: $n, state: "MERGED", isDraft: false,
+        createdAt: $at, updatedAt: $at, mergedAt: $at, closedAt: $at,
+        additions: 1, deletions: 1, changedFiles: 1,
+        headRefName: "f/\($n)", title: "pull request \($n)",
+        author: {login: "ada", __typename: "User"},
+        commits: {nodes: [{commit: {committedDate: $at}}]},
+        reviews: {totalCount: 0, nodes: []}, reviewThreads: {totalCount: 0}}]}}}}' > "$file" ||
+    fail "could not write the pull-request page $file"
+}
+
+# One repository, so the pull-request walk under test is the only one that runs.
+keep_only_widgets() {  # <fixtures-dir>
+  local dir=$1
+  jq '[.[] | select(.name == "widgets")]' "$dir/repos.json" > "$dir/repos.tmp" ||
+    fail "could not narrow the estate to one repository"
+  mv "$dir/repos.tmp" "$dir/repos.json"
+}
+
 # A fake gh-axi that answers from those fixtures with the caller's own --jq
 # program and renders the api_response envelope the real one renders: a bare body
 # for a payload that needs no escaping, a JSON-quoted body otherwise.
@@ -118,7 +147,7 @@ SH
   cat >> "$bin/gh-axi" <<'SH'
 [ "${1:-}" != "--version" ] || { printf 'gh-axi fake 9.9.9\n'; exit 0; }
 printf '%s\n' "$*" >> "${FAKE_GH_LOG:-/dev/null}"
-path='' program='' input='' args=("$@") i=0
+path='' program='' input='' cursor='' args=("$@") i=0
 while [ "$i" -lt "${#args[@]}" ]; do
   case ${args[$i]} in
     --jq) i=$((i + 1)); program=${args[$i]} ;;
@@ -135,10 +164,18 @@ fixture=''
 case $path in
   graphql)
     repo=$(jq -r '.variables.name' "$input")
+    cursor=$(jq -r '.variables.cursor // "-"' "$input")
     if grep -q 'states:OPEN' "$input"; then
       fixture=$FIXTURES/prs-open-$repo.json
     else
+      # The pull-request walk pages by cursor rather than by page number, so the
+      # next page is the fixture named for the cursor the walk asked for. That is
+      # how a multi-page walk is modelled without a second fake, and a fixture
+      # whose own endCursor names itself is a walk that never runs out of pages.
       fixture=$FIXTURES/prs-$repo.json
+      if [ "$cursor" != "-" ] && [ -f "$FIXTURES/prs-$repo-$cursor.json" ]; then
+        fixture=$FIXTURES/prs-$repo-$cursor.json
+      fi
     fi
     [ -f "$fixture" ] || fixture=$FIXTURES/empty-prs.json
     ;;
@@ -724,6 +761,22 @@ test_scope_and_argument_validation_refuses_rather_than_guessing() {
   out=$(PATH="$bin:$PATH" "$REVIEW" acme --since 2026-13-99 2>&1) && code=0 || code=$?
   assert_equals "2" "$code" "a malformed date exits 2"
 
+  # The trend splits the window into a fixed number of periods and dates each one
+  # rather than timing it, so a window with fewer days than periods would print
+  # the same date as two different period headings. The input is refused instead,
+  # and the refusal names the minimum, because there is no flag to reduce the
+  # period count and a report that cannot be read is worse than one not produced.
+  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme --window 3 2>&1) && code=0 || code=$?
+  assert_equals "2" "$code" "a window with fewer days than trend periods exits 2"
+  assert_contains "$out" "at least 6 days" "the refusal names the minimum window"
+  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme --since 2026-03-28 --until 2026-04-01 2>&1) && code=0 || code=$?
+  assert_equals "2" "$code" "a short window given as dates is refused the same way"
+  assert_contains "$out" "at least 6 days" "the dated refusal names the same minimum"
+  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme --window 6 --json) && code=0 || code=$?
+  assert_equals "0" "$code" "the shortest accepted window is collected"
+  printf '%s' "$out" > "$root/shortest.json"
+  assert_equals "6" "$(jq -r '.window.period_labels | unique | length' "$root/shortest.json")"     "the shortest accepted window still dates its six periods distinctly, which is what the minimum is for"
+
   out=$(PATH="$bin:$PATH" "$REVIEW" acme --since 2026-04-01 --until 2026-01-01 2>&1) && code=0 || code=$?
   assert_equals "2" "$code" "an inverted window exits 2"
   assert_contains "$out" "window start must be before the window end" "an inverted window is refused"
@@ -785,6 +838,102 @@ test_repository_selection_excludes_forks_and_discloses_it() {
   "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
   assert_grep "Selection: forks excluded" "$report" "section 1 discloses that forks were excluded"
   pass "forks are excluded from an organization review and the report discloses it"
+}
+
+test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork() {
+  local root bin model report
+  root=$(xo_test_tmproot xo-estate-review-named-fork) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # The fork filter belongs to the organization listing: it drops the forks an
+  # organization happens to own from a review of that organization's own work.
+  # A repository the caller named is the estate they asked about, so reviewing it
+  # cannot depend on who originally created it - there is no flag to override.
+  jq '.fork = true' "$root/fixtures/repo-widgets.json" > "$root/fixtures/repo.tmp" ||
+    fail "could not mark the named repository as a fork"
+  mv "$root/fixtures/repo.tmp" "$root/fixtures/repo-widgets.json"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme/widgets "${WINDOW[@]}" --json) ||
+    fail "a review of a named fork failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "1" "$(jq -r '.repositories | length' "$root/model.json")" "the named fork is reviewed"
+  assert_equals "acme/widgets" "$(jq -r '.repositories[0].name' "$root/model.json")"     "the repository reviewed is the one named"
+  assert_equals "true" "$(jq -r '.repositories[0].fork' "$root/model.json")" "the model records that it is a fork"
+  assert_equals "true" "$(jq -r '.options.include_forks' "$root/model.json")"     "the model records that no fork was excluded from this review"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_grep "Selection: forks included" "$report" "section 1 discloses the selection that actually ran"
+  assert_fixed_shape "$report" "a named fork"
+  pass "a repository named explicitly is reviewed whether or not it is a fork, and the report says so"
+}
+
+test_a_window_behind_the_pull_request_cap_is_still_reached() {
+  local root bin fixtures model file i
+  local -a after=(2026-03-01 2026-01-01 2025-11-01 2025-09-01 2025-07-01 2025-05-01)
+  root=$(xo_test_tmproot xo-estate-review-prwindow) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  fixtures=$root/fixtures
+  write_fixtures "$fixtures"
+  keep_only_widgets "$fixtures"
+  # The merged-pull-request walk descends by updated-at from the present, so a
+  # window in the past sits behind every pull request touched since it ended.
+  # Six pages of fifty such pull requests - 300, the review's whole pull-request
+  # cap - stand between the walk and the window's own two merged pull requests on
+  # the seventh page. None of the 300 is counted by any figure in the report, so
+  # spending the cap on them would stop the walk short of the window and print
+  # every pull-request figure as zero with nothing on the figure to say why.
+  for i in 0 1 2 3 4 5; do
+    if [ "$i" = 0 ]; then file=$fixtures/prs-widgets.json; else file=$fixtures/prs-widgets-c$((i + 1)).json; fi
+    write_pr_page "$file" "${after[$i]}T00:00:00Z" 50 "$((2000 + i * 100))" "c$((i + 2))"
+  done
+  write_pr_page "$fixtures/prs-widgets-c7.json" 2025-02-10T00:00:00Z 2 11 ""
+  install_fake_gh_axi "$bin" "$fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW \
+    "$REVIEW" acme --since 2025-01-01 --until 2025-04-01 --json) || fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "2" "$(jq -r '.repositories[0].pull_requests.merged' "$root/model.json")"     "the window's own merged pull requests are counted"
+  assert_equals "2" "$(jq -r '.headline[] | select(.metric == "Pull requests merged") | .value' "$root/model.json")"     "the headline reports them rather than reading as a window in which nothing merged"
+  assert_equals "0" "$(jq -r '[.caps[] | select(.signal == "pull_requests")] | length' "$root/model.json")"     "a cap spent on no counted pull request is not reported as a cap"
+  pass "a historical window is reached through the pull requests updated after it, which spend no cap"
+}
+
+test_a_walk_that_cannot_reach_the_window_names_the_page_bound() {
+  local root bin fixtures model detail limit calls report
+  root=$(xo_test_tmproot xo-estate-review-prpages) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  fixtures=$root/fixtures
+  write_fixtures "$fixtures"
+  keep_only_widgets "$fixtures"
+  # Not spending the cap on pull requests outside the window leaves the walk
+  # itself unbounded, so a repository whose pages never reach the window has to
+  # stop at the page bound and say that it did. Every page here is one the walk
+  # passes over, and each names itself as the next cursor, so the walk would
+  # otherwise never end.
+  write_pr_page "$fixtures/prs-widgets.json" 2026-03-01T00:00:00Z 50 2001 endless
+  write_pr_page "$fixtures/prs-widgets-endless.json" 2026-03-01T00:00:00Z 50 2001 endless
+  install_fake_gh_axi "$bin" "$fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW FAKE_GH_LOG="$fixtures/calls.log" \
+    "$REVIEW" acme --since 2025-01-01 --until 2025-04-01 --json) || fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  limit=$(jq -r '.options.pull_request_page_limit' "$root/model.json")
+  case $limit in '' | *[!0-9]*) fail "the model does not disclose the pull-request page bound, got '$limit'" ;; esac
+  detail=$(jq -r '.caps[] | select(.signal == "pull_requests") | .detail' "$root/model.json")
+  assert_contains "$detail" "$limit pages" "the cap row states the page bound by the value the model discloses"
+  assert_equals "0" "$(jq -r '.repositories[0].pull_requests.merged' "$root/model.json")"     "nothing in the window was reached, so nothing is counted"
+  # One page for the open-pull-request pass, which this fixture ends after one.
+  calls=$(grep -c 'POST graphql' "$fixtures/calls.log") || calls=0
+  assert_equals "$((limit + 1))" "$calls"     "the walk stopped at the disclosed page bound rather than paging without end"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_no_grep "No read hit a collection cap" "$report"     "a report whose pull-request walk stopped short does not claim every read was complete"
+  assert_grep "| acme/widgets | pull_requests |" "$report" "section 9.2 names the repository whose walk stopped"
+  assert_fixed_shape "$report" "a walk that never reached the window"
+  pass "a pull-request walk that cannot reach the window stops at the disclosed page bound and reports it as a cap"
 }
 
 test_an_estate_larger_than_the_caps_names_both_of_them() {
@@ -1180,7 +1329,10 @@ test_free_text_from_the_estate_cannot_break_a_record
 test_scope_and_argument_validation_refuses_rather_than_guessing
 test_a_single_repository_review_is_the_same_report_with_one_row
 test_repository_selection_excludes_forks_and_discloses_it
+test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork
 test_an_estate_larger_than_the_caps_names_both_of_them
+test_a_window_behind_the_pull_request_cap_is_still_reached
+test_a_walk_that_cannot_reach_the_window_names_the_page_bound
 test_a_person_table_is_ordered_by_account_not_by_volume
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show
 test_from_json_re_emits_the_stored_model_and_refuses_a_different_window

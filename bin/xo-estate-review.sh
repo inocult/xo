@@ -163,6 +163,10 @@ and risk-row caps, and the fork and archived selection - is a constant, so two
 reports cannot differ for a reason the reader cannot see. Every report states
 the value of each one, in its header bullet and section 1.
 
+The window must hold at least one day per trend period, because the periods are
+dated rather than timed and a shorter window would date two of them the same.
+A window below that is refused and the refusal names the minimum.
+
 With --from-json only --json applies. --since, --until and --window are refused
 by name: the window is already cut into the stored model and a different one
 needs a fresh collection.
@@ -195,7 +199,7 @@ UNMAINTAINED_DAYS=180 # a repository unpushed this long is unmaintained
 MAX_REPOS=100         # repositories reviewed at most
 MAX_PRS=300           # pull requests read per repository at most
 MAX_LISTED=15         # rows shown per risk list; the model keeps every row
-INCLUDE_FORKS=0       # forks are excluded from an organization review
+INCLUDE_FORKS=0       # an organization's forks are excluded; a named repository is reviewed either way
 EXCLUDE_ARCHIVED=0    # archived repositories are reviewed and labelled as archived
 
 need_value() {
@@ -406,7 +410,10 @@ resolve_window() {
     | if $sincee >= $untile then { error: "the window start must be before the window end" }
       else
         (($untile - $sincee) / day | floor) as $days
-        | (($untile - $sincee) / $periods) as $step
+        | if $days < $periods then
+            { error: "the window must be at least \($periods) days long, one day for each of the \($periods) periods the trend splits it into, but this one is \($days); a shorter window gives two periods the same date and the report dates a period rather than timing it" }
+          else
+        (($untile - $sincee) / $periods) as $step
         | {
             since: ($sincee | todateiso8601),
             until: ($untile | todateiso8601),
@@ -418,6 +425,7 @@ resolve_window() {
             period_edges: [range(0; $periods + 1) | $sincee + (. * $step) | floor],
             period_labels: [range(0; $periods) | ($sincee + (. * $step) | floor | strftime("%Y-%m-%d"))]
           }
+          end
       end' 2> /dev/null) || die "could not resolve the collection window from --since '${SINCE:-none}' and --until '${UNTIL:-none}'; both must be real calendar dates" 2
   if [ "$(printf '%s' "$WINDOW_JSON" | jq -r '.error // ""')" != "" ]; then
     die "$(printf '%s' "$WINDOW_JSON" | jq -r '.error')" 2
@@ -575,27 +583,43 @@ PR_SHAPE_JQ='
     end)
   | join("\n")'
 
-# read_prs <owner> <name> <query> <since_iso> <stop_on_window>
+# read_prs <owner> <name> <query> <since_iso> <until_iso> <stop_on_window>
 # Walks the pull-request connection by cursor and leaves pr and review records in
 # $GH_RECORDS. GraphQL cannot filter a pull-request connection by date, so the
 # updated-at ordering is walked until it leaves the window; the open-pull-request
 # pass walks oldest-first instead and is deliberately not window-bounded, because
 # a pull request nobody has touched for a year is exactly the stalled work
 # section 6.3 has to name.
+#
+# MAX_PRS bounds the pull requests the report counts, which is why the
+# window-bounded walk spends it only on pull requests inside the window. That
+# walk starts at the present and descends, so on a window in the past it passes
+# over every pull request updated since the window ended; those are read on the
+# way down and reported on by nothing, and letting them spend the budget would
+# stop the walk before it reached the window and print every pull-request figure
+# as zero with no caveat on it. MAX_PR_PAGES then bounds the walk itself, because
+# passing over pull requests that cost no budget is otherwise unbounded work on a
+# busy repository.
+PR_PAGE_SIZE=50       # pull requests per page of the walk
+MAX_PR_PAGES=40       # pages walked per repository at most
 PR_CAPPED=0
 read_prs() {
-  local owner=$1 name=$2 query=$3 since=$4 stop_on_window=$5
-  local cursor=null page_size=50 fetched=0 lines hasnext endcursor oldest body remaining
+  local owner=$1 name=$2 query=$3 since=$4 until=$5 stop_on_window=$6
+  local cursor=null page_size=$PR_PAGE_SIZE fetched=0 pages=0 counted lines hasnext endcursor oldest body remaining
   PR_CAPPED=0
   : > "$GH_RECORDS"
   while :; do
     if [ "$MAX_PRS" -gt 0 ]; then
       remaining=$((MAX_PRS - fetched))
       if [ "$remaining" -le 0 ]; then
-        PR_CAPPED=1
+        PR_CAPPED='prs'
         return 0
       fi
       [ "$remaining" -ge "$page_size" ] || page_size=$remaining
+    fi
+    if [ "$pages" -ge "$MAX_PR_PAGES" ]; then
+      PR_CAPPED='pages'
+      return 0
     fi
     body=$GH_SCRATCH/prq.json
     jq -n --arg q "$query" --arg owner "$owner" --arg name "$name" \
@@ -605,11 +629,17 @@ read_prs() {
       return 1
     }
     gh_read POST graphql --input "$body" --full --jq "$PR_SHAPE_JQ" || return 1
+    pages=$((pages + 1))
     hasnext=$(sed -n "s/^page${TAB}\\([^${TAB}]*\\)${TAB}.*\$/\\1/p" "$GH_PAYLOAD" | head -n 1)
     endcursor=$(sed -n "s/^page${TAB}[^${TAB}]*${TAB}\\(.*\\)\$/\\1/p" "$GH_PAYLOAD" | head -n 1)
     lines=$(grep -c "^pr$TAB" "$GH_PAYLOAD") || lines=0
     grep -v "^page$TAB" "$GH_PAYLOAD" >> "$GH_RECORDS" || true
-    fetched=$((fetched + lines))
+    if [ "$stop_on_window" = 1 ]; then
+      counted=$(awk -F'\t' -v until="$until" '$1 == "pr" && $6 < until { n++ } END { print n + 0 }' "$GH_PAYLOAD")
+    else
+      counted=$lines
+    fi
+    fetched=$((fetched + counted))
     if [ "$stop_on_window" = 1 ] && [ "$lines" -gt 0 ]; then
       oldest=$(awk -F'\t' '$1 == "pr" { print $6 }' "$GH_PAYLOAD" | sort | head -n 1)
       if [ -n "$oldest" ] && [ "$oldest" \< "$since" ]; then
@@ -622,13 +652,18 @@ read_prs() {
   done
 }
 
-# pr_detail <cap-message>: the disclosure for a pull-request read that succeeded,
-# which is "complete" only when neither the pull-request cap nor the per-pull-
-# request review page bound was reached. Both bounds shorten what the figures
-# describe, so both belong in section 9.2 rather than in this script alone.
+# pr_detail <pull-request-cap-message>: the disclosure for a pull-request read
+# that succeeded, which is "complete" only when none of the pull-request cap, the
+# page bound on the walk, and the per-pull-request review page bound was reached.
+# Each bound shortens what the figures describe, so each belongs in section 9.2
+# rather than in this script alone. Only the pull-request cap's wording depends on
+# which pass is walking, so only that one is the caller's to supply.
 pr_detail() {
   local detail=complete over
-  [ "$PR_CAPPED" = 0 ] || detail=$1
+  case $PR_CAPPED in
+    prs) detail=$1 ;;
+    pages) detail="capped at $MAX_PR_PAGES pages of $PR_PAGE_SIZE pull requests before the walk left the window, so every pull-request figure for this repository describes what was reached and a zero does not mean none" ;;
+  esac
   over=$(awk -F'\t' -v cap="$REVIEWS_PER_PR" '$1 == "pr" && ($15 + 0) > cap { n++ } END { print n + 0 }' "$GH_RECORDS")
   if [ "$over" != 0 ]; then
     if [ "$detail" = complete ]; then
@@ -660,13 +695,15 @@ collect() {
     case $line in repo*) ;; *) continue ;; esac
     IFS=$'\t' read -r _ full name owner branch archived fork pushed private <<< "$line"
     [ -n "$full" ] || continue
-    if [ "$fork" = true ] && [ "$INCLUDE_FORKS" = 0 ]; then continue; fi
-    if [ "$archived" = true ] && [ "$EXCLUDE_ARCHIVED" = 1 ]; then continue; fi
+    # The fork filter is the organization listing's, not the estate's: it drops the
+    # forks an organization happens to own from a review of that organization's own
+    # work. A repository someone named is the estate they asked about, fork or not.
+    if [ "$SCOPE_KIND" = organization ] && [ "$fork" = true ]; then continue; fi
     chosen+=("$line")
   done < "$REPOS_FILE"
 
   if [ "${#chosen[@]}" -eq 0 ]; then
-    die "no repository in estate '$SCOPE_NAME' matched the selection: this review excludes forks, so every repository the estate listed is one"
+    die "no repository of organization '$SCOPE_NAME' matched the selection: an organization review excludes forks, so every repository the estate listed is one"
   fi
   selected=${#chosen[@]}
   if [ "$MAX_REPOS" -gt 0 ] && [ "$selected" -gt "$MAX_REPOS" ]; then
@@ -697,11 +734,11 @@ collect() {
       printf 'signal\t%s\tcommits\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
     fi
 
-    if read_prs "$owner" "$name" "$PR_QUERY" "$since" 1; then
-      detail=$(pr_detail "capped at $MAX_PRS pull requests")
+    if read_prs "$owner" "$name" "$PR_QUERY" "$since" "$until" 1; then
+      detail=$(pr_detail "capped at $MAX_PRS pull requests updated inside the window")
       printf 'signal\t%s\tpull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
       sed -e "s|^pr$TAB|pr$TAB$full$TAB|" -e "s|^review$TAB|review$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
-      if read_prs "$owner" "$name" "$OPEN_PR_QUERY" "$since" 0; then
+      if read_prs "$owner" "$name" "$OPEN_PR_QUERY" "$since" "$until" 0; then
         detail=$(pr_detail "capped at $MAX_PRS open pull requests, so the open and stalled counts describe the oldest $MAX_PRS")
         printf 'signal\t%s\topen_pull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
         sed -e "s|^pr$TAB|pr$TAB$full$TAB|" -e "s|^review$TAB|review$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
@@ -1498,11 +1535,14 @@ OPTIONS_JSON=$(jq -n \
   --argjson max_listed "$MAX_LISTED" \
   --argjson include_forks "$INCLUDE_FORKS" --argjson exclude_archived "$EXCLUDE_ARCHIVED" \
   --argjson reviews_per_pr "$REVIEWS_PER_PR" --argjson max_pages "$REST_MAX_PAGES" \
+  --argjson pr_page_limit "$MAX_PR_PAGES" --arg scope_kind "$SCOPE_KIND" \
   '{window_days: $window_days, periods: $periods, stalled_days: $stalled_days,
     unmaintained_days: $unmaintained_days, max_repos: $max_repos, max_prs: $max_prs,
     max_listed: $max_listed,
-    include_forks: ($include_forks == 1), exclude_archived: ($exclude_archived == 1),
-    reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages, trend_band_pct: 15}')
+    include_forks: (if $scope_kind == "organization" then $include_forks == 1 else true end),
+    exclude_archived: ($exclude_archived == 1),
+    reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages,
+    pull_request_page_limit: $pr_page_limit, trend_band_pct: 15}')
 
 # The recorded commands are templates with this run's window substituted, one per
 # read the report depends on, rather than one line per page of every repository.
