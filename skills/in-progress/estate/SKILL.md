@@ -48,8 +48,8 @@ Add `--json` when you need the numbers for something other than reading, and `--
 Only `--json` goes alongside `--from-json`; a different window needs a fresh collection and the command says so by name rather than ignoring it.
 
 A large organization is the one case worth bounding before you start.
-The command reviews at most 100 repositories, and in each one walks at most 40 pages of 50 pull requests, counting at most 300 of those updated inside the window; a read that hit any of those bounds is named in section 9.2.
-The pull-request walk is what costs time, and it costs most on a window in the past, because it descends from today to reach the window: budget around six reads per repository on a recent window and up to forty-one on an old one.
+Do not carry the bounds here: section 1 of every report states the ones that produced it, and section 9.2 names every read that hit one, so quote the report rather than a figure from this page.
+What costs the time is the pull-request walk, and it costs most on a window in the past, because it descends from today to reach the window: expect roughly ten reads per repository on a window ending today and up to about fifty on an older one, approximately and from the bounds section 1 discloses.
 On an estate with more than about thirty repositories, or any window that does not end today, tell the captain roughly how long it will take before you start rather than after.
 
 Do not compute any figure yourself, do not write a second collector, and do not repair a number you disagree with.

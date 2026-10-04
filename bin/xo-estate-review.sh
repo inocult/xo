@@ -45,10 +45,12 @@
 # WHY THERE ARE NOT MORE. A report whose whole value is that two of them are
 # comparable must not offer the caller ways to make two of them differ for
 # reasons the reader cannot see. So every other setting - the trend periods, the
-# stalled and unmaintained thresholds, the repository, pull-request and risk-row
-# caps, and the fork and archived selection - is a constant, declared once below
-# and disclosed in every report: the period count in the header bullet, the rest
-# in section 1 beside it. A disclosed constant is honest;
+# stalled and unmaintained thresholds, and the repository, pull-request and
+# risk-row caps - is a constant declared once below, and the fork and archived
+# selection is the fixed behaviour of `collect` rather than a value at all.
+# Every one of them is disclosed in every report: the period count in the header
+# bullet, the rest in section 1 beside it, each printed from the model so a
+# disclosure cannot drift from what collection did. A disclosed constant is honest;
 # a hidden one is not, and a flag is a third thing: an invisible difference
 # between two reports that look alike. Changing one of these values is a change
 # to this script, reviewed once, applying to every report after it.
@@ -748,7 +750,7 @@ collect() {
     fi
 
     if read_prs "$owner" "$name" "$PR_QUERY" "$since" "$until" 1; then
-      detail=$(pr_detail "capped at $MAX_PRS pull requests updated inside the window")
+      detail=$(pr_detail "capped at $MAX_PRS pull requests updated before the window ended")
       printf 'signal\t%s\tpull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
       sed -e "s|^pr$TAB|pr$TAB$full$TAB|" -e "s|^review$TAB|review$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
       if read_prs "$owner" "$name" "$OPEN_PR_QUERY" "$since" "$until" 0; then
@@ -1216,7 +1218,9 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "Two reports of the same estate are therefore comparable line for line, and section 9 names the read every figure came from.",
   "",
   "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories.",
-  "Pull requests: each repository's walk reads at most \($o.pull_request_page_limit) pages of \($o.pull_request_page_size), and spends its cap of \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests only on the ones it finds updated inside the window, so a window in the past is reached rather than exhausted before it.",
+  "Pull requests: each repository takes two walks, and each spends its own cap of \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests.",
+  "The window-bounded walk spends that cap only on pull requests updated before the window ended, so one updated since then costs it nothing and a window in the past is reached rather than exhausted before it; the open-pull-request walk is not bounded by the window at all, because a pull request nobody has touched for a year is the stalled work section 6.3 names, so every open pull request it reads spends the cap, oldest first.",
+  "Either walk stops at \($o.pull_request_page_limit) pages of \($o.pull_request_page_size), and across both a repository is read at most \($o.pull_request_pages_per_repository) pages deep.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
   "Both of those thresholds, and every figure they select over, are measured from when this review collected rather than from inside the window, because they are facts about the estate now rather than events in it: the repository set and each default branch, the archived flag, whether an account is automation, days since last push, the open pull request and open issue counts, the stalled list with its idle and age days, and what section 9 records as read.",
   "Rather than list where each is labelled, the rule holds everywhere: a table column carrying a figure measured that way ends its heading `at collection`, and a column carrying a figure that does not is bounded by the window. A column that names rather than measures - a repository, an account, a pull request's number or title - carries no clock. Section 9 is the exception and is collection-time throughout, because it records the reads themselves.",
@@ -1558,6 +1562,18 @@ resolve_scope
 
 SINCE_ISO=$(printf '%s' "$WINDOW_JSON" | jq -r .since)
 UNTIL_ISO=$(printf '%s' "$WINDOW_JSON" | jq -r .until)
+# The read depth a reader is told about in section 1 is per repository, and two
+# walks make it up. The window-bounded pass is bounded by its page bound, because
+# a pull request outside the window spends none of the count cap. In the open
+# pass every pull request spends the cap, so that pass runs out of budget after
+# as many pages as the cap holds, or at the page bound if that comes first.
+PR_OPEN_PAGES=$MAX_PR_PAGES
+if [ "$MAX_PRS" -gt 0 ]; then
+  PR_OPEN_PAGES=$(((MAX_PRS + PR_PAGE_SIZE - 1) / PR_PAGE_SIZE))
+  [ "$PR_OPEN_PAGES" -le "$MAX_PR_PAGES" ] || PR_OPEN_PAGES=$MAX_PR_PAGES
+fi
+PR_PAGES_PER_REPO=$((MAX_PR_PAGES + PR_OPEN_PAGES))
+
 OPTIONS_JSON=$(jq -n \
   --argjson window_days "$WINDOW_DAYS" --argjson periods "$PERIODS" \
   --argjson stalled_days "$STALLED_DAYS" --argjson unmaintained_days "$UNMAINTAINED_DAYS" \
@@ -1565,6 +1581,7 @@ OPTIONS_JSON=$(jq -n \
   --argjson max_listed "$MAX_LISTED" \
   --argjson reviews_per_pr "$REVIEWS_PER_PR" --argjson max_pages "$REST_MAX_PAGES" \
   --argjson pr_page_limit "$MAX_PR_PAGES" --argjson pr_page_size "$PR_PAGE_SIZE" \
+  --argjson pr_pages_per_repo "$PR_PAGES_PER_REPO" \
   --arg scope_kind "$SCOPE_KIND" \
   '{window_days: $window_days, periods: $periods, stalled_days: $stalled_days,
     unmaintained_days: $unmaintained_days, max_repos: $max_repos, max_prs: $max_prs,
@@ -1573,6 +1590,7 @@ OPTIONS_JSON=$(jq -n \
     exclude_archived: false,
     reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages,
     pull_request_page_limit: $pr_page_limit, pull_request_page_size: $pr_page_size,
+    pull_request_pages_per_repository: $pr_pages_per_repo,
     trend_band_pct: 15}')
 
 # The recorded commands are templates with this run's window substituted, one per

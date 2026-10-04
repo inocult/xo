@@ -108,15 +108,17 @@ JSON
 # <at>, numbered from <first>, and a pageInfo that either names the cursor of the
 # next page or ends the walk. A page whose next cursor names its own fixture is
 # a repository the walk never runs out of pages on.
-write_pr_page() {  # <file> <at-iso> <count> <first-number> <next-cursor-or-empty>
-  local file=$1 at=$2 count=$3 first=$4 next=$5
-  jq -n --arg at "$at" --argjson count "$count" --argjson first "$first" --arg next "$next" '
-    {data: {repository: {pullRequests: {
+write_pr_page() {  # <file> <at-iso> <count> <first-number> <next-cursor-or-empty> [state]
+  local file=$1 at=$2 count=$3 first=$4 next=$5 state=${6:-MERGED}
+  jq -n --arg at "$at" --argjson count "$count" --argjson first "$first" --arg next "$next" \
+    --arg state "$state" '
+    (if $state == "OPEN" then null else $at end) as $ended
+    | {data: {repository: {pullRequests: {
       pageInfo: (if $next == "" then {hasNextPage: false, endCursor: null}
                  else {hasNextPage: true, endCursor: $next} end),
       nodes: [range(0; $count) | ($first + .) as $n | {
-        number: $n, state: "MERGED", isDraft: false,
-        createdAt: $at, updatedAt: $at, mergedAt: $at, closedAt: $at,
+        number: $n, state: $state, isDraft: false,
+        createdAt: $at, updatedAt: $at, mergedAt: $ended, closedAt: $ended,
         additions: 1, deletions: 1, changedFiles: 1,
         headRefName: "f/\($n)", title: "pull request \($n)",
         author: {login: "ada", __typename: "User"},
@@ -165,13 +167,16 @@ case $path in
   graphql)
     repo=$(jq -r '.variables.name' "$input")
     cursor=$(jq -r '.variables.cursor // "-"' "$input")
+    # Either walk pages by cursor rather than by page number, so the next page is
+    # the fixture named for the cursor the walk asked for. That is how a
+    # multi-page walk is modelled without a second fake, and a fixture whose own
+    # endCursor names itself is a walk that never runs out of pages.
     if grep -q 'states:OPEN' "$input"; then
       fixture=$FIXTURES/prs-open-$repo.json
+      if [ "$cursor" != "-" ] && [ -f "$FIXTURES/prs-open-$repo-$cursor.json" ]; then
+        fixture=$FIXTURES/prs-open-$repo-$cursor.json
+      fi
     else
-      # The pull-request walk pages by cursor rather than by page number, so the
-      # next page is the fixture named for the cursor the walk asked for. That is
-      # how a multi-page walk is modelled without a second fake, and a fixture
-      # whose own endCursor names itself is a walk that never runs out of pages.
       fixture=$FIXTURES/prs-$repo.json
       if [ "$cursor" != "-" ] && [ -f "$FIXTURES/prs-$repo-$cursor.json" ]; then
         fixture=$FIXTURES/prs-$repo-$cursor.json
@@ -1006,7 +1011,8 @@ test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged() {
     fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
   assert_equals "1" "$(jq -r '[.caps[] | select(.signal == "pull_requests")] | length' "$root/model.json")"     "the window pass is recorded as capped"
-  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_requests") | .detail' "$root/model.json")"     "updated inside the window" "the cap says what it bounds"
+  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_requests") | .detail' "$root/model.json")"     "updated before the window ended" "the cap says what it is actually spent on"
+  assert_equals "$(jq -r '.options.max_prs' "$root/model.json")" "$(jq -r '.repositories[0].pull_requests.merged' "$root/model.json")"     "the cap the report discloses is the count the walk actually stopped at"
   assert_equals "complete" "$(jq -r '.repositories[0].signals.open_pull_requests.detail' "$root/model.json")"     "the open-pull-request pass completed"
   assert_equals "1" "$(jq -r '.risk.open_pull_requests' "$root/model.json")"     "the open count is what the completed pass supplies"
 
@@ -1017,6 +1023,85 @@ test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged() {
   assert_grep "| acme/widgets | pull_requests |" "$report" "section 9.2 still names the cap that did bite"
   assert_fixed_shape "$report" "a capped window pass beside a complete open pass"
   pass "a cap on the window-bounded pull-request walk does not hedge the open count the completed open pass supplies"
+}
+
+test_each_pull_request_walk_spends_its_own_budget() {
+  local root bin fixtures model file i
+  root=$(xo_test_tmproot xo-estate-review-twowalks) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  fixtures=$root/fixtures
+  write_fixtures "$fixtures"
+  keep_only_widgets "$fixtures"
+  # Section 1 tells the reader that each repository takes two walks and each
+  # spends its own cap, and that the open walk is not bounded by the window.
+  # Both walks are driven past the cap here, with every open pull request last
+  # touched long before the window opened, so the open count is capped by what
+  # that walk read rather than by anything about the window.
+  for i in 0 1 2 3 4 5; do
+    if [ "$i" = 0 ]; then file=$fixtures/prs-widgets.json; else file=$fixtures/prs-widgets-c$((i + 1)).json; fi
+    write_pr_page "$file" 2026-02-01T00:00:00Z 50 "$((1000 + i * 100))" "c$((i + 2))"
+    if [ "$i" = 0 ]; then file=$fixtures/prs-open-widgets.json; else file=$fixtures/prs-open-widgets-o$((i + 1)).json; fi
+    write_pr_page "$file" 2024-05-01T00:00:00Z 50 "$((5000 + i * 100))" "o$((i + 2))" OPEN
+  done
+  install_fake_gh_axi "$bin" "$fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  local cap
+  cap=$(jq -r '.options.max_prs' "$root/model.json")
+  assert_equals "$cap" "$(jq -r '.repositories[0].pull_requests.merged' "$root/model.json")"     "the window-bounded walk stopped at its own cap"
+  assert_equals "$cap" "$(jq -r '.risk.open_pull_requests' "$root/model.json")"     "the open walk stopped at a cap of its own rather than sharing the window walk's"
+  assert_equals "1" "$(jq -r '[.caps[] | select(.signal == "pull_requests")] | length' "$root/model.json")"     "the window walk reports its cap"
+  assert_equals "1" "$(jq -r '[.caps[] | select(.signal == "open_pull_requests")] | length' "$root/model.json")"     "the open walk reports its own cap"
+  assert_contains "$(jq -r '.caps[] | select(.signal == "open_pull_requests") | .detail' "$root/model.json")"     "open pull requests" "the open walk's cap says it is spent on open pull requests"
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "an estate where both pull-request walks hit their cap"
+  pass "each pull-request walk spends a cap of its own, the open one regardless of the window"
+}
+
+test_section_1_states_the_bounds_the_model_carries() {
+  local root bin model section1 name phrase
+  root=$(xo_test_tmproot xo-estate-review-bounds) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+
+  # Section 1 is the report's own account of what produced its numbers, and the
+  # way it goes wrong is by restating a bound in prose instead of printing the
+  # value collection used. So the rule is that every bound it states comes from
+  # the model: rendering a model whose option values have been replaced must
+  # state the replacements, and a bound the renderer still holds as a literal
+  # fails here rather than waiting for a reader to notice the contradiction.
+  jq '.options.max_repos = 7
+      | .options.max_prs = 11
+      | .options.pull_request_page_limit = 13
+      | .options.pull_request_page_size = 17
+      | .options.pull_request_pages_per_repository = 19
+      | .options.max_listed = 23
+      | .options.stalled_days = 29
+      | .options.unmaintained_days = 31
+      | .options.trend_band_pct = 37' "$root/model.json" > "$root/altered.json" ||
+    fail "could not replace the stored model's bounds"
+  "$REVIEW" --from-json "$root/altered.json" > "$root/altered.md" || fail "rendering failed"
+  section1=$(awk '/^## 1\./ { inside = 1; next } /^## 2\./ { inside = 0 } inside' "$root/altered.md")
+  [ -n "$section1" ] || fail "the rendered report has no section 1 to read the bounds from"
+  while IFS='|' read -r name phrase; do
+    assert_contains "$section1" "$phrase" "section 1 states $name from the model rather than from a literal"
+  done <<'BOUNDS'
+max_repos|at most 7 repositories
+max_prs|cap of 11 pull requests
+pull_request_page_limit|stops at 13 pages of 17
+pull_request_pages_per_repository|at most 19 pages deep
+max_listed|at most 23 worst-first rows
+stalled_days|idle for 29 days or more
+unmaintained_days|unpushed for 31 days or more
+trend_band_pct|beyond 37%
+BOUNDS
+  pass "every collection bound section 1 states is printed from the model, so the disclosure cannot drift from it"
 }
 
 test_an_estate_larger_than_the_caps_names_both_of_them() {
@@ -1419,6 +1504,8 @@ test_repository_selection_excludes_forks_and_discloses_it
 test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork
 test_an_estate_larger_than_the_caps_names_both_of_them
 test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged
+test_each_pull_request_walk_spends_its_own_budget
+test_section_1_states_the_bounds_the_model_carries
 test_a_window_behind_the_pull_request_cap_is_still_reached
 test_a_walk_that_cannot_reach_the_window_names_the_page_bound
 test_a_person_table_is_ordered_by_account_not_by_volume
