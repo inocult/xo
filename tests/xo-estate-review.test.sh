@@ -928,12 +928,27 @@ test_a_walk_that_cannot_reach_the_window_names_the_page_bound() {
   calls=$(grep -c 'POST graphql' "$fixtures/calls.log") || calls=0
   assert_equals "$((limit + 1))" "$calls"     "the walk stopped at the disclosed page bound rather than paging without end"
 
+  # A cap is a gap, so it reaches the same boundary an unread signal does. The
+  # row in section 9.2 is not enough on its own: the sentences a reader believes
+  # are the one that says the window was silent and the one that says the estate
+  # was read completely, and both would otherwise be false here.
+  assert_equals "0" "$(jq -r '.selection.fully_read' "$root/model.json")"     "a repository whose read stopped at a cap was not read completely"
+  assert_equals "1" "$(jq -r '.selection.partially_read' "$root/model.json")"     "it is counted as read with a gap instead"
+
   report=$root/report.md
   "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_grep "1 reviewed, 0 read completely, 1 read with at least one gap" "$report"     "the header bullet reports the gap rather than claiming a clean read"
+  assert_grep "No commit, pull request, review, or workflow run in what could be read, so every measure above is zero or unmeasurable rather than low (1 read behind this figure stopped at a cap; section 9.2 names it)." "$report"     "the headline says the walk never reached the window rather than that the window was silent"
+  assert_grep "No pull request merged in what could be read, so there is no change-size distribution to report (1 read behind this figure stopped at a cap; section 9.2 names it)." "$report"     "a figure the capped read fed says how far its claim reaches"
+  # The other half of the same rule: the reads that did complete are not hedged,
+  # and the figures resting only on them still range over the window.
+  assert_grep "No authored commit landed on a default branch in this window, so there is no revert or hotfix rate to report." "$report"     "a figure fed only by reads that completed still claims the window"
+  assert_grep "- Open issues: 2" "$report"     "a count fed only by a read that completed carries no notice"
   assert_no_grep "No read hit a collection cap" "$report"     "a report whose pull-request walk stopped short does not claim every read was complete"
   assert_grep "| acme/widgets | pull_requests |" "$report" "section 9.2 names the repository whose walk stopped"
+  assert_grep "| 0 | 2 | no | pull_requests |" "$report"     "section 7 names the capped read in that repository's gaps rather than reporting none"
   assert_fixed_shape "$report" "a walk that never reached the window"
-  pass "a pull-request walk that cannot reach the window stops at the disclosed page bound and reports it as a cap"
+  pass "a pull-request walk that cannot reach the window stops at the disclosed page bound, reports it as a cap, and no sentence claims a silent window or a complete read"
 }
 
 test_an_estate_larger_than_the_caps_names_both_of_them() {

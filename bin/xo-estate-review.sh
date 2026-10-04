@@ -1025,8 +1025,8 @@ $win as $w
     options: $o,
     selection: { matched: ($sel[1] | tonumber), reviewed: ($sel[2] | tonumber),
                  capped: ($sel[3] == "1"),
-                 fully_read: ($repo_models | map(select([.signals[] | .status] | all(. != "unread"))) | length),
-                 partially_read: ($repo_models | map(select([.signals[] | .status] | any(. == "unread"))) | length) },
+                 fully_read: ($repo_models | map(select([.signals[] | .detail] | all(. == "complete"))) | length),
+                 partially_read: ($repo_models | map(select([.signals[] | .detail] | any(. != "complete"))) | length) },
     commands: $commands,
     headline: [
       { metric: "Pull requests merged", value: ($merged | length),
@@ -1135,18 +1135,29 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 | ($w.period_labels) as $labels
 | (if $m.scope.kind == "repository" then "repository" else "organization" end) as $scope_word
 # EVERY sentence in this report that says the estate did nothing is composed
-# here and nowhere else. A read that failed contributes no records at all, so an
-# unread estate reaches the derivation looking exactly like a silent one, and a
-# sentence written the ordinary way would state as fact something no read ever
-# saw. A caller supplies only what was absent, what follows from that, and which
-# reads the figure rests on; this is what owns the phrase that says how far the
-# claim reaches. That is why it takes a subject rather than a finished sentence:
-# a helper that edited the caller's wording would silently do nothing to a
-# sentence spelled differently, which is a way to get it wrong once per call site
-# instead of right once here.
-| def readnote($signals): ([$m.unread[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $n
+# here and nowhere else. A read that delivered less than the whole window
+# contributes fewer records, or none, so an estate that could not be read
+# reaches the derivation looking exactly like a silent one, and a sentence
+# written the ordinary way would state as fact something no read ever saw. Both
+# ways a read falls short count here: one that failed saw nothing, and one that
+# stopped at a cap saw only part, and either can make a figure read as a zero it
+# is not. A caller supplies only what was absent, what follows from that, and
+# which reads the figure rests on; this is what owns the phrase that says how far
+# the claim reaches. That is why it takes a subject rather than a finished
+# sentence: a helper that edited the caller's wording would silently do nothing
+# to a sentence spelled differently, which is a way to get it wrong once per call
+# site instead of right once here.
+| def readnote($signals):
+    ([$m.unread[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $failed
+    | ([$m.caps[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $capped
+    | ($failed + $capped) as $n
+    | ([(if $failed == 0 then empty
+         else "\(if $failed == 1 then "1 read" else "\($failed) reads" end) behind this figure failed" end),
+        (if $capped == 0 then empty
+         elif $failed == 0 then "\(if $capped == 1 then "1 read" else "\($capped) reads" end) behind this figure stopped at a cap"
+         else "\($capped) stopped at a cap" end)] | join(" and ")) as $what
     | if $n == 0 then ""
-      else " (\(if $n == 1 then "1 read" else "\($n) reads" end) behind this figure failed; section 9.2 names \(if $n == 1 then "it" else "them" end))" end;
+      else " (\($what); section 9.2 names \(if $n == 1 then "it" else "them" end))" end;
   def absent($subject; $consequence; $clock; $signals):
     (readnote($signals)) as $note
     | (if $note != "" then (if $clock == "collection" then "in what could be read, as at collection" else "in what could be read" end)
@@ -1438,7 +1449,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
     .name, .commits.total, .pull_requests.merged, .pull_requests.open_now,
     (.pull_requests.cycle_hours.median | hrs), (.review.coverage_pct | pc),
     (.ci.latest_attempt_pass_rate_pct | pc), .concentration.authors, (.idle_days | num), yn(.archived),
-    ([.signals | to_entries[] | select(.value.status == "unread") | .key] | if length == 0 then "none" else join(", ") end)])]
+    ([.signals | to_entries[] | select(.value.detail != "complete") | .key] | if length == 0 then "none" else join(", ") end)])]
 + [
   "",
   "## 8. What these numbers do not measure",
@@ -1475,7 +1486,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
     (.signals.issues.status // "not attempted")])]
 + [""]
 + (if ($m.unread | length) == 0
-   then ["Every reviewed repository was read completely for every signal this report uses."]
+   then ["No read this report uses failed: every reviewed repository answered every one of them."]
    else ["Named gaps.",
          "A repository the tooling could not read is named here and excluded from the figures it could not supply; it is never silently dropped from an aggregate.",
          ""]
