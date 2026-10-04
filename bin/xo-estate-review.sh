@@ -188,6 +188,14 @@ FLAGS_GIVEN=()
 # produced the numbers without being able to vary it between two runs. They are deliberately not configurable: see WHY
 # THERE ARE NOT MORE above.
 #
+# Every value here is a lever: editing it is the supported way to change what it
+# bounds, and section 1 then reports the new value. The fork and archived
+# selection is NOT one of them and so is not a value here - it is the fixed
+# behaviour of `collect`, which reviews an archived repository and labels it, and
+# excludes an organization's forks while reviewing a repository named directly.
+# OPTIONS_JSON states that behaviour for section 1 to print rather than reading a
+# setting, so the disclosure cannot drift from what the code does.
+#
 # The three caps keep their "0 means no cap" handling even though no caller can
 # now pass 0, in both the collection guards and the renderer. Editing one of
 # these values is the supported way to change it, so 0 has to keep meaning what
@@ -197,10 +205,8 @@ PERIODS=6             # equal periods the window is split into for the trend
 STALLED_DAYS=14       # an open pull request idle this long is stalled
 UNMAINTAINED_DAYS=180 # a repository unpushed this long is unmaintained
 MAX_REPOS=100         # repositories reviewed at most
-MAX_PRS=300           # pull requests read per repository at most
+MAX_PRS=300           # pull requests updated inside the window counted per repository at most
 MAX_LISTED=15         # rows shown per risk list; the model keeps every row
-INCLUDE_FORKS=0       # an organization's forks are excluded; a named repository is reviewed either way
-EXCLUDE_ARCHIVED=0    # archived repositories are reviewed and labelled as archived
 
 need_value() {
   [ "$2" -gt 1 ] || die "$1 needs a value" 2
@@ -652,27 +658,34 @@ read_prs() {
   done
 }
 
-# pr_detail <pull-request-cap-message>: the disclosure for a pull-request read
-# that succeeded, which is "complete" only when none of the pull-request cap, the
-# page bound on the walk, and the per-pull-request review page bound was reached.
-# Each bound shortens what the figures describe, so each belongs in section 9.2
-# rather than in this script alone. Only the pull-request cap's wording depends on
-# which pass is walking, so only that one is the caller's to supply.
+# pr_detail <pull-request-cap-message>: the disclosure for a pull-request walk
+# that succeeded, which is "complete" only when neither the pull-request cap nor
+# the page bound on the walk was reached. Only the pull-request cap's wording
+# depends on which pass is walking, so only that one is the caller's to supply.
+#
+# Each bound in this report is filed against the signal it actually bounds, and
+# never against a wider one. A figure carries a caveat only when a read behind it
+# fell short, so a bound recorded against a read it does not shorten would hedge
+# a figure that is exact - which teaches a reader to ignore the caveat, and costs
+# as much as omitting one. These two bound how far down the pull-request
+# connection the walk got, so they belong to that walk; the review page bound
+# shortens the review list inside a pull request and nothing else, so it is filed
+# separately by reviews_over.
 pr_detail() {
-  local detail=complete over
   case $PR_CAPPED in
-    prs) detail=$1 ;;
-    pages) detail="capped at $MAX_PR_PAGES pages of $PR_PAGE_SIZE pull requests before the walk left the window, so every pull-request figure for this repository describes what was reached and a zero does not mean none" ;;
+    prs) printf '%s' "$1" ;;
+    pages) printf '%s' "capped at $MAX_PR_PAGES pages of $PR_PAGE_SIZE pull requests before the walk left the window, so every pull-request figure for this repository describes what was reached and a zero does not mean none" ;;
+    *) printf 'complete' ;;
   esac
-  over=$(awk -F'\t' -v cap="$REVIEWS_PER_PR" '$1 == "pr" && ($15 + 0) > cap { n++ } END { print n + 0 }' "$GH_RECORDS")
-  if [ "$over" != 0 ]; then
-    if [ "$detail" = complete ]; then
-      detail="$over pull requests carry more than $REVIEWS_PER_PR reviews; only the first $REVIEWS_PER_PR of each were read"
-    else
-      detail="$detail; $over pull requests carry more than $REVIEWS_PER_PR reviews, of which only the first $REVIEWS_PER_PR were read"
-    fi
-  fi
-  printf '%s' "$detail"
+}
+
+# reviews_over <repository>: how many of that repository's pull requests carry
+# more review submissions than one page holds, counted over the records both
+# passes left in $RECORDS so a pull request returned by each is counted once.
+reviews_over() {
+  awk -F'\t' -v repo="$1" -v cap="$REVIEWS_PER_PR" \
+    '$1 == "pr" && $2 == repo && ($16 + 0) > cap && !($3 in seen) { seen[$3] = 1; n++ }
+     END { print n + 0 }' "$RECORDS"
 }
 
 # ---------------------------------------------------------------------------
@@ -688,7 +701,7 @@ collect() {
 
   list_repos
 
-  local line full name owner branch archived fork pushed private detail
+  local line full name owner branch archived fork pushed private detail over
   local -a chosen=()
   while IFS= read -r line; do
     [ -n "$line" ] || continue
@@ -745,6 +758,10 @@ collect() {
       else
         printf 'signal\t%s\topen_pull_requests\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
       fi
+      over=$(reviews_over "$full")
+      [ "$over" = 0 ] ||
+        printf 'signal\t%s\tpull_request_reviews\tread\t%s pull requests carry more than %s reviews; only the first %s of each were read\n' \
+          "$full" "$over" "$REVIEWS_PER_PR" "$REVIEWS_PER_PR" >> "$RECORDS"
     else
       printf 'signal\t%s\tpull_requests\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
       printf 'signal\t%s\topen_pull_requests\tunread\tnot attempted after the pull-request read failed\n' "$full" >> "$RECORDS"
@@ -1174,6 +1191,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 | (["pull_requests"]) as $merged_pr_reads
 | (["open_pull_requests"]) as $open_pr_reads
 | (["pull_requests", "open_pull_requests"]) as $any_pr_reads
+| (["pull_request_reviews"]) as $review_reads
 | (["ci_runs"]) as $ci_reads
 | (["issues"]) as $issue_reads
 | # A series with no measurement in its last period gets no direction at all, and
@@ -1197,7 +1215,8 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "The same nine sections appear in the same order for every estate, and a section with no data says so rather than disappearing.",
   "Two reports of the same estate are therefore comparable line for line, and section 9 names the read every figure came from.",
   "",
-  "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories, at most \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests per repository.",
+  "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories.",
+  "Pull requests: each repository's walk reads at most \($o.pull_request_page_limit) pages of \($o.pull_request_page_size), and spends its cap of \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests only on the ones it finds updated inside the window, so a window in the past is reached rather than exhausted before it.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
   "Both of those thresholds, and every figure they select over, are measured from when this review collected rather than from inside the window, because they are facts about the estate now rather than events in it: the repository set and each default branch, the archived flag, whether an account is automation, days since last push, the open pull request and open issue counts, the stalled list with its idle and age days, and what section 9 records as read.",
   "Rather than list where each is labelled, the rule holds everywhere: a table column carrying a figure measured that way ends its heading `at collection`, and a column carrying a figure that does not is bounded by the window. A column that names rather than measures - a repository, an account, a pull request's number or title - carries no clock. Section 9 is the exception and is collection-time throughout, because it records the reads themselves.",
@@ -1226,7 +1245,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 + [
   "",
   (if $m.quality.commits.total == 0 and ($m.people | length) == 0 and $m.quality.ci.runs == 0
-   then absent_in_window("commit, pull request, review, or workflow run"; "so every measure above is zero or unmeasurable rather than low"; $commit_reads + $any_pr_reads + $ci_reads)
+   then absent_in_window("commit, pull request, review, or workflow run"; "so every measure above is zero or unmeasurable rather than low"; $commit_reads + $any_pr_reads + $review_reads + $ci_reads)
    else "A rising cycle time means work is getting slower; a rising merged count means more is landing." end),
   "",
   "## 3. Who did what",
@@ -1237,7 +1256,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "This table is a record of participation, not a ranking, and the counts carry no judgement about anyone's effort, difficulty of work, or worth.",
   ""
   ]
-+ (if ($m.people | length) == 0 then [absent_in_window("account committed, opened a pull request, or reviewed one"; ""; $commit_reads + $any_pr_reads)]
++ (if ($m.people | length) == 0 then [absent_in_window("account committed, opened a pull request, or reviewed one"; ""; $commit_reads + $any_pr_reads + $review_reads)]
    else header(["Account", "Automation, at collection", "Commits", "Pull requests opened", "Pull requests merged", "Reviews submitted", "Pull requests reviewed", "Repositories touched"])
         + [$m.people[] | row([.person, yn(.automation), .commits, .prs_opened, .prs_merged, .reviews_submitted, .prs_reviewed, .repos])]
         + ["",
@@ -1252,7 +1271,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ]
 + (($m.people | map(select(.reviews_submitted > 0))) as $reviewers
    | if ($reviewers | length) == 0
-     then [absent_in_window("account submitted a review of another account's pull request"; ""; $any_pr_reads),
+     then [absent_in_window("account submitted a review of another account's pull request"; ""; $any_pr_reads + $review_reads),
            "",
            "Of \($m.quality.review.merged) merged pull requests, \($m.quality.review.with_review_by_another_account) carried a review by another account.",
            "That is a fact about this estate's recorded review activity, not evidence that the work went unexamined: review can happen in a channel GitHub never sees."]
@@ -1300,7 +1319,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if $m.velocity.review_latency_hours.measured == 0
-   then [absent_in_window("merged pull request with a review from another account"; "so review latency is unmeasurable here"; $merged_pr_reads),
+   then [absent_in_window("merged pull request with a review from another account"; "so review latency is unmeasurable here"; $merged_pr_reads + $review_reads),
          "That is the same fact section 3.2 reports, stated as a waiting time rather than as coverage."]
    else [bullet("Median: \($m.velocity.review_latency_hours.median | hrs) over \($m.velocity.review_latency_hours.measured) merged pull requests"),
          bullet("p90: \($m.velocity.review_latency_hours.p90 | hrs)"),
@@ -1424,7 +1443,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at \($m.generated_at).",
   ""
   ]
-+ [bullet("Open pull requests: \($m.risk.open_pull_requests)\(readnote($any_pr_reads))"),
++ [bullet("Open pull requests: \($m.risk.open_pull_requests)\(readnote($open_pr_reads))"),
    bullet("Open issues: \($m.risk.open_issues)\(readnote($issue_reads))"),
    ""]
 + (if ($m.risk.stalled_pull_requests | length) == 0
@@ -1544,16 +1563,17 @@ OPTIONS_JSON=$(jq -n \
   --argjson stalled_days "$STALLED_DAYS" --argjson unmaintained_days "$UNMAINTAINED_DAYS" \
   --argjson max_repos "$MAX_REPOS" --argjson max_prs "$MAX_PRS" \
   --argjson max_listed "$MAX_LISTED" \
-  --argjson include_forks "$INCLUDE_FORKS" --argjson exclude_archived "$EXCLUDE_ARCHIVED" \
   --argjson reviews_per_pr "$REVIEWS_PER_PR" --argjson max_pages "$REST_MAX_PAGES" \
-  --argjson pr_page_limit "$MAX_PR_PAGES" --arg scope_kind "$SCOPE_KIND" \
+  --argjson pr_page_limit "$MAX_PR_PAGES" --argjson pr_page_size "$PR_PAGE_SIZE" \
+  --arg scope_kind "$SCOPE_KIND" \
   '{window_days: $window_days, periods: $periods, stalled_days: $stalled_days,
     unmaintained_days: $unmaintained_days, max_repos: $max_repos, max_prs: $max_prs,
     max_listed: $max_listed,
-    include_forks: (if $scope_kind == "organization" then $include_forks == 1 else true end),
-    exclude_archived: ($exclude_archived == 1),
+    include_forks: ($scope_kind != "organization"),
+    exclude_archived: false,
     reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages,
-    pull_request_page_limit: $pr_page_limit, trend_band_pct: 15}')
+    pull_request_page_limit: $pr_page_limit, pull_request_page_size: $pr_page_size,
+    trend_band_pct: 15}')
 
 # The recorded commands are templates with this run's window substituted, one per
 # read the report depends on, rather than one line per page of every repository.

@@ -585,45 +585,78 @@ $claimed"
     assert_grep "$surface" "$root/report.md" "an unread estate reports '$surface'"
   done
   # The notice counts the reads behind the figure it sits on, not every read in
-  # the run, so a figure fed by four failed reads says four and the open-issue
-  # count beside it says two.
-  assert_grep "Open pull requests: 0 (4 reads behind this figure failed" "$root/report.md"     "the open pull request count names the reads that fed it"
+  # the run, so the headline, which rests on four reads of two repositories, says
+  # eight, while the counts beside each other in 6.3 each name only their own
+  # read: the open pull request count rests on the open-pull-request pass and the
+  # open issue count on the issue read.
+  assert_grep "rather than low (8 reads behind this figure failed" "$root/report.md"     "the headline names every read behind it"
+  assert_grep "Open pull requests: 0 (2 reads behind this figure failed" "$root/report.md"     "the open pull request count names the read that fed it and no wider one"
   assert_grep "Open issues: 0 (2 reads behind this figure failed" "$root/report.md"     "the open issue count names its own reads rather than every failure in the run"
   assert_equals "14" "$(grep -c 'behind this figure failed' "$root/report.md")"     "every figure a failed read fed says so"
   pass "an estate whose reads all failed states in every section that it could not be read, never that it was quiet"
 }
 
-test_a_read_failure_reaches_the_figures_it_fed_and_no_others() {
-  local root bin model signal expected seen
+test_a_read_that_fell_short_reaches_the_figures_it_fed_and_no_others() {
+  local root bin model mode case_name expected seen
   # One read at a time, against an estate that is otherwise silent so every
   # surface renders its empty sentence and is therefore eligible for a notice.
-  # What the case proves is the whole rule in both directions: the sections a
-  # failed read fed all say so, and no section it did not feed says anything.
+  # What the case proves is the whole rule in both directions: the sections the
+  # read fed all say so, and no section it did not feed says anything.
   # A surface that named a read it does not rest on fails here as loudly as one
   # that dropped a read it does.
-  while IFS='|' read -r signal expected; do
-    root=$(xo_test_tmproot "xo-estate-review-$signal") || fail "no fixture root"
+  #
+  # Both ways a read falls short are driven through the same rule, because a cap
+  # misfiled against a wider signal hedges an exact figure exactly as a notice on
+  # the wrong surface does. The per-pull-request review bound is the cap case: it
+  # shortens the review list inside a pull request and nothing else, so it must
+  # reach the review-derived surfaces and no others.
+  while IFS='|' read -r case_name expected; do
+    root=$(xo_test_tmproot "xo-estate-review-$case_name") || fail "no fixture root"
     bin=$(xo_fakebin "$root")
     write_fixtures "$root/fixtures"
     jq -n '[{full_name: "acme/quiet", name: "quiet", owner: {login: "acme"}, default_branch: "main",
              archived: false, fork: false, pushed_at: "2026-03-30T00:00:00Z", private: false}]' \
       > "$root/fixtures/repos.json" || fail "could not write the silent estate"
-    install_fake_gh_axi "$bin" "$root/fixtures" "deny-$signal"
+    mode=ok
+    case $case_name in
+      deny-*) mode=$case_name ;;
+      cap-pull-request-reviews)
+        # One pull request, merged and reviewed before the window opened, whose
+        # review count exceeds what a single page holds. The estate is still
+        # silent in the window; the only thing short is that review list.
+        jq -n '{data: {repository: {pullRequests: {
+                 pageInfo: {hasNextPage: false, endCursor: null},
+                 nodes: [{number: 1, state: "MERGED", isDraft: false,
+                   createdAt: "2025-06-01T00:00:00Z", updatedAt: "2025-06-02T00:00:00Z",
+                   mergedAt: "2025-06-02T00:00:00Z", closedAt: "2025-06-02T00:00:00Z",
+                   additions: 1, deletions: 1, changedFiles: 1, headRefName: "f/1",
+                   title: "before the window", author: {login: "ada", __typename: "User"},
+                   commits: {nodes: [{commit: {committedDate: "2025-06-01T00:00:00Z"}}]},
+                   reviews: {totalCount: 60, nodes: [{author: {login: "brooke", __typename: "User"},
+                     submittedAt: "2025-06-01T12:00:00Z", state: "APPROVED"}]},
+                   reviewThreads: {totalCount: 0}}]}}}}' \
+          > "$root/fixtures/prs-quiet.json" || fail "could not write the over-reviewed pull request"
+        ;;
+      *) fail "unknown case '$case_name'" ;;
+    esac
+    install_fake_gh_axi "$bin" "$root/fixtures" "$mode"
     model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
-      fail "a review with the $signal read denied did not produce a model"
+      fail "the $case_name review did not produce a model"
     printf '%s' "$model" > "$root/model.json"
     "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
     seen=$(awk '/^#+ [0-9]/ { section = $2; sub(/\.$/, "", section) }
-                /behind this figure failed/ { print section }' "$root/report.md" | sort -u | tr '\n' ' ')
-    assert_equals "$expected " "$seen" "a failed $signal read reaches exactly the sections its figures rest on"
+                /behind this figure (failed|stopped at a cap)/ { print section }' \
+             "$root/report.md" | sort -u | tr '\n' ' ')
+    assert_equals "$expected " "$seen" "$case_name reaches exactly the sections its figures rest on"
   done <<'CASES'
-commits|2 3.1 4.1 5.1 6.1
-pull-requests|2 3.1 3.2 4.1 4.2 4.3 5.2 5.3 6.3
-open-pull-requests|2 3.1 3.2 6.3
-ci-runs|2 5.4
-issues|6.3
+deny-commits|2 3.1 4.1 5.1 6.1
+deny-pull-requests|2 3.1 3.2 4.1 4.2 4.3 5.2 5.3 6.3
+deny-open-pull-requests|2 3.1 3.2 6.3
+deny-ci-runs|2 5.4
+deny-issues|6.3
+cap-pull-request-reviews|2 3.1 3.2 4.3
 CASES
-  pass "a failed read is named on every figure it fed and on no figure it did not"
+  pass "a read that failed or stopped at a cap is named on every figure it fed and on no figure it did not"
 }
 
 test_push_recency_is_measured_from_collection_not_from_the_window_end() {
@@ -951,6 +984,41 @@ test_a_walk_that_cannot_reach_the_window_names_the_page_bound() {
   pass "a pull-request walk that cannot reach the window stops at the disclosed page bound, reports it as a cap, and no sentence claims a silent window or a complete read"
 }
 
+test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged() {
+  local root bin fixtures model report line file i
+  root=$(xo_test_tmproot xo-estate-review-prcapopen) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  fixtures=$root/fixtures
+  write_fixtures "$fixtures"
+  keep_only_widgets "$fixtures"
+  # The window-bounded pass spends its whole cap on pull requests merged inside
+  # the window; the open-pull-request pass is a separate walk that completes.
+  # The open count is what the completed pass supplies, so it is exact, and a cap
+  # on the other walk must not hedge it: a notice on a figure it does not bound
+  # teaches a reader to ignore the notice, which costs as much as omitting one.
+  for i in 0 1 2 3 4 5; do
+    if [ "$i" = 0 ]; then file=$fixtures/prs-widgets.json; else file=$fixtures/prs-widgets-c$((i + 1)).json; fi
+    write_pr_page "$file" 2026-02-01T00:00:00Z 50 "$((1000 + i * 100))" "c$((i + 2))"
+  done
+  install_fake_gh_axi "$bin" "$fixtures" ok
+
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "1" "$(jq -r '[.caps[] | select(.signal == "pull_requests")] | length' "$root/model.json")"     "the window pass is recorded as capped"
+  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_requests") | .detail' "$root/model.json")"     "updated inside the window" "the cap says what it bounds"
+  assert_equals "complete" "$(jq -r '.repositories[0].signals.open_pull_requests.detail' "$root/model.json")"     "the open-pull-request pass completed"
+  assert_equals "1" "$(jq -r '.risk.open_pull_requests' "$root/model.json")"     "the open count is what the completed pass supplies"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  line=$(grep -F "Open pull requests: " "$report" | head -n 1)
+  assert_not_contains "$line" "behind this figure"     "a count a completed read supplies in full carries no notice from another walk's cap"
+  assert_grep "| acme/widgets | pull_requests |" "$report" "section 9.2 still names the cap that did bite"
+  assert_fixed_shape "$report" "a capped window pass beside a complete open pass"
+  pass "a cap on the window-bounded pull-request walk does not hedge the open count the completed open pass supplies"
+}
+
 test_an_estate_larger_than_the_caps_names_both_of_them() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-listcap) || fail "no fixture root"
@@ -1044,8 +1112,12 @@ test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound() {
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
     fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
-  assert_equals "1" "$(jq -r '[.caps[] | select(.repo == "acme/widgets" and .signal == "pull_requests")] | length' "$root/model.json")"     "the review page bound is recorded as a cap"
-  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_requests") | .detail' "$root/model.json")"     "carry more than 50 reviews" "the cap says what was shortened"
+  # Filed under the signal it bounds rather than under the pull-request walk: it
+  # shortens the review list inside a pull request, and nothing else, so it must
+  # not reach a merged count that is exact.
+  assert_equals "1" "$(jq -r '[.caps[] | select(.repo == "acme/widgets" and .signal == "pull_request_reviews")] | length' "$root/model.json")"     "the review page bound is recorded as a cap of its own"
+  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_request_reviews") | .detail' "$root/model.json")"     "carry more than 50 reviews" "the cap says what was shortened"
+  assert_equals "complete" "$(jq -r '.repositories[0].signals.pull_requests.detail' "$root/model.json")"     "the pull-request walk itself is still recorded as complete"
   "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
   assert_fixed_shape "$root/report.md" "an estate with a heavily reviewed pull request"
   assert_grep "Reads that hit a cap" "$root/report.md" "section 9.2 surfaces the bound to the reader"
@@ -1335,7 +1407,7 @@ test_an_estate_with_no_data_still_emits_every_section
 test_a_repository_the_tooling_cannot_read_is_named_not_dropped
 test_an_estate_nothing_could_be_read_from_never_reads_as_a_quiet_one
 test_push_recency_is_measured_from_collection_not_from_the_window_end
-test_a_read_failure_reaches_the_figures_it_fed_and_no_others
+test_a_read_that_fell_short_reaches_the_figures_it_fed_and_no_others
 test_rendering_the_same_model_twice_is_byte_identical
 test_a_changed_gh_axi_envelope_refuses_instead_of_reporting_an_empty_estate
 test_collection_makes_no_state_changing_call
@@ -1346,6 +1418,7 @@ test_a_single_repository_review_is_the_same_report_with_one_row
 test_repository_selection_excludes_forks_and_discloses_it
 test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork
 test_an_estate_larger_than_the_caps_names_both_of_them
+test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged
 test_a_window_behind_the_pull_request_cap_is_still_reached
 test_a_walk_that_cannot_reach_the_window_names_the_page_bound
 test_a_person_table_is_ordered_by_account_not_by_volume
