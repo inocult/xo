@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Behavior tests for bin/xo-estate-review.sh, the read-only estate review.
+# Behavior tests for the estate-review skill's script, the read-only estate review.
 #
 # Two things need pinning and they fail for different reasons.
 #
@@ -22,7 +22,7 @@ set -u
 # shellcheck source=tests/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-REVIEW="$ROOT/bin/xo-estate-review.sh"
+REVIEW="$ROOT/skills/in-progress/estate-review/scripts/estate-review.sh"
 NOW=2026-04-01T00:00:00Z
 WINDOW=(--since 2026-01-01 --until 2026-04-01)
 

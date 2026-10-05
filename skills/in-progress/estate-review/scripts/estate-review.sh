@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# xo-estate-review.sh - read-only estate review with a fixed report shape.
+# estate-review.sh - read-only estate review with a fixed report shape.
 #
 # Reviews an engineering estate - a GitHub organization or one of its
 # repositories - over a bounded collection window and prints a status report whose
@@ -27,9 +27,9 @@
 # Section 8 of every report states what the numbers do not measure.
 #
 # Usage:
-#   bin/xo-estate-review.sh <org> [flags]              every repository the org owns
-#   bin/xo-estate-review.sh <owner>/<repo> [flags]     one repository
-#   bin/xo-estate-review.sh --from-json <file>         render a stored model, no network
+#   scripts/estate-review.sh <org> [flags]              every repository the org owns
+#   scripts/estate-review.sh <owner>/<repo> [flags]     one repository
+#   scripts/estate-review.sh --from-json <file>         render a stored model, no network
 #
 # An organization review is a per-repository review plus an aggregate; a single
 # repository review is the same report with one repository in it.
@@ -69,8 +69,8 @@
 # different window needs a fresh collection, and re-deriving one here would leave
 # the report disagreeing with the model it was rendered from.
 #
-# XO_ESTATE_REVIEW_NOW overrides the collection clock (ISO 8601 UTC), the same
-# injected-clock contract bin/xo-fleet-snapshot.sh uses, so a run is reproducible.
+# XO_ESTATE_REVIEW_NOW overrides the collection clock: an ISO 8601 UTC instant
+# that replaces "now" everywhere this script reads it, so a run is reproducible.
 #
 # DATA SOURCES, and what each figure does and does not evidence:
 #   gh-axi api                 repository metadata, commits on the default branch,
@@ -133,7 +133,7 @@
 # tests/xo-estate-review-live-e2e.test.sh proves the real gh-axi still emits it.
 set -u
 
-SCRIPT_NAME=xo-estate-review.sh
+SCRIPT_NAME=estate-review.sh
 CONTRACT=xo-estate-review.v1
 # The record separator, spelled once. `\t` inside a sed or grep expression is a
 # GNU extension that BSD sed reads as a literal `t`, so a pattern written that
@@ -149,8 +149,8 @@ die() {
 
 usage() {
   cat <<'EOF'
-usage: xo-estate-review.sh <org|owner/repo> [flags]
-       xo-estate-review.sh --from-json <file>
+usage: estate-review.sh <org|owner/repo> [flags]
+       estate-review.sh --from-json <file>
 
 Read-only estate review. Prints the same nine sections in the same order for
 every estate; a surface with no data is stated as empty, never omitted.
@@ -1051,7 +1051,7 @@ $win as $w
 | {
     contract: $contract,
     generated_at: $now,
-    generator: "xo-estate-review.sh",
+    generator: "estate-review.sh",
     scope: { kind: $scope_kind, name: $scope_name },
     window: { since: $w.since, until: $w.until, days: $w.days, periods: $np,
               period_days: $w.period_days, period_labels: $w.period_labels },
@@ -1564,7 +1564,6 @@ if [ -n "$FROM_JSON" ]; then
 fi
 
 command -v gh-axi > /dev/null 2>&1 || die "gh-axi is required for estate collection"
-command -v gh > /dev/null 2>&1 || die "gh is required: gh-axi wraps the GitHub CLI"
 
 TMPROOT=$(mktemp -d "${TMPDIR:-/tmp}/xo-estate-review.XXXXXX") || die "could not create a working directory"
 gh_scratch_init

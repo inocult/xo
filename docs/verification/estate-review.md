@@ -1,7 +1,7 @@
 # Estate review verification
 
 Repeatable evidence for the read-only estate review.
-Current behavior, every metric definition, and the flags are owned by [`../../bin/xo-estate-review.sh`](../../bin/xo-estate-review.sh)'s header and `--help`, and the invocation policy by the `estate` skill; this page records evidence only.
+Current behavior, every metric definition, and the flags are owned by [`../../skills/in-progress/estate-review/scripts/estate-review.sh`](../../skills/in-progress/estate-review/scripts/estate-review.sh)'s header and `--help`, and the invocation policy by the `estate-review` skill; this page records evidence only.
 
 Date: 2026-10-04.
 Shell: GNU bash 5.3.15 (Linux 7.2.5-3-omarchy).
@@ -10,7 +10,7 @@ jq: 1.8.2.
 
 ## Why this surface needs live evidence
 
-`bin/xo-estate-review.sh` reads a vendor-rendered surface.
+The skill's script reads a vendor-rendered surface.
 gh-axi renders every response for an agent to read, so the collector asks for a tab-separated payload with `--jq` and decodes the one `api_response` body field that carries it.
 Returning JSON from `--jq` is not an option: gh-axi recognizes a JSON result and re-renders it as a document, so the payload would stop being a payload.
 A portable fake can only confirm the assumption written into the fake, so the envelope itself is proven against the installed gh-axi.
@@ -105,7 +105,7 @@ $ XO_ESTATE_REVIEW_LIVE=1 bash tests/xo-estate-review-live-e2e.test.sh
 The renderer's jq program is read with `IFS= read -r -d '' RENDER_JQ <<'JQ' || :` rather than assigned from `$(cat <<'JQ' ... )`, and that is a correctness constraint rather than a style choice.
 Stock macOS Bash 3.2 scans a command substitution for its closing parenthesis without treating a here-document body inside it as data.
 The renderer interpolates jq strings, so the parenthesis that closes a `\( ... )` containing a quoted string reads to that scanner as the end of the substitution, and the rest of the program is then parsed as shell.
-The observed failure was `bin/xo-estate-review.sh: line 1149: syntax error near unexpected token '('` under `/bin/bash -n`, reported against GNU bash 3.2.57(1)-release (arm64-apple-darwin25).
+The observed failure was `estate-review.sh: line 1149: syntax error near unexpected token '('` under `/bin/bash -n`, reported against GNU bash 3.2.57(1)-release (arm64-apple-darwin25).
 
 `DERIVE_JQ` remains an ordinary `$( ... )` assignment because it carries no `\( ... )` interpolation and stays parenthesis-balanced under the same scanner; a future interpolation added there would need the same treatment.
 
@@ -116,9 +116,9 @@ Changing how the program is delivered must not change what it prints.
 The check is that one stored model renders byte-identically, which is also what makes a stored model a fixed input rather than a snapshot of a machine:
 
 ```console
-$ xo-estate-review.sh jqlang --since 2025-05-01 --until 2025-07-01 --json > model.json
-$ xo-estate-review.sh --from-json model.json > a.md
-$ xo-estate-review.sh --from-json model.json > b.md
+$ estate-review.sh jqlang --since 2025-05-01 --until 2025-07-01 --json > model.json
+$ estate-review.sh --from-json model.json > a.md
+$ estate-review.sh --from-json model.json > b.md
 $ cmp a.md b.md && wc -lc a.md
   287 18332 a.md
 ```

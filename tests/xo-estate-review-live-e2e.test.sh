@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Live guard for bin/xo-estate-review.sh against the real gh-axi and real GitHub.
+# Live guard for the estate-review skill's script against the real gh-axi and real GitHub.
 #
-# bin/xo-estate-review.sh reads a vendor-rendered surface: gh-axi renders every
+# The script reads a vendor-rendered surface: gh-axi renders every
 # response for an agent to read, and the script decodes the one envelope field
 # that carries its shaped payload. A fake can only ever confirm the assumption
 # already written into the fake, so the envelope itself has to be proven against
@@ -35,7 +35,7 @@ if ! gh auth status > /dev/null 2>&1; then
   exit 0
 fi
 
-REVIEW="$ROOT/bin/xo-estate-review.sh"
+REVIEW="$ROOT/skills/in-progress/estate-review/scripts/estate-review.sh"
 ESTATE=${XO_ESTATE_REVIEW_LIVE_ESTATE:-jqlang}
 REPO=${XO_ESTATE_REVIEW_LIVE_REPO:-jq}
 WINDOW=(--since 2025-05-01 --until 2025-07-01)
@@ -56,7 +56,7 @@ test_the_real_gh_axi_envelope_still_carries_a_shaped_payload() {
     fail "gh-axi ($GH_AXI_VERSION) could not read /repos/$ESTATE/$REPO"
   bodies=$(grep -c '^[[:space:]]*body:[[:space:]]*' "$raw") || bodies=0
   [ "$bodies" = 1 ] ||
-    fail "gh-axi ($GH_AXI_VERSION) rendered $bodies body fields, not 1; bin/xo-estate-review.sh's gh_read decodes exactly one"
+    fail "gh-axi ($GH_AXI_VERSION) rendered $bodies body fields, not 1; the script's gh_read decodes exactly one"
   truncated=$(sed -n 's/^[[:space:]]*truncated:[[:space:]]*//p' "$raw" | head -n 1)
   [ "$truncated" = "false" ] ||
     fail "gh-axi ($GH_AXI_VERSION) reported truncated='$truncated' under --full; the collector refuses a truncated payload"

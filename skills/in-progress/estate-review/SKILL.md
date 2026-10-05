@@ -15,7 +15,7 @@ XO neither loads nor dispatches it, so it is not XO runtime code and carries no 
 
 Review an estate and tell the captain what is actually happening in it.
 
-`bin/xo-estate-review.sh` is the single owner of collection, every metric definition, and the report's shape; its header and `--help` own the flags.
+`scripts/estate-review.sh`, beside this file, is the single owner of collection, every metric definition, and the report's shape; its header and `--help` own the flags.
 This skill owns which estate and window to point it at, what the captain hears back, and the two boundaries that matter: the review never writes to the estate, and it never ranks people.
 
 ## 1. Resolve the estate and the window
@@ -38,7 +38,7 @@ When the captain asks about the last day or two, give them the shortest accepted
 ## 2. Run it
 
 ```
-bin/xo-estate-review.sh <estate> [--since <date>] [--until <date>] [--window <days>]
+scripts/estate-review.sh <estate> [--since <date>] [--until <date>] [--window <days>]
 ```
 
 Choosing the period is all the flags do, and that is deliberate: a report whose value is that two of them are comparable must not offer ways to make two of them differ invisibly.
