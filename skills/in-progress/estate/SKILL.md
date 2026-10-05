@@ -41,15 +41,15 @@ bin/xo-estate-review.sh <estate> [--since <date>] [--until <date>] [--window <da
 ```
 
 Choosing the period is all the flags do, and that is deliberate: a report whose value is that two of them are comparable must not offer ways to make two of them differ invisibly.
-The trend periods, the stalled and unmaintained thresholds, the repository and pull-request bounds and the fork and archived selection are fixed, each disclosed in the report's header bullet or section 1 rather than chosen per run.
+The trend periods, the stalled and unmaintained thresholds, the collection bounds and the fork and archived selection are fixed rather than chosen per run; the report states the window, the thresholds and the selection, and `--help` describes how collection is bounded.
 If one of those values is wrong for an estate, that is a change to the command, reviewed once and applying to every report after it - not a flag, and not something to work around.
 
 Add `--json` when you need the numbers for something other than reading, and `--from-json` to re-render a stored model without touching the network.
 Only `--json` goes alongside `--from-json`; a different window needs a fresh collection and the command says so by name rather than ignoring it.
 
 A large organization is the one case worth bounding before you start.
-Do not carry the bounds here: section 1 of every report states the ones that produced it, and section 9.2 names every read that hit one, so quote the report rather than a figure from this page.
-What costs the time is the pull-request walk, and it costs most on a window in the past, because it descends from today to reach the window: expect roughly ten reads per repository on a window ending today and up to about fifty on an older one, approximately and from the bounds section 1 discloses.
+Do not carry the bounds here: section 9.2 of every report names each read that stopped at one, so quote the report rather than a figure from this page.
+What costs the time is the pull-request walk, and it costs most on a window in the past, because it descends from today to reach the window: expect roughly ten reads per repository on a window ending today and up to about fifty on an older one, both approximate.
 On an estate with more than about thirty repositories, or any window that does not end today, tell the captain roughly how long it will take before you start rather than after.
 
 Do not compute any figure yourself, do not write a second collector, and do not repair a number you disagree with.

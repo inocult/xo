@@ -1032,11 +1032,11 @@ test_each_pull_request_walk_spends_its_own_budget() {
   fixtures=$root/fixtures
   write_fixtures "$fixtures"
   keep_only_widgets "$fixtures"
-  # Section 1 tells the reader that each repository takes two walks and each
-  # spends its own cap, and that the open walk is not bounded by the window.
-  # Both walks are driven past the cap here, with every open pull request last
-  # touched long before the window opened, so the open count is capped by what
-  # that walk read rather than by anything about the window.
+  # Each repository takes two pull-request walks and each spends its own cap, the
+  # open one regardless of the window. Both are driven past the cap here, with
+  # every open pull request last touched long before the window opened, so the
+  # open count is capped by what that walk read rather than by anything about the
+  # window, and the collection log names each cap against the walk that hit it.
   for i in 0 1 2 3 4 5; do
     if [ "$i" = 0 ]; then file=$fixtures/prs-widgets.json; else file=$fixtures/prs-widgets-c$((i + 1)).json; fi
     write_pr_page "$file" 2026-02-01T00:00:00Z 50 "$((1000 + i * 100))" "c$((i + 2))"
@@ -1070,18 +1070,15 @@ test_section_1_states_the_bounds_the_model_carries() {
     fail "collection failed"
   printf '%s' "$model" > "$root/model.json"
 
-  # Section 1 is the report's own account of what produced its numbers, and the
-  # way it goes wrong is by restating a bound in prose instead of printing the
-  # value collection used. So the rule is that every bound it states comes from
-  # the model: rendering a model whose option values have been replaced must
-  # state the replacements, and a bound the renderer still holds as a literal
-  # fails here rather than waiting for a reader to notice the contradiction.
+  # Section 1 states the window, the thresholds and the selection - what a reader
+  # needs in order to read the figures, and nothing about how collection walks.
+  # The way it goes wrong is by restating one of those in prose instead of
+  # printing the value collection used, so the rule is that every one it states
+  # comes from the model: rendering a model whose option values have been
+  # replaced must state the replacements, and a value the renderer still holds as
+  # a literal fails here rather than waiting for a reader to notice.
   jq '.options.max_repos = 7
-      | .options.max_prs = 11
-      | .options.pull_request_page_limit = 13
-      | .options.pull_request_page_size = 17
-      | .options.pull_request_pages_per_repository = 19
-      | .options.max_listed = 23
+          | .options.max_listed = 23
       | .options.stalled_days = 29
       | .options.unmaintained_days = 31
       | .options.trend_band_pct = 37' "$root/model.json" > "$root/altered.json" ||
@@ -1093,9 +1090,6 @@ test_section_1_states_the_bounds_the_model_carries() {
     assert_contains "$section1" "$phrase" "section 1 states $name from the model rather than from a literal"
   done <<'BOUNDS'
 max_repos|at most 7 repositories
-max_prs|cap of 11 pull requests
-pull_request_page_limit|stops at 13 pages of 17
-pull_request_pages_per_repository|at most 19 pages deep
 max_listed|at most 23 worst-first rows
 stalled_days|idle for 29 days or more
 unmaintained_days|unpushed for 31 days or more

@@ -48,9 +48,12 @@
 # stalled and unmaintained thresholds, and the repository, pull-request and
 # risk-row caps - is a constant declared once below, and the fork and archived
 # selection is the fixed behaviour of `collect` rather than a value at all.
-# Every one of them is disclosed in every report: the period count in the header
-# bullet, the rest in section 1 beside it, each printed from the model so a
-# disclosure cannot drift from what collection did. A disclosed constant is honest;
+# The report states the ones a reader needs in order to read the figures - the
+# window, the thresholds and the selection - each printed from the model so the
+# disclosure cannot drift from what collection did, and the collection log names
+# every read that actually stopped at a cap. The walk mechanics behind those caps
+# are a maintainer's business and live in --help and in the model's `options`,
+# not in a section a reader has to reconcile. A disclosed constant is honest;
 # a hidden one is not, and a flag is a third thing: an invisible difference
 # between two reports that look alike. Changing one of these values is a change
 # to this script, reviewed once, applying to every report after it.
@@ -162,8 +165,19 @@ every estate; a surface with no data is stated as empty, never omitted.
 Choosing the period is all these flags do. Every other setting - the trend
 periods, the stalled and unmaintained thresholds, the repository, pull-request
 and risk-row caps, and the fork and archived selection - is a constant, so two
-reports cannot differ for a reason the reader cannot see. Every report states
-the value of each one, in its header bullet and section 1.
+reports cannot differ for a reason the reader cannot see. The report states the
+window, the thresholds and the selection, and its collection log names every
+read that stopped at a cap.
+
+HOW COLLECTION IS BOUNDED. The commit, workflow-run, open-issue and repository
+listing reads are paged walks that stop at a page bound. Pull requests take two
+walks per repository: one descends by update time until it leaves the window,
+spending its pull-request cap only on those updated before the window ended, and
+one walks open pull requests oldest-first, not bounded by the window because a
+pull request nobody has touched for a year is the stalled work the report has to
+name, spending that same cap on every open pull request it reads. One pull
+request's reviews are read a page at a time. Each bound's value is in the
+model's `options`, which --json prints; none of them is a flag.
 
 The window must hold at least one day per trend period, because the periods are
 dated rather than timed and a shorter window would date two of them the same.
@@ -1218,9 +1232,6 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "Two reports of the same estate are therefore comparable line for line, and section 9 names the read every figure came from.",
   "",
   "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories.",
-  "Pull requests: each repository takes two walks, and each spends its own cap of \(if $o.max_prs == 0 then "no limit on" else "\($o.max_prs)" end) pull requests.",
-  "The window-bounded walk spends that cap only on pull requests updated before the window ended, so one updated since then costs it nothing and a window in the past is reached rather than exhausted before it; the open-pull-request walk is not bounded by the window at all, because a pull request nobody has touched for a year is the stalled work section 6.3 names, so every open pull request it reads spends the cap, oldest first.",
-  "Either walk stops at \($o.pull_request_page_limit) pages of \($o.pull_request_page_size), and across both a repository is read at most \($o.pull_request_pages_per_repository) pages deep.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
   "Both of those thresholds, and every figure they select over, are measured from when this review collected rather than from inside the window, because they are facts about the estate now rather than events in it: the repository set and each default branch, the archived flag, whether an account is automation, days since last push, the open pull request and open issue counts, the stalled list with its idle and age days, and what section 9 records as read.",
   "Rather than list where each is labelled, the rule holds everywhere: a table column carrying a figure measured that way ends its heading `at collection`, and a column carrying a figure that does not is bounded by the window. A column that names rather than measures - a repository, an account, a pull request's number or title - carries no clock. Section 9 is the exception and is collection-time throughout, because it records the reads themselves.",
@@ -1483,7 +1494,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   bullet("They do not see work outside this estate's GitHub record: pairing, design, incident response, mentoring, review in chat, and work in repositories outside the selection are all absent."),
   bullet("They do not attribute shared work. A pull request has one author field, whoever did the work."),
   bullet("They do not establish cause. A rising cycle time is a fact to ask about, not a conclusion about anyone."),
-  bullet("They are bounded by the window and the caps in section 1. A figure here describes what was collected, never the whole history."),
+  bullet("They are bounded by the window section 1 states and by what section 9 records as read, including every read that stopped at a collection cap. A figure here describes what was collected, never the whole history."),
   "",
   "## 9. Collection log",
   "",
@@ -1562,18 +1573,6 @@ resolve_scope
 
 SINCE_ISO=$(printf '%s' "$WINDOW_JSON" | jq -r .since)
 UNTIL_ISO=$(printf '%s' "$WINDOW_JSON" | jq -r .until)
-# The read depth a reader is told about in section 1 is per repository, and two
-# walks make it up. The window-bounded pass is bounded by its page bound, because
-# a pull request outside the window spends none of the count cap. In the open
-# pass every pull request spends the cap, so that pass runs out of budget after
-# as many pages as the cap holds, or at the page bound if that comes first.
-PR_OPEN_PAGES=$MAX_PR_PAGES
-if [ "$MAX_PRS" -gt 0 ]; then
-  PR_OPEN_PAGES=$(((MAX_PRS + PR_PAGE_SIZE - 1) / PR_PAGE_SIZE))
-  [ "$PR_OPEN_PAGES" -le "$MAX_PR_PAGES" ] || PR_OPEN_PAGES=$MAX_PR_PAGES
-fi
-PR_PAGES_PER_REPO=$((MAX_PR_PAGES + PR_OPEN_PAGES))
-
 OPTIONS_JSON=$(jq -n \
   --argjson window_days "$WINDOW_DAYS" --argjson periods "$PERIODS" \
   --argjson stalled_days "$STALLED_DAYS" --argjson unmaintained_days "$UNMAINTAINED_DAYS" \
@@ -1581,7 +1580,6 @@ OPTIONS_JSON=$(jq -n \
   --argjson max_listed "$MAX_LISTED" \
   --argjson reviews_per_pr "$REVIEWS_PER_PR" --argjson max_pages "$REST_MAX_PAGES" \
   --argjson pr_page_limit "$MAX_PR_PAGES" --argjson pr_page_size "$PR_PAGE_SIZE" \
-  --argjson pr_pages_per_repo "$PR_PAGES_PER_REPO" \
   --arg scope_kind "$SCOPE_KIND" \
   '{window_days: $window_days, periods: $periods, stalled_days: $stalled_days,
     unmaintained_days: $unmaintained_days, max_repos: $max_repos, max_prs: $max_prs,
@@ -1590,7 +1588,6 @@ OPTIONS_JSON=$(jq -n \
     exclude_archived: false,
     reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages,
     pull_request_page_limit: $pr_page_limit, pull_request_page_size: $pr_page_size,
-    pull_request_pages_per_repository: $pr_pages_per_repo,
     trend_band_pct: 15}')
 
 # The recorded commands are templates with this run's window substituted, one per
