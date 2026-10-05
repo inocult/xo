@@ -11,7 +11,7 @@ user-invocable: true
 # estate-review
 
 A human invokes this skill in their harness.
-XO neither loads nor dispatches it, so it is not XO runtime code and carries no XO runtime guarantees.
+XO loads it on that invocation but never dispatches it as runtime work: no wake, no supervision path and no recovery procedure reaches it, and nothing in XO's operation depends on it, so it carries no XO runtime guarantees.
 
 Review an estate and tell the captain what is actually happening in it.
 

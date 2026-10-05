@@ -68,7 +68,8 @@ spending its pull-request cap only on those updated before the window ended, and
 one walks open pull requests oldest-first, not bounded by the window because a
 pull request nobody has touched for a year is the stalled work the report has to
 name, spending that same cap on every open pull request it reads. One pull
-request's reviews are read a page at a time. Each bound's value is in the
+request's reviews are read in a single page of the review cap, and a pull request
+carrying more is disclosed as a cap of its own. Each bound's value is in the
 model's `options`, which --json prints; none of them is a flag.
 
 The window must hold at least one day per trend period, because the periods are

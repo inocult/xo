@@ -395,7 +395,19 @@ jobs:
           # than widened into xo-lint.sh's canonical set: a stock-Bash parse error
           # in a skill people are meant to copy surfaces only for whoever copied
           # it, and this is the one job running a shell old enough to catch it.
-          find skills -type f -name '*.sh' -path '*/scripts/*' | LC_ALL=C sort >> "$shell_inventory"
+          # The append is asserted rather than trusted: a sweep that silently
+          # covered nothing would report a protection that is not in force.
+          find skills -type f -name '*.sh' | LC_ALL=C sort > "$RUNNER_TEMP/xo-skill-scripts"
+          skill_script_count=$(grep -c . "$RUNNER_TEMP/xo-skill-scripts" || :)
+          [ "$skill_script_count" -gt 0 ] || {
+            echo "::error::expected at least one *.sh under skills/ in the parse inventory, found none"
+            exit 1
+          }
+          grep -qxF 'skills/in-progress/estate-review/scripts/estate-review.sh' "$RUNNER_TEMP/xo-skill-scripts" || {
+            echo "::error::skills/in-progress/estate-review/scripts/estate-review.sh is missing from the parse inventory; if it moved, this assertion needs its new path"
+            exit 1
+          }
+          cat "$RUNNER_TEMP/xo-skill-scripts" >> "$shell_inventory"
           parse_fail=0
           while IFS= read -r f; do
             /bin/bash -n "$f" || { echo "::error::stock macOS Bash 3.2 failed to parse $f"; parse_fail=1; }

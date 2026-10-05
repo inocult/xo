@@ -111,8 +111,9 @@ The observed failure was `estate-review.sh: line 1149: syntax error near unexpec
 
 `DERIVE_JQ` remains an ordinary `$( ... )` assignment because it carries no `\( ... )` interpolation and stays parenthesis-balanced under the same scanner; a future interpolation added there would need the same treatment.
 
-The guard is the stock-Bash parse sweep in `.github/workflows/ci.yml`, which runs `/bin/bash -n` over every file in an inventory it builds from `bin/xo-lint.sh --list-files` plus every `*.sh` under a `scripts/` directory in `skills/`.
+The guard is the stock-Bash parse sweep in `.github/workflows/ci.yml`, which runs `/bin/bash -n` over every file in an inventory it builds from `bin/xo-lint.sh --list-files` plus every `*.sh` anywhere under `skills/`.
 That second half is what keeps this file covered after the move into the skill: it sits outside `bin/xo-lint.sh`'s canonical set of `bin/*.sh`, `bin/backends/*.sh` and `tests/*.sh`, so ShellCheck no longer analyses it at all, and the sweep's own inventory is where it is named.
+The step fails when that half selects nothing or no longer names this script, because a sweep covering nothing would report a protection that is not in force rather than losing one loudly.
 That sweep is what caught this, and it is the regression cover: no local test can stand in for it, because the defect is a parse-time failure on a shell version this repository's Linux hosts do not have, and asserting it from source text would violate the rule that tests exercise behavior rather than implementation bytes.
 
 Changing how the program is delivered must not change what it prints.
