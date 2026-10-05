@@ -1,0 +1,54 @@
+### 3.1 Contribution by person
+
+Sorted by account name, never by volume.
+This table is a record of participation, not a ranking, and the counts carry no judgement about anyone's effort, difficulty of work, or worth.
+
+| Account | Automation, at collection | Commits | Pull requests opened | Pull requests merged | Reviews submitted | Pull requests reviewed | Repositories touched |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 00200200 | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| 22elix3r | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| 2cs2vprhyf-creator | no | 0 | 0 | 0 | 1 | 1 | 1 |
+| 9999years | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| Abhirup0 | no | 0 | 1 | 0 | 3 | 2 | 1 |
+| AgentSmithClaw | no | 1 | 0 | 0 | 0 | 0 | 1 |
+| AlexisAMZ | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| ArjunCodess | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| AshSgDe29071999 | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| BagToad | no | 121 | 37 | 25 | 56 | 45 | 2 |
+| BlasCasale | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| Copilot | yes | 4 | 0 | 0 | 0 | 0 | 1 |
+| DynamoIVII | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| HIHACK1911 | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| Hiro5409 | no | 0 | 1 | 0 | 0 | 0 | 1 |
+...
+=== section 8 ===
+## 8. What these numbers do not measure
+
+- They do not measure anyone's productivity, effort, skill, or value. A commit count is a count of commits.
+- They do not measure difficulty. The hardest change in this window may be the smallest row in it.
+- They do not measure quality of thought. Review threads count conversation, not care.
+- They do not see work outside this estate's GitHub record: pairing, design, incident response, mentoring, review in chat, and work in repositories outside the selection are all absent.
+- They do not attribute shared work. A pull request has one author field, whoever did the work.
+- They do not establish cause. A rising cycle time is a fact to ask about, not a conclusion about anyone.
+- They are bounded by the window section 1 states and by what section 9 records as read, including every read that stopped at a collection cap. A figure here describes what was collected, never the whole history.
+
+## 9. Collection log
+=== section 9.2 gaps (jqlang org) ===
+### 9.2 What was read
+
+| Repository | Commits | Pull requests | Open pull requests | CI runs | Issues |
+| --- | --- | --- | --- | --- | --- |
+| jqlang/.github | read | read | read | read | read |
+| jqlang/awesome-jq | read | read | read | read | read |
+| jqlang/bazel_rules_jq | read | read | read | read | read |
+| jqlang/jq | read | read | read | read | read |
+| jqlang/playground | read | read | read | read | read |
+
+No read this report uses failed: every reviewed repository answered every one of them.
+
+Reads that hit a cap, so the figures they feed describe the collected subset rather than the whole window:
+
+| Repository | Signal | Cap |
+| --- | --- | --- |
+| jqlang/jq | pull_request_reviews | 1 pull requests carry more than 50 reviews; only the first 50 of each were read |
+

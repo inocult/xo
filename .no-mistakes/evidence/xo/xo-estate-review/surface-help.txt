@@ -1,0 +1,42 @@
+$ estate-review.sh --help
+usage: estate-review.sh <org|owner/repo> [flags]
+       estate-review.sh --from-json <file>
+
+Read-only estate review. Prints the same nine sections in the same order for
+every estate; a surface with no data is stated as empty, never omitted.
+
+  --since <YYYY-MM-DD>  window start (default: --window days before --until)
+  --until <YYYY-MM-DD>  window end (default: today, UTC)
+  --window <days>       window length when --since is absent (default 90)
+  --json                print the derived model (contract xo-estate-review.v1)
+  --from-json <file>    render the report from a stored model, making no network call
+  -h, --help            this usage
+
+Choosing the period is all these flags do. Every other setting - the trend
+periods, the stalled and unmaintained thresholds, the repository, pull-request
+and risk-row caps, and the fork and archived selection - is a constant, so two
+reports cannot differ for a reason the reader cannot see. The report states the
+window, the thresholds and the selection, and its collection log names every
+read that stopped at a cap.
+
+HOW COLLECTION IS BOUNDED. The commit, workflow-run, open-issue and repository
+listing reads are paged walks that stop at a page bound. Pull requests take two
+walks per repository: one descends by update time until it leaves the window,
+spending its pull-request cap only on those updated before the window ended, and
+one walks open pull requests oldest-first, not bounded by the window because a
+pull request nobody has touched for a year is the stalled work the report has to
+name, spending that same cap on every open pull request it reads. One pull
+request's reviews are read in a single page of the review cap, and a pull request
+carrying more is disclosed as a cap of its own. Each bound's value is in the
+model's `options`, which --json prints; none of them is a flag.
+
+The window must hold at least one day per trend period, because the periods are
+dated rather than timed and a shorter window would date two of them the same.
+A window below that is refused and the refusal names the minimum.
+
+With --from-json only --json applies. --since, --until and --window are refused
+by name: the window is already cut into the stored model and a different one
+needs a fresh collection.
+
+It never writes to the estate it reviews.
+

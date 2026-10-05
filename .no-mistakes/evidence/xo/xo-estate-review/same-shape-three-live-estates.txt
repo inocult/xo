@@ -1,0 +1,48 @@
+# The same report shape on three real estates, each collected live from GitHub in this run
+
+  A  organization digitalimpactventures  (4 repositories after the fork filter, no activity in a 365-day window)
+  B  organization jqlang                 (5 repositories, heavy activity in a 180-day window)
+  C  repository   jqlang/jq              (one repository, rendered from its stored model)
+
+## Heading structure, A vs B
+1c1
+< # Estate review: digitalimpactventures
+---
+> # Estate review: jqlang
+
+## Heading structure, B vs C
+1c1
+< # Estate review: jqlang
+---
+> # Estate review: jqlang/jq
+
+## The structure all three share
+# Estate review: jqlang
+## 1. Scope and method
+## 2. Headline
+## 3. Who did what
+### 3.1 Contribution by person
+### 3.2 Review participation
+## 4. Velocity
+### 4.1 Throughput
+### 4.2 Cycle time, first commit to merge
+### 4.3 Review latency, opened to first review by another account
+## 5. Quality
+### 5.1 Reverts and hotfixes
+### 5.2 Change size
+### 5.3 Review depth
+### 5.4 Continuous integration latest-attempt pass rate
+## 6. Risk and concentration
+### 6.1 Knowledge concentration
+### 6.2 Unmaintained repositories, as at collection
+### 6.3 Stalled work, as at collection
+## 7. Per-repository detail
+## 8. What these numbers do not measure
+## 9. Collection log
+### 9.1 Commands
+### 9.2 What was read
+
+## Section 7 row counts (an organization review is the per-repository table plus the aggregate)
+  report-digitalimpactventures-org: 4 repository rows
+  report-jqlang-org: 5 repository rows
+  report-jqlang-jq-repo: 1 repository rows

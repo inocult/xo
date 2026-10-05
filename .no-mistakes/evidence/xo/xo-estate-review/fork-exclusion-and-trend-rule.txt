@@ -1,0 +1,31 @@
+# Fork exclusion, disclosed in a live report, and the trend rule checked against real figures
+
+## The real listing of organization digitalimpactventures
+   digitalimpactventures/crtc-parser	fork=false
+   digitalimpactventures/digital-twins-explorer	fork=true
+   digitalimpactventures/mopc-doit	fork=false
+   digitalimpactventures/divs-website-backend	fork=false
+   digitalimpactventures/divs-website	fork=false
+
+## What the live report said about that selection
+   5:- Repositories: 4 matched the selection, 4 reviewed, 4 read completely, 0 read with at least one gap
+   14:Selection: forks excluded, archived repositories included and labelled, at most 100 repositories.
+   -> 5 listed, 1 fork dropped, 4 matched and 4 reviewed, and the report states the rule it applied.
+
+## Section 1 names the trend band value; section 4.1 is the only place the comparison is described
+   15:Thresholds: an open pull request idle for 14 days or more is stalled; a repository unpushed for 180 days or more is unmaintained; the trend band section 4.1 reports a direction outside is 15%.
+   168:Direction compares the last period against the mean of the earlier ones.
+   occurrences of "period-over-period" anywhere in the live report: 0
+
+## The labels section 4.1 printed, recomputed from the same live series by the rule 4.1 states
+   | Period beginning | 2026-04-08 | 2026-05-08 | 2026-06-07 | 2026-07-07 | 2026-08-06 | 2026-09-05 | Direction |
+   | --- | --- | --- | --- | --- | --- | --- | --- |
+   | Commits authored | 19 | 6 | 27 | 4 | 8 | 14 | flat |
+   | Pull requests opened | 16 | 18 | 37 | 26 | 31 | 31 | rising |
+   | Pull requests merged | 6 | 3 | 23 | 4 | 8 | 14 | rising |
+   
+
+   Commits authored      last=14  mean of the earlier five=12.80  change=+9.4%  (band 15%)  ->  flat
+   Pull requests opened  last=31  mean of the earlier five=25.60  change=+21.1%  (band 15%)  ->  rising
+   Pull requests merged  last=14  mean of the earlier five=8.80  change=+59.1%  (band 15%)  ->  rising
+   Each recomputed label matches the Direction cell section 4.1 printed, so the rule 4.1 states is the rule the report applied.

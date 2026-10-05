@@ -1,0 +1,24 @@
+# Estate review: cli
+## 1. Scope and method
+## 2. Headline
+## 3. Who did what
+### 3.1 Contribution by person
+### 3.2 Review participation
+## 4. Velocity
+### 4.1 Throughput
+### 4.2 Cycle time, first commit to merge
+### 4.3 Review latency, opened to first review by another account
+## 5. Quality
+### 5.1 Reverts and hotfixes
+### 5.2 Change size
+### 5.3 Review depth
+### 5.4 Continuous integration latest-attempt pass rate
+## 6. Risk and concentration
+### 6.1 Knowledge concentration
+### 6.2 Unmaintained repositories, as at collection
+### 6.3 Stalled work, as at collection
+## 7. Per-repository detail
+## 8. What these numbers do not measure
+## 9. Collection log
+### 9.1 Commands
+### 9.2 What was read

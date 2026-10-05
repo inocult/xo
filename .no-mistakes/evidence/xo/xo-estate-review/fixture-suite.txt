@@ -1,0 +1,41 @@
+ok - collection derives the documented figures from real GitHub-shaped payloads
+ok - an automation account is one marked row and no two accounts are merged by name
+ok - an unreadable estate stops the run and quotes gh-axi's own diagnostic
+ok - a report of an active estate emits the fixed nine sections and states its scope, window, and contract
+ok - an estate with no commits, pull requests, reviews, or checks still emits every section, each stating that it is empty
+ok - a repository the tooling cannot read is named as unread, still appears, and reaches only the figures its failed read fed
+ok - an estate whose reads all failed states in every section that it could not be read, never that it was quiet
+ok - push recency and the unmaintained list are measured from the collection clock and labelled as such
+ok - a read that failed or stopped at a cap is named on every figure it fed and on no figure it did not
+ok - rendering one model twice is byte-identical, so a comparison between reports is a comparison of estates
+ok - a gh-axi envelope this reader does not know refuses loudly with the installed version, never as an empty estate
+ok - collection issues only reads, with POST used solely to carry the GraphQL query
+ok - the report records the command templates with this run's window substituted, so a figure can be re-derived
+ok - estate free text containing a record separator is neutralised rather than shifting every later field
+ok - an unusable scope, window, flag, or model file is refused rather than guessed around
+ok - a single-repository review emits the same nine sections as an organization review
+ok - forks are excluded from an organization review and the report discloses it
+ok - a repository named explicitly is reviewed whether or not it is a fork, and the report says so
+ok - an archived repository is reviewed, labelled, and surfaced in the unmaintained list
+ok - a repository GitHub reports with no push date is named unmaintained with its idle days unmeasurable
+ok - a repository with no push date heads the unmaintained list rather than being truncated out of it
+ok - an estate larger than the review names the listing page bound and the repository cap, with the value of each
+ok - a cap on the window-bounded pull-request walk does not hedge the open count the completed open pass supplies
+ok - each pull-request walk spends a cap of its own, the open one regardless of the window
+ok - every collection bound section 1 states is printed from the model, so the disclosure cannot drift from it
+ok - a historical window is reached through the pull requests updated after it, which spend no cap
+ok - a pull-request walk that cannot reach the window stops at the disclosed page bound, reports it as a cap, and no sentence claims a silent window or a complete read
+ok - the person table is ordered by account name and says in writing that it is not a ranking
+ok - a bounded risk list states its complete count and how many rows it did not show, and names where every row can be read
+ok - --from-json re-emits the stored model, refuses a different window by name, and a constant is not a flag anywhere
+ok - the window bounds what is counted, and it and the fixed period count are recorded in the model
+ok - a full page whose pull requests are filtered out does not end the open-issue walk with the rest unread
+ok - a review on a pull request both collection passes return is counted once, not twice
+ok - a pull request carrying more reviews than one page holds is disclosed as a cap rather than silently shortening a review count
+ok - a direction is measured against the mean of the earlier periods, and the report describes that comparison once
+ok - a median series whose last period has no measurement reports no direction and names the empty periods
+ok - a commit whose workflow ran more than once counts the attempts of every run, not only the last
+ok - an account that reaches the person table only through a merged pull request is marked and counted like any other
+ok - a table cell carrying the pipe that separates cells stays one cell and keeps its text
+ok - a commit rebased into the window is counted in the period it landed in and credited to its author
+# xo-estate-review.test.sh: all assertions passed

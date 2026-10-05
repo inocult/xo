@@ -1,0 +1,11 @@
+| Measure | Value | Unit | Direction over the window |
+| Account | Automation, at collection | Commits | Pull requests opened | Pull requests merged | Reviews submitted | Pull requests reviewed | Repositories touched |
+| Account | Automation, at collection | Reviews submitted | Pull requests reviewed |
+| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 | Direction |
+| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
+| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
+| Lines changed | Merged pull requests |
+| Repository | Number | Idle days, at collection | Age days, at collection | Author | Draft, at collection | Title |
+| Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps, at collection |
+| Repository | Commits | Pull requests | Open pull requests | CI runs | Issues |
+| Repository | Signal | Cap |

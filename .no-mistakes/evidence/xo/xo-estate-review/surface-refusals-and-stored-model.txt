@@ -1,0 +1,26 @@
+# Stored model -> report: deterministic, offline, and window-locked (real model collected from jqlang/jq)
+
+$ estate-review.sh --from-json model.json  (twice)  ; cmp of the two renders
+identical byte for byte (19766 bytes each)
+
+$ gh-axi calls made by those two renders: 0 (a report rendered from a stored model touches no network)
+
+$ estate-review.sh --from-json model.json --window 30
+estate-review.sh: --window cannot be applied to a stored model: it chooses the window, and the stored model's per-period tallies are already cut, so it needs a fresh collection; re-run the review against the estate with --window
+exit=2
+
+$ estate-review.sh jqlang --window 5      # a window shorter than the fixed period count
+estate-review.sh: the window must be at least 6 days long, one day for each of the 6 periods the trend splits it into, but this one is 5; a shorter window gives two periods the same date and the report dates a period rather than timing it
+exit=2
+
+$ estate-review.sh jqlang/jq/extra
+estate-review.sh: 'jqlang/jq/extra' is not an estate scope: give an organization or owner/repo
+exit=2
+
+$ estate-review.sh torvalds              # an owner GitHub reports as a user, not an organization
+estate-review.sh: GitHub reports owner 'torvalds' as type 'User', not an organization; an estate is an organization or one of its repositories as owner/repo
+exit=2
+
+$ estate-review.sh no-such-estate-xyzzy-42
+estate-review.sh: could not read the owner 'no-such-estate-xyzzy-42': error: "gh: Not Found (HTTP 404)" code: NOT_FOUND 
+exit=1

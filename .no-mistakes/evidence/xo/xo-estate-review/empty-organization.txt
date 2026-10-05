@@ -1,0 +1,16 @@
+GitHub says the organization munpict owns this many repositories:
+0
+... of which forks:
+0
+
+$ estate-review.sh munpict
+estate-review.sh: no repository of organization 'munpict' matched the selection: an organization review excludes forks, so every repository the estate listed is one
+exit=1
+
+$ estate-review.sh torvalds   (a user, not an organization)
+estate-review.sh: GitHub reports owner 'torvalds' as type 'User', not an organization; an estate is an organization or one of its repositories as owner/repo
+exit=2
+
+$ estate-review.sh jqlang/no-such-repo-xyz
+estate-review.sh: could not read repository jqlang/no-such-repo-xyz: error: "gh: Not Found (HTTP 404)" code: NOT_FOUND 
+exit=1

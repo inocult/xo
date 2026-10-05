@@ -1,0 +1,29 @@
+Every gh-axi invocation made by: estate-review.sh jqlang/jq --json
+(captured by a PATH shim that logged argv and forwarded to the real gh-axi 0.1.35)
+
+1:api /repos/jqlang/jq --full
+2:api /repos/jqlang/jq/commits?sha=master&since=2026-07-07T00:00:00Z&until=2026-10-05T00:00:00Z&per_page=100&page=1 --full
+3:api POST graphql --input /tmp/xo-estate-review.epxfkU/read/prq.json --full
+17:api POST graphql --input /tmp/xo-estate-review.epxfkU/read/prq.json --full
+31:api POST graphql --input /tmp/xo-estate-review.epxfkU/read/prq.json --full
+45:api POST graphql --input /tmp/xo-estate-review.epxfkU/read/prq.json --full
+59:api POST graphql --input /tmp/xo-estate-review.epxfkU/read/prq.json --full
+73:api /repos/jqlang/jq/actions/runs?event=pull_request&created=2026-07-07..2026-10-05&per_page=100&page=1 --full
+74:api /repos/jqlang/jq/actions/runs?event=pull_request&created=2026-07-07..2026-10-05&per_page=100&page=2 --full
+75:api /repos/jqlang/jq/actions/runs?event=pull_request&created=2026-07-07..2026-10-05&per_page=100&page=3 --full
+76:api /repos/jqlang/jq/actions/runs?event=pull_request&created=2026-07-07..2026-10-05&per_page=100&page=4 --full
+77:api /repos/jqlang/jq/actions/runs?event=pull_request&created=2026-07-07..2026-10-05&per_page=100&page=5 --full
+78:api /repos/jqlang/jq/issues?state=open&per_page=100&page=1 --full
+79:api /repos/jqlang/jq/issues?state=open&per_page=100&page=2 --full
+80:api /repos/jqlang/jq/issues?state=open&per_page=100&page=3 --full
+81:api /repos/jqlang/jq/issues?state=open&per_page=100&page=4 --full
+82:api /repos/jqlang/jq/issues?state=open&per_page=100&page=5 --full
+
+non-api gh-axi invocations:
+  none
+
+GraphQL operation keywords sent:
+
+GraphQL request bodies (second run, --window 6): operation type of every POST body
+      4 "query": "query
+(every GraphQL operation is a 'query'; no 'mutation' was sent)

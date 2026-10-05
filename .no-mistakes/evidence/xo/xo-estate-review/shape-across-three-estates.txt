@@ -1,0 +1,58 @@
+Same report shape on three real estates, collected live on 2026-10-05 against github.com.
+
+  A  jqlang            public organization, 5 repositories
+  B  cli               public organization, 10 repositories (one archived)
+  C  jqlang/jq         a single repository
+
+Every markdown heading, in order, from each report:
+
+  A vs B below the title: IDENTICAL
+  A vs C below the title: IDENTICAL
+  titles differ only by estate name: # Estate review: jqlang / # Estate review: cli / # Estate review: jqlang/jq
+
+## 1. Scope and method
+## 2. Headline
+## 3. Who did what
+### 3.1 Contribution by person
+### 3.2 Review participation
+## 4. Velocity
+### 4.1 Throughput
+### 4.2 Cycle time, first commit to merge
+### 4.3 Review latency, opened to first review by another account
+## 5. Quality
+### 5.1 Reverts and hotfixes
+### 5.2 Change size
+### 5.3 Review depth
+### 5.4 Continuous integration latest-attempt pass rate
+## 6. Risk and concentration
+### 6.1 Knowledge concentration
+### 6.2 Unmaintained repositories, as at collection
+### 6.3 Stalled work, as at collection
+## 7. Per-repository detail
+## 8. What these numbers do not measure
+## 9. Collection log
+### 9.1 Commands
+### 9.2 What was read
+
+Table column headers, in order (A vs B identical; C omits the two tables whose
+sections had no rows, and both of those sections still appear and say so in words):
+
+| Measure | Value | Unit | Direction over the window |
+| Account | Automation, at collection | Commits | Pull requests opened | Pull requests merged | Reviews submitted | Pull requests reviewed | Repositories touched |
+| Account | Automation, at collection | Reviews submitted | Pull requests reviewed |
+| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 | Direction |
+| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
+| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
+| Lines changed | Merged pull requests |
+| Repository | Account | Share | Authors | Authored commits |
+| Repository | Days since last push, at collection | Archived, at collection | Commits in window |
+| Repository | Number | Idle days, at collection | Age days, at collection | Author | Draft, at collection | Title |
+| Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps, at collection |
+| Repository | Commits | Pull requests | Open pull requests | CI runs | Issues |
+| Repository | Signal | Cap |
+
+C's section 6.2 with no rows:
+### 6.2 Unmaintained repositories, as at collection
+
+No reviewed repository is archived, has never been pushed to, or had gone 180 days without a push when this review collected.
+

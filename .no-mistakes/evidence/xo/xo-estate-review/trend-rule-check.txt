@@ -1,0 +1,6 @@
+band = 15% ; periods = 6
+merged: series=[3,1,1,6,9,5] base_mean_of_earlier=4 last=5 expected=rising reported=rising MATCH
+opened: series=[8,5,7,16,9,12] base_mean_of_earlier=9 last=12 expected=rising reported=rising MATCH
+commits: series=[3,1,1,6,9,5] base_mean_of_earlier=4 last=5 expected=rising reported=rising MATCH
+cycle_hours_median: series=[70.5,19,0.8,256,44.3,0.2] base_mean_of_earlier=78.12 last=0.2 expected=falling reported=falling MATCH
+review_latency_median: series=[44.9,19,0.8,14.1,154.1,4.3] base_mean_of_earlier=46.58 last=4.3 expected=falling reported=falling MATCH

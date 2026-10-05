@@ -1,0 +1,16 @@
+# Regression proof: the new case against the pre-fix script (script hunk of b2aa13b reverted)
+
+$ skills/in-progress/estate-review/scripts/estate-review.sh munpict   # real GitHub, organization owning zero repositories
+estate-review.sh: no repository of organization 'munpict' matched the selection: an organization review excludes forks, so every repository the estate listed is one
+exit=1
+
+$ bash tests/xo-estate-review.test.sh   (tail)
+ok - estate free text containing a record separator is neutralised rather than shifting every later field
+ok - an unusable scope, window, flag, or model file is refused rather than guessed around
+ok - a single-repository review emits the same nine sections as an organization review
+ok - forks are excluded from an organization review and the report discloses it
+ok - a repository named explicitly is reviewed whether or not it is a fork, and the report says so
+not ok - the refusal says the listing was empty (missing: 'listed no repository')
+--- output ---
+estate-review.sh: no repository of organization 'acme' matched the selection: an organization review excludes forks, so every repository the estate listed is one
+suite exit=1

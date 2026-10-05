@@ -1,0 +1,23 @@
+# Live refusal transcripts, real gh-axi against real GitHub, 2026-10-05T05:56:20Z
+# gh-axi 0.1.35
+
+$ gh api /orgs/munpict/repos --jq length     # the real estate: an organization owning zero repositories
+0
+
+$ scripts/estate-review.sh munpict
+estate-review.sh: organization 'munpict' listed no repository: it owns none, or the token this review reads with cannot see them
+exit=1
+
+$ gh api /orgs/ubqty-labs/repos --jq length  # a second real organization with an empty listing
+0
+
+$ scripts/estate-review.sh ubqty-labs
+estate-review.sh: organization 'ubqty-labs' listed no repository: it owns none, or the token this review reads with cannot see them
+exit=1
+
+$ gh api /orgs/fork-maintainers/repos --jq "[.[]|{name,fork}]"   # a real organization whose entire listing is forks
+iceraven-browser	fork=true
+
+$ scripts/estate-review.sh fork-maintainers
+estate-review.sh: no repository of organization 'fork-maintainers' matched the selection: an organization review excludes forks, so every repository the estate listed is one
+exit=1

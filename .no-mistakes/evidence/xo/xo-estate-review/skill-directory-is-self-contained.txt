@@ -1,0 +1,44 @@
+# The skill directory is the unit of distribution: copied alone, outside any checkout, it still works
+
+$ cp -r skills/in-progress/estate-review /tmp/er-dist/ && find /tmp/er-dist -type f | sort
+   /tmp/er-dist/estate-review/reference.md
+   /tmp/er-dist/estate-review/scripts/estate-review.sh
+   /tmp/er-dist/estate-review/SKILL.md
+
+$ cd /tmp/er-dist/estate-review && ./scripts/estate-review.sh --help | head -12
+   usage: estate-review.sh <org|owner/repo> [flags]
+          estate-review.sh --from-json <file>
+   
+   Read-only estate review. Prints the same nine sections in the same order for
+   every estate; a surface with no data is stated as empty, never omitted.
+   
+     --since <YYYY-MM-DD>  window start (default: --window days before --until)
+     --until <YYYY-MM-DD>  window end (default: today, UTC)
+     --window <days>       window length when --since is absent (default 90)
+     --json                print the derived model (contract xo-estate-review.v1)
+     --from-json <file>    render the report from a stored model, making no network call
+     -h, --help            this usage
+
+   flags the usage offers:
+       --since
+       --until
+       --window
+       --json
+       --from-json
+       -h, --help
+
+$ cd /tmp/er-dist/estate-review && ./scripts/estate-review.sh digitalimpactventures --window 30   # real GitHub, from the copied directory
+   exit=0
+   stderr: 
+   sections emitted:
+     ## 1. Scope and method
+     ## 2. Headline
+     ## 3. Who did what
+     ## 4. Velocity
+     ## 5. Quality
+     ## 6. Risk and concentration
+     ## 7. Per-repository detail
+     ## 8. What these numbers do not measure
+     ## 9. Collection log
+
+   references to a path outside the skill directory in the copied tree:

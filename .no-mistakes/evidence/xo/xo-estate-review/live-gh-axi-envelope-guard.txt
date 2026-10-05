@@ -1,0 +1,4 @@
+ok - gh-axi 0.1.35 still renders one quoted api_response body carrying an untruncated tab-separated payload
+ok - the live GraphQL read returns the collector's own shaped record under an explicit POST, __typename included
+ok - a live review of jqlang/jq over a settled historical window emits the fixed nine sections and a model carrying real commits, merges, and accounts
+# xo-estate-review-live-e2e.test.sh: all assertions passed

@@ -1,0 +1,2053 @@
+{
+  "contract": "xo-estate-review.v1",
+  "generated_at": "2026-10-05T05:59:42Z",
+  "generator": "estate-review.sh",
+  "scope": {
+    "kind": "repository",
+    "name": "jqlang/jq"
+  },
+  "window": {
+    "since": "2026-04-08T00:00:00Z",
+    "until": "2026-10-05T00:00:00Z",
+    "days": 180,
+    "periods": 6,
+    "period_days": 30,
+    "period_labels": [
+      "2026-04-08",
+      "2026-05-08",
+      "2026-06-07",
+      "2026-07-07",
+      "2026-08-06",
+      "2026-09-05"
+    ]
+  },
+  "options": {
+    "window_days": 180,
+    "periods": 6,
+    "stalled_days": 14,
+    "unmaintained_days": 180,
+    "max_repos": 100,
+    "max_prs": 300,
+    "max_listed": 15,
+    "include_forks": true,
+    "reviews_per_pull_request": 50,
+    "page_limit": 30,
+    "pull_request_page_limit": 40,
+    "pull_request_page_size": 50,
+    "trend_band_pct": 15
+  },
+  "selection": {
+    "matched": 1,
+    "reviewed": 1,
+    "capped": false,
+    "fully_read": 0,
+    "partially_read": 1
+  },
+  "commands": [
+    "gh-axi api /repos/jqlang/jq",
+    "gh-axi api /repos/<owner>/<repo>/commits?sha=<default_branch>&since=2026-04-08T00:00:00Z&until=2026-10-05T00:00:00Z --paginate",
+    "gh-axi api POST graphql --input <pull-requests-updated-desc-until-2026-04-08T00:00:00Z>",
+    "gh-axi api POST graphql --input <open-pull-requests-created-asc>",
+    "gh-axi api /repos/<owner>/<repo>/actions/runs?event=pull_request&created=2026-04-08..2026-10-05 --paginate",
+    "gh-axi api /repos/<owner>/<repo>/issues?state=open --paginate"
+  ],
+  "headline": [
+    {
+      "metric": "Pull requests merged",
+      "value": 39,
+      "unit": "pull requests",
+      "trend": "rising"
+    },
+    {
+      "metric": "Cycle time, first commit to merge",
+      "value": 25.8,
+      "unit": "hours (median)",
+      "trend": "falling"
+    },
+    {
+      "metric": "Merged pull requests reviewed by another account",
+      "value": 87.2,
+      "unit": "percent",
+      "trend": "not-tracked"
+    },
+    {
+      "metric": "Continuous integration latest-attempt pass rate",
+      "value": 81.4,
+      "unit": "percent",
+      "trend": "not-tracked"
+    },
+    {
+      "metric": "Repositories where one account authored over half the commits",
+      "value": 0,
+      "unit": "repositories",
+      "trend": "not-tracked"
+    }
+  ],
+  "people": [
+    {
+      "person": "0-wiz-0",
+      "automation": false,
+      "commits": 2,
+      "prs_opened": 2,
+      "prs_merged": 2,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "01mf02",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "4RH1T3CT0R7",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 2,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "A4-Tacks",
+      "automation": false,
+      "commits": 2,
+      "prs_opened": 4,
+      "prs_merged": 2,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "AbhinavMir",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "AetherAI3",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "Boulea7",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "CodeSasuke",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "HarmfulBreeze",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "Hugohong258",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "Jorge-Polanco-Roque",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "MbappeWU",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "Pandapip1",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 2,
+      "prs_reviewed": 1,
+      "repos": 1
+    },
+    {
+      "person": "Rohan5commit",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 2,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "Salamandar",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "Saur2000",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 0,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "Solaris-star",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 3,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "aivot-on",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "alexprabhat99",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "amtbsl",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "arhxam",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 2,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "arifthpe",
+      "automation": false,
+      "commits": 2,
+      "prs_opened": 2,
+      "prs_merged": 2,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "christf",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 1,
+      "prs_reviewed": 1,
+      "repos": 1
+    },
+    {
+      "person": "copilot-pull-request-reviewer",
+      "automation": true,
+      "commits": 0,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 6,
+      "prs_reviewed": 6,
+      "repos": 1
+    },
+    {
+      "person": "cosine0",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "cuishuang",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "davidfetter",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "davidscottpope-gif",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "ded-furby",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "dependabot",
+      "automation": true,
+      "commits": 9,
+      "prs_opened": 9,
+      "prs_merged": 9,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "dmitrivereshchagin",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "driphtyio",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "eyupcanakman",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "fuyu0425",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "fzlzjerry",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "github-actions",
+      "automation": true,
+      "commits": 1,
+      "prs_opened": 3,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "glaziermag",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "happyaron",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "herley-shaori",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "hkbu-kennycheng",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "howtonotwin",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "itchyny",
+      "automation": false,
+      "commits": 28,
+      "prs_opened": 12,
+      "prs_merged": 10,
+      "reviews_submitted": 40,
+      "prs_reviewed": 26,
+      "repos": 1
+    },
+    {
+      "person": "jegarian83",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 1,
+      "prs_reviewed": 1,
+      "repos": 1
+    },
+    {
+      "person": "kanwren",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 1,
+      "prs_reviewed": 1,
+      "repos": 1
+    },
+    {
+      "person": "knightmare2600",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "ksh368-bit",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "lawrence3699",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "linbo328",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "lucsansag",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "mahirhir",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "maruixin-kls",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "mikamikasuki",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "mvanslobbe",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "neilpang",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "obhor",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "oodadoudou",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "owenthereal",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 5,
+      "prs_reviewed": 5,
+      "repos": 1
+    },
+    {
+      "person": "pavelkuliaka",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "pkoppstein",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 1,
+      "prs_reviewed": 1,
+      "repos": 1
+    },
+    {
+      "person": "qatcod",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "santhiprakash",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 4,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "sorena-paydar",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "thalha-a9",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "theyoucheng",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "tianon-sso",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "tlsbollei",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 0,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "vigneshakaviki",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "vlmarek",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 0,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    },
+    {
+      "person": "wader",
+      "automation": false,
+      "commits": 0,
+      "prs_opened": 1,
+      "prs_merged": 0,
+      "reviews_submitted": 24,
+      "prs_reviewed": 18,
+      "repos": 1
+    },
+    {
+      "person": "winklemad",
+      "automation": false,
+      "commits": 1,
+      "prs_opened": 1,
+      "prs_merged": 1,
+      "reviews_submitted": 0,
+      "prs_reviewed": 0,
+      "repos": 1
+    }
+  ],
+  "velocity": {
+    "commits": {
+      "per_period": [
+        19,
+        6,
+        9,
+        4,
+        7,
+        14
+      ],
+      "trend": "rising"
+    },
+    "merged": {
+      "per_period": [
+        6,
+        3,
+        5,
+        4,
+        7,
+        14
+      ],
+      "trend": "rising"
+    },
+    "opened": {
+      "per_period": [
+        13,
+        14,
+        9,
+        13,
+        23,
+        21
+      ],
+      "trend": "rising"
+    },
+    "cycle_hours": {
+      "measured": 39,
+      "unmeasurable": 0,
+      "median": 25.8,
+      "p90": 446.3,
+      "per_period_median": [
+        52,
+        8.7,
+        5.8,
+        51.4,
+        253.1,
+        18.1
+      ],
+      "trend": "falling"
+    },
+    "review_latency_hours": {
+      "measured": 34,
+      "unmeasurable": 5,
+      "median": 8.6,
+      "p90": 791.7,
+      "per_period_median": [
+        52,
+        2.6,
+        20.9,
+        38.6,
+        1.1,
+        8.6
+      ],
+      "trend": "falling"
+    }
+  },
+  "quality": {
+    "commits": {
+      "commits": 59,
+      "reverts": 0,
+      "hotfixes": 0,
+      "revert_rate_pct": 0,
+      "hotfix_rate_pct": 0,
+      "total": 59,
+      "merges": 0,
+      "unlinked_accounts": 0,
+      "per_period": [
+        19,
+        6,
+        9,
+        4,
+        7,
+        14
+      ]
+    },
+    "size": {
+      "measured": 39,
+      "median_lines": 18,
+      "p90_lines": 270,
+      "distribution": {
+        "under_10": 15,
+        "from_10_to_49": 13,
+        "from_50_to_249": 6,
+        "from_250_to_999": 5,
+        "at_least_1000": 0
+      }
+    },
+    "review": {
+      "merged": 39,
+      "with_review_by_another_account": 34,
+      "coverage_pct": 87.2,
+      "review_threads_median": 0,
+      "review_threads_total": 11
+    },
+    "ci": {
+      "runs": 824,
+      "passed": 670,
+      "failed": 153,
+      "inconclusive": 1,
+      "needed_more_than_one_attempt": 2,
+      "latest_attempt_pass_rate_pct": 81.4
+    }
+  },
+  "risk": {
+    "concentration": {
+      "authors": 21,
+      "commits": 59,
+      "top": "itchyny",
+      "top_share_pct": 47.5,
+      "accounts_covering_half": 2,
+      "breakdown": [
+        {
+          "person": "itchyny",
+          "commits": 28,
+          "share_pct": 47.5
+        },
+        {
+          "person": "dependabot",
+          "commits": 9,
+          "share_pct": 15.3
+        },
+        {
+          "person": "0-wiz-0",
+          "commits": 2,
+          "share_pct": 3.4
+        },
+        {
+          "person": "A4-Tacks",
+          "commits": 2,
+          "share_pct": 3.4
+        },
+        {
+          "person": "arifthpe",
+          "commits": 2,
+          "share_pct": 3.4
+        },
+        {
+          "person": "4RH1T3CT0R7",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "AbhinavMir",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "AetherAI3",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "Hugohong258",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "Rohan5commit",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "Saur2000",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "cosine0",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "ded-furby",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "fuyu0425",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "github-actions",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "oodadoudou",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "pavelkuliaka",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "theyoucheng",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "tlsbollei",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "vlmarek",
+          "commits": 1,
+          "share_pct": 1.7
+        },
+        {
+          "person": "winklemad",
+          "commits": 1,
+          "share_pct": 1.7
+        }
+      ]
+    },
+    "concentrated_repositories": [],
+    "unmaintained": [],
+    "stalled_pull_requests": [
+      {
+        "repo": "jqlang/jq",
+        "number": 1062,
+        "title": "project/1, query/1 and unify/1 added to builtin.jq, with tests and documentation",
+        "author": "pkoppstein",
+        "draft": false,
+        "age_days": 3925,
+        "idle_days": 1220
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1767,
+        "title": "Patches for AIX",
+        "author": "ayappanec",
+        "draft": false,
+        "age_days": 2883,
+        "idle_days": 1220
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1907,
+        "title": "Unify/simplify the MultiByteToWideChar() code and add wrappers for open()/stat()",
+        "author": "bit2shift",
+        "draft": false,
+        "age_days": 2693,
+        "idle_days": 1220
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2241,
+        "title": "Added base/1 and unbase/1",
+        "author": "unattributed",
+        "draft": false,
+        "age_days": 2100,
+        "idle_days": 1220
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 673,
+        "title": "Working module/package system",
+        "author": "joelpurra",
+        "draft": true,
+        "age_days": 4275,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1032,
+        "title": "Dump block",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 3960,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1127,
+        "title": "Ignore jq.exe, fixed gcc compiler warnings for msys2 (windows).",
+        "author": "WaffleSouffle",
+        "draft": false,
+        "age_days": 3834,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1201,
+        "title": "Add snap packaging support",
+        "author": "ltrager",
+        "draft": false,
+        "age_days": 3708,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1215,
+        "title": "Add support for seccomp",
+        "author": "mark-kubacki",
+        "draft": false,
+        "age_days": 3698,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1228,
+        "title": "Define format in jq code",
+        "author": "dbohdan",
+        "draft": false,
+        "age_days": 3682,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1246,
+        "title": "jv: Add some support for 64 bit ints in a very conservative way",
+        "author": "dequis",
+        "draft": false,
+        "age_days": 3654,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1327,
+        "title": "jv: Add some support for 64 bit ints in a very conservative way (ALTERNATIVE)",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 3536,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1643,
+        "title": "Add mul builtin",
+        "author": "andremarianiello",
+        "draft": false,
+        "age_days": 3105,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1703,
+        "title": "wip: feat: terminate jq immediately after the outgoing pipe closed",
+        "author": "mumoshu",
+        "draft": false,
+        "age_days": 2984,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1726,
+        "title": "Rename gen_* functions to jq_gen_*",
+        "author": "jgarvin",
+        "draft": false,
+        "age_days": 2930,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1748,
+        "title": "Make reverse more DWIM-y",
+        "author": "davidfetter",
+        "draft": false,
+        "age_days": 2902,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1789,
+        "title": "Provide a jvp_dump_raw_string function to implement the combination o…",
+        "author": "rain-1",
+        "draft": false,
+        "age_days": 2820,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1843,
+        "title": "dlopen(), random, I/O, eval, and co-expressions (co-routines)",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 2779,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1862,
+        "title": "Added jv_is_integer_large() to the library.",
+        "author": "mfeit-internet2",
+        "draft": false,
+        "age_days": 2761,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1866,
+        "title": "Should work on the entire object instead of each key of it.",
+        "author": "davidfetter",
+        "draft": false,
+        "age_days": 2754,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1993,
+        "title": "Better dumping",
+        "author": "bb010g",
+        "draft": false,
+        "age_days": 2540,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 1997,
+        "title": "Use decnum for addition",
+        "author": "wtlangford",
+        "draft": false,
+        "age_days": 2539,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2060,
+        "title": "Added lpad and rpad",
+        "author": "davidfetter",
+        "draft": false,
+        "age_days": 2425,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2099,
+        "title": "alloc: properly allocate memory handler per thread",
+        "author": "bouk",
+        "draft": false,
+        "age_days": 2368,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2108,
+        "title": "Remove undefined behavior caught by LLVM 10 UBSAN.",
+        "author": "Gaelan",
+        "draft": false,
+        "age_days": 2350,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2249,
+        "title": "Enhance @sh to output objects as bash associative array initialisers",
+        "author": "rah2501",
+        "draft": false,
+        "age_days": 2090,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2285,
+        "title": "Add in-place modification (expression) shorthand in objects",
+        "author": "Wazzaps",
+        "draft": false,
+        "age_days": 2033,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2296,
+        "title": "Use a regex to parse ISO8601 dates",
+        "author": "jmarianer",
+        "draft": false,
+        "age_days": 2013,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2311,
+        "title": "Replace bareword error",
+        "author": "jsoref",
+        "draft": false,
+        "age_days": 1974,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2314,
+        "title": "Support binary strings, preserve UTF-8 and UTF-16 errors",
+        "author": "Maxdamantus",
+        "draft": false,
+        "age_days": 1963,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2484,
+        "title": "Tidy up nomem_handler implementations to fix SEGVs and ensure more consistency between TLS and non-TLS implementations.",
+        "author": "edwardb96",
+        "draft": false,
+        "age_days": 1486,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2547,
+        "title": "add unicode `upcase`, `downcase`",
+        "author": "liquidaty",
+        "draft": false,
+        "age_days": 1312,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2548,
+        "title": "Allow, and strip, comments (#, // or /*)",
+        "author": "liquidaty",
+        "draft": false,
+        "age_days": 1312,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2563,
+        "title": "Enable non-single-line mode",
+        "author": "weeble",
+        "draft": false,
+        "age_days": 1284,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2699,
+        "title": "regex documentation (FLAGS; Extended Groups) + tests in onig.test",
+        "author": "pkoppstein",
+        "draft": false,
+        "age_days": 1181,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2736,
+        "title": "Binary strings",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 1173,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2776,
+        "title": "builtin.jq: whilst",
+        "author": "pkoppstein",
+        "draft": false,
+        "age_days": 1166,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2786,
+        "title": "builtin.jq: lpad, nwise/1, nwise/2",
+        "author": "pkoppstein",
+        "draft": false,
+        "age_days": 1164,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2828,
+        "title": "Make @sh work with objects; add @shassoc (fix #1947)",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 1155,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2845,
+        "title": "Better checking for `$v` not being a path expression (Fix #2844)",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 1147,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2850,
+        "title": "def last:",
+        "author": "pkoppstein",
+        "draft": false,
+        "age_days": 1144,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2857,
+        "title": "builtin.jq: Add `assert/2`",
+        "author": "mrwilson",
+        "draft": false,
+        "age_days": 1137,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2863,
+        "title": "Time function improvements (fix #1912)",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 1134,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 2932,
+        "title": "Add last resort version string in scripts/version",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 1087,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3013,
+        "title": "Release dev artifacts too?",
+        "author": "nicowilliams",
+        "draft": false,
+        "age_days": 989,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3040,
+        "title": "Update delpaths function to use sort with slicing",
+        "author": "capak07",
+        "draft": false,
+        "age_days": 965,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3057,
+        "title": "Add functions to work with filesystem paths: `expand_path` , `get_home`, `get_abspath`",
+        "author": "Florents-Tselai",
+        "draft": false,
+        "age_days": 946,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3092,
+        "title": "Add `--sandbox` flag to prevent dynamic loading of other files/data.",
+        "author": "jemc",
+        "draft": false,
+        "age_days": 905,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3109,
+        "title": "adds jv_unshare(), jv_is_unshared()",
+        "author": "MaxBrandtner",
+        "draft": false,
+        "age_days": 884,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3113,
+        "title": "Make tonumber work on `true` and `false` #3112",
+        "author": "davidfetter",
+        "draft": false,
+        "age_days": 881,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3119,
+        "title": "Add filters to generate uuids",
+        "author": "jadutter",
+        "draft": false,
+        "age_days": 873,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3123,
+        "title": "Allow tests to use slurpfile and rawfile arguments",
+        "author": "jadutter",
+        "draft": false,
+        "age_days": 871,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3146,
+        "title": "Include filename in input parse error message",
+        "author": "wader",
+        "draft": true,
+        "age_days": 826,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3186,
+        "title": "Generate docs from Markdown with Pandoc",
+        "author": "01mf02",
+        "draft": false,
+        "age_days": 734,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3189,
+        "title": "Overhaul of the Manual",
+        "author": "01mf02",
+        "draft": false,
+        "age_days": 725,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3191,
+        "title": "Return more-specific error when input might be application/json-seq",
+        "author": "LPardue",
+        "draft": false,
+        "age_days": 718,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3230,
+        "title": "feat: allow user-defined string formats (close #1227)",
+        "author": "itchyny",
+        "draft": false,
+        "age_days": 622,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3306,
+        "title": "Add ssv output format",
+        "author": "HenrikHolst",
+        "draft": false,
+        "age_days": 550,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3334,
+        "title": "Add a @table formatter with optional headings",
+        "author": "yertto",
+        "draft": true,
+        "age_days": 490,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3367,
+        "title": "feat: allow writing to output file",
+        "author": "christf",
+        "draft": false,
+        "age_days": 457,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3373,
+        "title": "feat: add custom memory allocators",
+        "author": "williamcotton",
+        "draft": false,
+        "age_days": 446,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3380,
+        "title": "Add support for RFC 4648 base64url encoding",
+        "author": "robbieg8s",
+        "draft": false,
+        "age_days": 434,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3426,
+        "title": "Add syntax highlighing",
+        "author": "polluks",
+        "draft": false,
+        "age_days": 347,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3454,
+        "title": "Add `--color-field` for per-value highlighting",
+        "author": "omdxp",
+        "draft": false,
+        "age_days": 292,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3459,
+        "title": "chore: update documentation for --binary option",
+        "author": "fardarter",
+        "draft": false,
+        "age_days": 270,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3464,
+        "title": "Support $XDG_CONFIG_HOME in module search path",
+        "author": "nsfisis",
+        "draft": false,
+        "age_days": 260,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3488,
+        "title": "jq --in-place semantics",
+        "author": "jubr",
+        "draft": false,
+        "age_days": 219,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3520,
+        "title": "Bind only `$x`, not `x` in `def f($x): ...`",
+        "author": "01mf02",
+        "draft": false,
+        "age_days": 173,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3535,
+        "title": "feat: for is not defined error message, prompt for similar names",
+        "author": "alexprabhat99",
+        "draft": false,
+        "age_days": 158,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3536,
+        "title": "Make tonumber work on boolean input per #3112",
+        "author": "davidfetter",
+        "draft": false,
+        "age_days": 157,
+        "idle_days": 146
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3543,
+        "title": "Fix delpaths with negative array indices in non-leaf positions",
+        "author": "eyupcanakman",
+        "draft": false,
+        "age_days": 144,
+        "idle_days": 144
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3548,
+        "title": "Fix delpaths() negative index handling at non-leaf positions",
+        "author": "driphtyio",
+        "draft": false,
+        "age_days": 133,
+        "idle_days": 133
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3542,
+        "title": "Fix: alternate operator (//) precedence (#3507)",
+        "author": "CodeSasuke",
+        "draft": false,
+        "age_days": 146,
+        "idle_days": 93
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3596,
+        "title": "Add jv_mem_reallocarray for overflow-safe array reallocation",
+        "author": "thalha-a9",
+        "draft": false,
+        "age_days": 71,
+        "idle_days": 64
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3601,
+        "title": "Fix array slice extension exposing hidden elements",
+        "author": "fzlzjerry",
+        "draft": false,
+        "age_days": 55,
+        "idle_days": 55
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3602,
+        "title": "Fix destructuring in path expressions",
+        "author": "Boulea7",
+        "draft": false,
+        "age_days": 55,
+        "idle_days": 55
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3609,
+        "title": "Preserve captures inside zero-width regex matches",
+        "author": "arhxam",
+        "draft": false,
+        "age_days": 42,
+        "idle_days": 42
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3613,
+        "title": "parse: reject numeric literals with unterminated fraction",
+        "author": "santhiprakash",
+        "draft": false,
+        "age_days": 39,
+        "idle_days": 39
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3612,
+        "title": "Preserve exact decimal precision for literal addition and subtraction",
+        "author": "santhiprakash",
+        "draft": false,
+        "age_days": 40,
+        "idle_days": 38
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3598,
+        "title": "Fix _TIME_BITS conflict on x32 ABI",
+        "author": "hkbu-kennycheng",
+        "draft": false,
+        "age_days": 66,
+        "idle_days": 37
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3600,
+        "title": "Add FreeBSD CI",
+        "author": "neilpang",
+        "draft": false,
+        "age_days": 60,
+        "idle_days": 37
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3610,
+        "title": "fix(fromdateiso8601): support fractional seconds",
+        "author": "santhiprakash",
+        "draft": false,
+        "age_days": 42,
+        "idle_days": 37
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3615,
+        "title": "Pad out-of-bounds array slice assignments",
+        "author": "ksh368-bit",
+        "draft": false,
+        "age_days": 37,
+        "idle_days": 37
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3628,
+        "title": "Fix JOIN with non-string index keys",
+        "author": "cuishuang",
+        "draft": false,
+        "age_days": 28,
+        "idle_days": 28
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3623,
+        "title": "Fix inconsistent `delpaths` behavior with mixed negative indices",
+        "author": "Jorge-Polanco-Roque",
+        "draft": false,
+        "age_days": 33,
+        "idle_days": 26
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3593,
+        "title": "Split token `?//` to `?` and `//`",
+        "author": "A4-Tacks",
+        "draft": false,
+        "age_days": 76,
+        "idle_days": 21
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3511,
+        "title": "docs: add animated terminal demo to README",
+        "author": "dobestan",
+        "draft": false,
+        "age_days": 199,
+        "idle_days": 16
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3560,
+        "title": "Fix undefined behavior when infinite is used as array index in has() and del()",
+        "author": "obhor",
+        "draft": false,
+        "age_days": 116,
+        "idle_days": 16
+      },
+      {
+        "repo": "jqlang/jq",
+        "number": 3432,
+        "title": "Switch to PCRE2 for regular expressions",
+        "author": "wader",
+        "draft": false,
+        "age_days": 333,
+        "idle_days": 14
+      }
+    ],
+    "open_pull_requests": 107,
+    "open_issues": 325
+  },
+  "repositories": [
+    {
+      "name": "jqlang/jq",
+      "owner": "jqlang",
+      "default_branch": "master",
+      "archived": false,
+      "fork": false,
+      "pushed_at": "2026-10-01T06:39:24Z",
+      "private": false,
+      "signals": {
+        "commits": {
+          "status": "read",
+          "detail": "complete"
+        },
+        "pull_requests": {
+          "status": "read",
+          "detail": "complete"
+        },
+        "open_pull_requests": {
+          "status": "read",
+          "detail": "complete"
+        },
+        "pull_request_reviews": {
+          "status": "read",
+          "detail": "1 pull requests carry more than 50 reviews; only the first 50 of each were read"
+        },
+        "ci_runs": {
+          "status": "read",
+          "detail": "complete"
+        },
+        "issues": {
+          "status": "read",
+          "detail": "complete"
+        }
+      },
+      "idle_days": 3,
+      "commits": {
+        "commits": 59,
+        "reverts": 0,
+        "hotfixes": 0,
+        "revert_rate_pct": 0,
+        "hotfix_rate_pct": 0,
+        "total": 59,
+        "merges": 0,
+        "unlinked_accounts": 0,
+        "per_period": [
+          19,
+          6,
+          9,
+          4,
+          7,
+          14
+        ]
+      },
+      "pull_requests": {
+        "opened": 93,
+        "merged": 39,
+        "closed_unmerged": 37,
+        "open_now": 107,
+        "merged_per_period": [
+          6,
+          3,
+          5,
+          4,
+          7,
+          14
+        ],
+        "cycle_hours": {
+          "measured": 39,
+          "median": 25.8,
+          "p90": 446.3,
+          "unmeasurable": 0
+        }
+      },
+      "review": {
+        "merged": 39,
+        "with_review_by_another_account": 34,
+        "coverage_pct": 87.2,
+        "review_threads_median": 0,
+        "review_threads_total": 11
+      },
+      "reviews_received": 81,
+      "ci": {
+        "runs": 824,
+        "passed": 670,
+        "failed": 153,
+        "inconclusive": 1,
+        "needed_more_than_one_attempt": 2,
+        "latest_attempt_pass_rate_pct": 81.4
+      },
+      "size": {
+        "measured": 39,
+        "median_lines": 18,
+        "p90_lines": 270,
+        "distribution": {
+          "under_10": 15,
+          "from_10_to_49": 13,
+          "from_50_to_249": 6,
+          "from_250_to_999": 5,
+          "at_least_1000": 0
+        }
+      },
+      "issues": {
+        "open": 325,
+        "oldest_open_days": 4914
+      },
+      "concentration": {
+        "authors": 21,
+        "commits": 59,
+        "top": "itchyny",
+        "top_share_pct": 47.5,
+        "accounts_covering_half": 2,
+        "breakdown": [
+          {
+            "person": "itchyny",
+            "commits": 28,
+            "share_pct": 47.5
+          },
+          {
+            "person": "dependabot",
+            "commits": 9,
+            "share_pct": 15.3
+          },
+          {
+            "person": "0-wiz-0",
+            "commits": 2,
+            "share_pct": 3.4
+          },
+          {
+            "person": "A4-Tacks",
+            "commits": 2,
+            "share_pct": 3.4
+          },
+          {
+            "person": "arifthpe",
+            "commits": 2,
+            "share_pct": 3.4
+          },
+          {
+            "person": "4RH1T3CT0R7",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "AbhinavMir",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "AetherAI3",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "Hugohong258",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "Rohan5commit",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "Saur2000",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "cosine0",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "ded-furby",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "fuyu0425",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "github-actions",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "oodadoudou",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "pavelkuliaka",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "theyoucheng",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "tlsbollei",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "vlmarek",
+            "commits": 1,
+            "share_pct": 1.7
+          },
+          {
+            "person": "winklemad",
+            "commits": 1,
+            "share_pct": 1.7
+          }
+        ]
+      }
+    }
+  ],
+  "unread": [],
+  "caps": [
+    {
+      "repo": "jqlang/jq",
+      "signal": "pull_request_reviews",
+      "detail": "1 pull requests carry more than 50 reviews; only the first 50 of each were read"
+    }
+  ]
+}

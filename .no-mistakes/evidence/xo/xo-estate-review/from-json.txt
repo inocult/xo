@@ -1,0 +1,17 @@
+$ PATH=<gh-axi replaced by a tripwire> estate-review.sh --from-json model-jqlang-jq.json   (run 1)
+exit=0
+run 2 exit=0
+two renders of the same stored model are byte-identical (18632 bytes)
+tripwire hits in render output: 0
+
+$ estate-review.sh --from-json model-jqlang-jq.json --window 30
+estate-review.sh: --window cannot be applied to a stored model: it chooses the window, and the stored model's per-period tallies are already cut, so it needs a fresh collection; re-run the review against the estate with --window
+exit=2
+
+$ estate-review.sh --from-json model-jqlang-jq.json --since 2026-01-01
+estate-review.sh: --since cannot be applied to a stored model: it chooses the window, and the stored model's per-period tallies are already cut, so it needs a fresh collection; re-run the review against the estate with --since
+exit=2
+
+$ estate-review.sh --from-json model-jqlang-jq.json --json | jq -S . | cmp with stored
+exit=0
+re-emitted model equals the stored model
