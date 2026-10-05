@@ -384,8 +384,8 @@ resolve_scope() {
   esac
 }
 
-REPO_LIST_JQ='(["items\t" + (length|tostring)] + [.[]|["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv])|join("\n")'
 REPO_ONE_JQ='["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv'
+REPO_LIST_JQ='(["items\t" + (length|tostring)] + [.[]|'"$REPO_ONE_JQ"'])|join("\n")'
 
 # list_repos: leaves the estate's repo records in $REPOS_FILE, and the listing's
 # own page cap in $REPOS_CAPPED. That flag has to be taken here and kept: it lives
@@ -418,7 +418,7 @@ list_repos() {
 # count a different set of commits from the one the request asked for, and the
 # difference is silent: a rebased commit's author date can sit outside a window
 # the API already decided it belongs to.
-COMMITS_JQ='(["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.committer.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")[0]|gsub("[\\t\\r]";" "))]|@tsv])|join("\n")'
+COMMITS_JQ='(["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.committer.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")|(.[0]//"")|gsub("[\\t\\r]";" ")|if . == "" then "-" else . end)]|@tsv])|join("\n")'
 RUNS_JQ='(["items\t" + (.workflow_runs|length|tostring)] + [.workflow_runs[]|["run",(.workflow_id|tostring),(.head_sha//"-"),(.run_number|tostring),(.run_attempt|tostring),(.conclusion//"-"),(.created_at//"-")]|@tsv])|join("\n")'
 # The open-issue read is the one program that drops items GitHub returned: the
 # endpoint answers with pull requests alongside issues. The `items` count is the
@@ -432,42 +432,38 @@ ISSUES_JQ='(["items\t" + (length|tostring)] + [.[]|select(.pull_request==null)|[
 # bound in this report is, rather than silently shortening a review count.
 REVIEWS_PER_PR=50
 
+PR_NODE_FIELDS='nodes{ number state isDraft createdAt updatedAt mergedAt closedAt additions deletions changedFiles headRefName title
+        author{login __typename}
+        commits(first:1){nodes{commit{committedDate}}}
+        reviews(first:'"$REVIEWS_PER_PR"'){totalCount nodes{author{login __typename} submittedAt state}}
+        reviewThreads(first:1){totalCount} }'
+
 # shellcheck disable=SC2016  # GraphQL variables are literal query syntax.
 PR_QUERY='query($owner:String!,$name:String!,$cursor:String,$page:Int!){
   repository(owner:$owner,name:$name){
     pullRequests(first:$page, orderBy:{field:UPDATED_AT,direction:DESC}, after:$cursor){
       pageInfo{hasNextPage endCursor}
-      nodes{ number state isDraft createdAt updatedAt mergedAt closedAt additions deletions changedFiles headRefName title
-        author{login __typename}
-        commits(first:1){nodes{commit{committedDate}}}
-        reviews(first:'"$REVIEWS_PER_PR"'){totalCount nodes{author{login __typename} submittedAt state}}
-        reviewThreads(first:1){totalCount} } } } }'
+      '"$PR_NODE_FIELDS"' } } }'
 
 # shellcheck disable=SC2016  # GraphQL variables are literal query syntax.
 OPEN_PR_QUERY='query($owner:String!,$name:String!,$cursor:String,$page:Int!){
   repository(owner:$owner,name:$name){
     pullRequests(first:$page, states:OPEN, orderBy:{field:CREATED_AT,direction:ASC}, after:$cursor){
       pageInfo{hasNextPage endCursor}
-      nodes{ number state isDraft createdAt updatedAt mergedAt closedAt additions deletions changedFiles headRefName title
-        author{login __typename}
-        commits(first:1){nodes{commit{committedDate}}}
-        reviews(first:'"$REVIEWS_PER_PR"'){totalCount nodes{author{login __typename} submittedAt state}}
-        reviewThreads(first:1){totalCount} } } } }'
+      '"$PR_NODE_FIELDS"' } } }'
 
 # shellcheck disable=SC2016  # jq owns every $ in this program.
 PR_SHAPE_JQ='
   .data.repository.pullRequests as $p
-  | (if $p == null then ["page\tfalse\t-"] else
-      ["page\t" + (($p.pageInfo.hasNextPage)|tostring) + "\t" + (($p.pageInfo.endCursor)//"-")]
+  | (["page\t" + (($p.pageInfo.hasNextPage)|tostring) + "\t" + (($p.pageInfo.endCursor)//"-")]
       + [ $p.nodes[]
           | ["pr",(.number|tostring),(.state//"-"),(.isDraft|tostring),(.createdAt//"-"),(.updatedAt//"-"),
              ((.mergedAt)//"-"),((.closedAt)//"-"),(.additions|tostring),(.deletions|tostring),(.changedFiles|tostring),
              ((.author.login)//"-"),((.author.__typename)//"-"),((.commits.nodes[0].commit.committedDate)//"-"),
              (.reviews.totalCount|tostring),(.reviewThreads.totalCount|tostring),((.headRefName)//"-"),
-             ((.title//"")|gsub("[\\t\\r\\n]";" "))]|@tsv ]
+             ((.title//"")|gsub("[\\t\\r\\n]";" ")|if . == "" then "-" else . end)]|@tsv ]
       + [ $p.nodes[] as $n | $n.reviews.nodes[]
-          | ["review",($n.number|tostring),((.author.login)//"-"),((.author.__typename)//"-"),((.submittedAt)//"-"),(.state//"-")]|@tsv ]
-    end)
+          | ["review",($n.number|tostring),((.author.login)//"-"),((.author.__typename)//"-"),((.submittedAt)//"-"),(.state//"-")]|@tsv ])
   | join("\n")'
 
 # read_prs <owner> <name> <query> <since_iso> <until_iso> <stop_on_window>

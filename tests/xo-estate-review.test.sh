@@ -102,6 +102,9 @@ JSON
   cat > "$dir/empty-prs.json" <<'JSON'
 {"data":{"repository":{"pullRequests":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}}
 JSON
+  cat > "$dir/null-repository.json" <<'JSON'
+{"data":{"repository":null}}
+JSON
 }
 
 # One page of the merged-pull-request walk: <count> pull requests merged at
@@ -262,6 +265,12 @@ case $MODE in
       /repos/* | graphql) printf 'gh: HTTP 403 Resource protected by organization SAML enforcement\n' >&2; exit 1 ;;
     esac
     ;;
+  null-repository)
+    # A GraphQL read that succeeds and answers with no repository at all.
+    case $path in
+      graphql) fixture=$FIXTURES/null-repository.json ;;
+    esac
+    ;;
   owner-not-found)
     # gh-axi renders its own failures as a document on STDOUT, not stderr.
     case $path in
@@ -275,6 +284,10 @@ if [ "$fixture" = "$FIXTURES/repos-every-page.json" ]; then
   fixture=$FIXTURES/.repos-page.json
 fi
 payload=$(jq -r "$program" "$fixture") || exit 1
+# gh-axi renders a non-JSON response body as raw.trim(), so a payload whose last
+# field is empty reaches the caller with the record separator already removed.
+payload=${payload#"${payload%%[![:space:]]*}"}
+payload=${payload%"${payload##*[![:space:]]}"}
 printf 'api_response:\n'
 case $MODE in
   no-body) printf '  truncated: false\n'; exit 0 ;;
@@ -771,6 +784,77 @@ test_free_text_from_the_estate_cannot_break_a_record() {
   assert_equals "5" "$(jq -r '.risk.stalled_pull_requests[0].number' "$root/model.json")" "the fields after it did not shift"
   assert_equals "brooke" "$(jq -r '.risk.stalled_pull_requests[0].author' "$root/model.json")" "the author field did not shift"
   pass "estate free text containing a record separator is neutralised rather than shifting every later field"
+}
+
+test_a_record_whose_last_field_is_empty_estate_text_keeps_every_field() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-empty-text) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  keep_only_widgets "$root/fixtures"
+  # Both shapes GitHub really returns for a commit with nothing on its subject
+  # line: a message that opens with a newline, and a message that is empty.
+  cat > "$root/fixtures/commits-widgets.json" <<'JSON'
+[
+ {"sha":"e1","author":{"login":"ada","type":"User"},"parents":[{"sha":"e0"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"message":"\nbody only"}},
+ {"sha":"e2","author":{"login":"brooke","type":"User"},"parents":[{"sha":"e1"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-01-11T00:00:00Z"},"committer":{"email":"brooke@example.com","date":"2026-01-11T00:00:00Z"},"message":""}}
+]
+JSON
+  # And the same at the end of a pull-request record: the stalled pull request
+  # carries no title.
+  local prs
+  for prs in prs-widgets prs-open-widgets; do
+    jq '.data.repository.pullRequests.nodes |= map(if .number == 5 then .title = "" else . end)' \
+      "$root/fixtures/$prs.json" > "$root/fixtures/$prs.tmp" ||
+      fail "could not empty the pull-request title in $prs"
+    mv "$root/fixtures/$prs.tmp" "$root/fixtures/$prs.json"
+  done
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "an estate carrying a commit with no subject produced no model at all"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "0" "$(jq -r '.unread | length' "$root/model.json")" \
+    "a commit with no subject is read rather than costing the repository its commit read"
+  assert_equals "2" "$(jq -r '.quality.commits.commits' "$root/model.json")" \
+    "both subjectless commits are counted"
+  assert_equals "5" "$(jq -r '.risk.stalled_pull_requests[0].number' "$root/model.json")" \
+    "the untitled pull request's own number survives the record"
+  assert_equals "brooke" "$(jq -r '.risk.stalled_pull_requests[0].author' "$root/model.json")" \
+    "the fields before the empty title did not shift"
+  assert_equals "-" "$(jq -r '.risk.stalled_pull_requests[0].title' "$root/model.json")" \
+    "an empty title arrives as the script's own absent-value mark, not as a missing field"
+  pass "a record whose final field is empty estate text keeps every field through the gh-axi body"
+}
+
+test_a_pull_request_read_that_returned_no_repository_is_a_gap_not_a_complete_read() {
+  local root bin model
+  root=$(xo_test_tmproot xo-estate-review-nullrepo) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  install_fake_gh_axi "$bin" "$root/fixtures" null-repository
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "a review whose pull-request reads answered with no repository produced no model"
+  printf '%s' "$model" > "$root/model.json"
+  # The worst outcome available here is a repository recorded as read completely
+  # with no pull requests in it, because that reads as a quiet estate.
+  assert_equals "0" "$(jq -r '.selection.fully_read' "$root/model.json")" \
+    "no repository is recorded as read completely when its pull-request walk returned nothing to read"
+  assert_equals "2" "$(jq -r '.selection.partially_read' "$root/model.json")" \
+    "both repositories are recorded as read with a gap"
+  assert_equals "4" \
+    "$(jq -r '[.unread[] | select(.signal == "pull_requests" or .signal == "open_pull_requests")] | length' "$root/model.json")" \
+    "both pull-request passes of both repositories are recorded as unread"
+
+  "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
+  assert_fixed_shape "$root/report.md" "an estate whose pull-request reads returned no repository"
+  assert_grep "Open pull requests: 0 (2 reads behind this figure failed" "$root/report.md" \
+    "the open pull request count hedges on the reads that failed"
+  local claimed
+  claimed=$(grep -nE '^No (pull request|open pull request)' "$root/report.md" | grep -F "in this window" || true)
+  [ -z "$claimed" ] ||
+    fail "a pull-request read that returned no repository was reported as a window with no pull requests in it:
+$claimed"
+  pass "a pull-request read that succeeded with no repository in it is recorded as a gap, never as a complete read of a quiet estate"
 }
 
 test_scope_and_argument_validation_refuses_rather_than_guessing() {
@@ -1686,5 +1770,7 @@ test_a_commit_whose_workflow_ran_twice_counts_every_attempt
 test_an_account_reaching_the_table_only_through_a_merged_pull_request_is_whole
 test_a_table_cell_carrying_a_pipe_stays_one_cell
 test_a_commit_is_counted_in_the_window_it_landed_in
+test_a_record_whose_last_field_is_empty_estate_text_keeps_every_field
+test_a_pull_request_read_that_returned_no_repository_is_a_gap_not_a_complete_read
 
 echo "# xo-estate-review.test.sh: all assertions passed"
