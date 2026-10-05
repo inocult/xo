@@ -27,7 +27,6 @@ An owner GitHub reports as anything but an organization is refused with the type
 
 Forks are excluded from an organization's listing and reviewed when named directly, because a repository someone names explicitly is one they meant.
 Archived repositories are reviewed and labelled as archived.
-A repository with no push date at all is selected as unmaintained with its idle days unmeasurable, because a repository nobody has ever pushed to is the strongest case of what section 6.2 names.
 Neither is a setting: both are the fixed behaviour of `collect`, and the report states the selection it actually performed rather than reading a value that could drift from it.
 
 ## 2. The fixed constants and why each one exists
@@ -53,6 +52,8 @@ Each value below is a lever: editing it is the supported way to change what it b
 | `REVIEWS_PER_PR` | 50 | reviews read per pull request | past this the review count is a crowd rather than a signal |
 
 A window shorter than `PERIODS` days is refused, naming the minimum, because sub-day periods would label two periods with the same date.
+
+A repository GitHub reports with no push date at all is unmaintained whatever `UNMAINTAINED_DAYS` holds, and heads the section 6.2 list with its idle days unmeasurable, because a repository nobody has ever pushed to is the strongest case of what that section names.
 
 ## 3. Collection bounds, per walk
 

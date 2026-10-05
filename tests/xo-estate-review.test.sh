@@ -1154,6 +1154,42 @@ test_a_repository_with_no_push_date_is_named_unmaintained() {
   pass "a repository GitHub reports with no push date is named unmaintained with its idle days unmeasurable"
 }
 
+test_a_never_pushed_repository_heads_the_bounded_unmaintained_list() {
+  local root bin model report listed
+  root=$(xo_test_tmproot xo-estate-review-nopush-order) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # More unmaintained repositories than one list shows, so the row bound bites.
+  # An archived repository qualifies whatever its push recency, so sixteen
+  # recently-pushed archived repositories plus one GitHub reports with no push
+  # date make seventeen rows against a fifteen-row list. The never-pushed one is
+  # the worst row in that set, so a worst-first list has to show it rather than
+  # name it in the header sentence and then truncate it away.
+  jq '[.[] | select(.name == "widgets")]
+      + [range(16) | {full_name: ("acme/attic" + (. | tostring)), name: ("attic" + (. | tostring)),
+           owner: {login: "acme"}, default_branch: "main", archived: true, fork: false,
+           pushed_at: "2026-03-30T00:00:00Z", private: false}]
+      + [{full_name: "acme/placeholder", name: "placeholder", owner: {login: "acme"},
+           default_branch: "main", archived: false, fork: false, pushed_at: null, private: false}]' \
+    "$root/fixtures/repos.json" > "$root/fixtures/repos.tmp" &&
+    mv "$root/fixtures/repos.tmp" "$root/fixtures/repos.json" ||
+    fail "could not write the oversized unmaintained estate"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "17" "$(jq -r '.risk.unmaintained | length' "$root/model.json")"     "every unmaintained repository is in the model, beyond what one list shows"
+  assert_equals "acme/placeholder" "$(jq -r '.risk.unmaintained[0].repo' "$root/model.json")"     "the repository with no push date is ranked worst rather than least"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_grep "| acme/placeholder | not measurable |" "$report"     "the never-pushed row survives the row bound instead of being truncated away"
+  assert_grep "2 further repositories are in this report" "$report"     "the rows the list did not show are still disclosed"
+  listed=$(awk -F'|' '/^\| acme\// { gsub(/ /, "", $2); print $2 }' "$report" | head -n 15 | wc -l)
+  assert_equals "15" "$listed" "the list is bounded at the row cap it discloses"
+  pass "a repository with no push date heads the unmaintained list rather than being truncated out of it"
+}
+
 test_an_estate_larger_than_the_caps_names_both_of_them() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-listcap) || fail "no fixture root"
@@ -1554,6 +1590,7 @@ test_repository_selection_excludes_forks_and_discloses_it
 test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork
 test_an_archived_repository_is_reviewed_and_labelled
 test_a_repository_with_no_push_date_is_named_unmaintained
+test_a_never_pushed_repository_heads_the_bounded_unmaintained_list
 test_an_estate_larger_than_the_caps_names_both_of_them
 test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged
 test_each_pull_request_walk_spends_its_own_budget

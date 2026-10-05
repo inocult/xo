@@ -891,7 +891,7 @@ $win as $w
    | sort_by(.name)) as $repo_models
 | ($repo_models | map(select(.pushed_at == null or (.idle_days != null and .idle_days >= $o.unmaintained_days) or .archived)
     | {repo: .name, idle_days: .idle_days, archived: .archived, commits_in_window: .commits.total})
-   | sort_by(-(.idle_days // 0), .repo)) as $unmaintained
+   | sort_by(if .idle_days == null then 0 else 1 end, -(.idle_days // 0), .repo)) as $unmaintained
 | ($repo_models | map(select(.concentration.commits > 0 and .concentration.accounts_covering_half == 1)
     | {repo: .name, top: .concentration.top, top_share_pct: .concentration.top_share_pct,
        authors: .concentration.authors, commits: .concentration.commits})
