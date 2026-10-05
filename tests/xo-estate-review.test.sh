@@ -285,9 +285,12 @@ if [ "$fixture" = "$FIXTURES/repos-every-page.json" ]; then
 fi
 payload=$(jq -r "$program" "$fixture") || exit 1
 # gh-axi renders a non-JSON response body as raw.trim(), so a payload whose last
-# field is empty reaches the caller with the record separator already removed.
-payload=${payload#"${payload%%[![:space:]]*}"}
-payload=${payload%"${payload##*[![:space:]]}"}
+# field is blank reaches the caller with the record separator already removed.
+# JavaScript's trim() strips the byte-order mark along with the whitespace jq
+# calls whitespace, and bash's own [[:space:]] is narrower than either, so the
+# set is spelled out here rather than taken from the shell.
+payload=$(printf '%s' "$payload" |
+  jq -Rrs 'sub("^[[:space:]\\x{feff}]+";"") | sub("[[:space:]\\x{feff}]+$";"")') || exit 1
 printf 'api_response:\n'
 case $MODE in
   no-body) printf '  truncated: false\n'; exit 0 ;;
@@ -787,32 +790,40 @@ test_free_text_from_the_estate_cannot_break_a_record() {
 }
 
 test_a_record_whose_last_field_is_blank_estate_text_keeps_every_field() {
-  local root bin model title shape
+  local root bin model shape subject title
   # gh-axi hands over a non-JSON body trimmed, so a record whose final field is
-  # blank reaches the reader with the separator before it already gone. Every
-  # shape of blank is driven through, because the field is lost whether it was
-  # empty to begin with or became whitespace when the separators were
-  # substituted out of it.
-  while IFS='|' read -r shape title; do
+  # blank reaches the reader with the separator before it already gone. The
+  # shapes below are the distinct ones: a field that was already empty, one that
+  # becomes whitespace when the record separators are substituted out of it, and
+  # one carrying the byte-order mark, which the trim strips but jq does not count
+  # as whitespace. A tab-only and a spaces-only field are the same shape as each
+  # other, because the substitution runs before the sentinel sees the value; if
+  # that order ever changes they stop being equivalent and both need driving.
+  for shape in empty whitespace byte-order-mark; do
+    case $shape in
+      empty) subject=$'\nbody only'; title='' ;;
+      whitespace) subject=$'\r\nbody only'; title=$'\t' ;;
+      byte-order-mark) subject=$'﻿\nbody only'; title=$'﻿' ;;
+    esac
     root=$(xo_test_tmproot "xo-estate-review-blank-$shape") || fail "no fixture root"
     bin=$(xo_fakebin "$root")
     write_fixtures "$root/fixtures"
     keep_only_widgets "$root/fixtures"
-    # The three subject lines GitHub really returns with nothing on them: no
-    # message at all, a message opening with a newline, and a message with CRLF
-    # endings opening with a blank line, whose subject is a lone carriage return.
-    # The last of them is the page's last record, so its field is the one the
-    # body trim reaches.
-    cat > "$root/fixtures/commits-widgets.json" <<'JSON'
-[
- {"sha":"e1","author":{"login":"ada","type":"User"},"parents":[{"sha":"e0"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"message":""}},
- {"sha":"e2","author":{"login":"ada","type":"User"},"parents":[{"sha":"e1"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-11T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-11T00:00:00Z"},"message":"\nbody only"}},
- {"sha":"e3","author":{"login":"brooke","type":"User"},"parents":[{"sha":"e2"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-01-12T00:00:00Z"},"committer":{"email":"brooke@example.com","date":"2026-01-12T00:00:00Z"},"message":"\r\nbody only"}}
-]
-JSON
+    # The shape's own commit is the page's last record, so its field is the one
+    # the body trim reaches. The commit before it has no message at all, which is
+    # the one blank subject GitHub reports as a message with no lines in it.
+    jq -n --arg subject "$subject" '[
+      {sha: "e1", author: {login: "ada", type: "User"}, parents: [{sha: "e0"}],
+       commit: {author: {email: "ada@example.com", date: "2026-01-10T00:00:00Z"},
+                committer: {email: "ada@example.com", date: "2026-01-10T00:00:00Z"}, message: ""}},
+      {sha: "e2", author: {login: "brooke", type: "User"}, parents: [{sha: "e1"}],
+       commit: {author: {email: "brooke@example.com", date: "2026-01-11T00:00:00Z"},
+                committer: {email: "brooke@example.com", date: "2026-01-11T00:00:00Z"}, message: $subject}}]' \
+      > "$root/fixtures/commits-widgets.json" ||
+      fail "could not write the $shape commit fixture"
     # And the same at the end of a pull-request record. The stalled pull request
     # is the only node its pages carry and it carries no review, so its title
-    # really is the payload's final field rather than a field with records after it.
+    # really is the payload's final field rather than one with records after it.
     local prs
     for prs in prs-widgets prs-open-widgets; do
       jq --arg t "$title" '.data.repository.pullRequests.nodes |=
@@ -827,20 +838,16 @@ JSON
     printf '%s' "$model" > "$root/model.json"
     assert_equals "0" "$(jq -r '.unread | length' "$root/model.json")" \
       "the $shape case reads the commits rather than costing the repository its commit read"
-    assert_equals "3" "$(jq -r '.quality.commits.commits' "$root/model.json")" \
-      "the $shape case counts all three blank-subject commits"
+    assert_equals "2" "$(jq -r '.quality.commits.commits' "$root/model.json")" \
+      "the $shape case counts both blank-subject commits"
     assert_equals "5" "$(jq -r '.risk.stalled_pull_requests[0].number' "$root/model.json")" \
       "the $shape case keeps the untitled pull request's own number"
     assert_equals "brooke" "$(jq -r '.risk.stalled_pull_requests[0].author' "$root/model.json")" \
       "the $shape case did not shift the fields before the blank title"
     assert_equals "-" "$(jq -r '.risk.stalled_pull_requests[0].title' "$root/model.json")" \
       "the $shape case renders the absent-value mark rather than a lost field or the text null"
-  done <<EOF
-empty|
-tab|	
-spaces|   
-EOF
-  pass "a record whose final field is blank estate text keeps every field through the gh-axi body, whether the field was empty or whitespace"
+  done
+  pass "a record whose final field is blank estate text keeps every field through the gh-axi body, whether the field was empty, whitespace, or the byte-order mark"
 }
 
 test_a_pull_request_read_that_returned_no_repository_is_a_gap_not_a_complete_read() {

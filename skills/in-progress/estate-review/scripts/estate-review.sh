@@ -418,7 +418,7 @@ list_repos() {
 # count a different set of commits from the one the request asked for, and the
 # difference is silent: a rebased commit's author date can sit outside a window
 # the API already decided it belongs to.
-COMMITS_JQ='(["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.committer.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")|(.[0]//"")|gsub("[\\t\\r]";" ")|if test("^[[:space:]]*$") then "-" else . end)]|@tsv])|join("\n")'
+COMMITS_JQ='(["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.committer.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")|(.[0]//"")|gsub("[\\t\\r]";" ")|if test("^[[:space:]\\x{feff}]*$") then "-" else . end)]|@tsv])|join("\n")'
 RUNS_JQ='(["items\t" + (.workflow_runs|length|tostring)] + [.workflow_runs[]|["run",(.workflow_id|tostring),(.head_sha//"-"),(.run_number|tostring),(.run_attempt|tostring),(.conclusion//"-"),(.created_at//"-")]|@tsv])|join("\n")'
 # The open-issue read is the one program that drops items GitHub returned: the
 # endpoint answers with pull requests alongside issues. The `items` count is the
@@ -461,7 +461,7 @@ PR_SHAPE_JQ='
              ((.mergedAt)//"-"),((.closedAt)//"-"),(.additions|tostring),(.deletions|tostring),(.changedFiles|tostring),
              ((.author.login)//"-"),((.author.__typename)//"-"),((.commits.nodes[0].commit.committedDate)//"-"),
              (.reviews.totalCount|tostring),(.reviewThreads.totalCount|tostring),((.headRefName)//"-"),
-             ((.title//"")|gsub("[\\t\\r\\n]";" ")|if test("^[[:space:]]*$") then "-" else . end)]|@tsv ]
+             ((.title//"")|gsub("[\\t\\r\\n]";" ")|if test("^[[:space:]\\x{feff}]*$") then "-" else . end)]|@tsv ]
       + [ $p.nodes[] as $n | $n.reviews.nodes[]
           | ["review",($n.number|tostring),((.author.login)//"-"),((.author.__typename)//"-"),((.submittedAt)//"-"),(.state//"-")]|@tsv ])
   | join("\n")'
