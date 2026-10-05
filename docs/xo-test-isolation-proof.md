@@ -206,9 +206,10 @@ Two scripts left the residual set rather than joining it.
 Its current live-backend result is recorded under [workspace-removal focus safety](verification/runtime-backends.md#workspace-removal-focus-safety).
 `tests/xo-claude-stop-autoarm-live-e2e.test.sh` gate-skips on its opt-in variable and is now `live-harness-optin`, since a candidate that gate-skips cannot prove concurrency.
 
-One member needs a current Pi to pass at all.
+One member needs a matching Pi to pass at all.
 `tests/xo-pi-branch-extension.test.sh` compares XO's supervision-branch extension against the stock renderers of the installed `@earendil-works/pi-coding-agent`, and the proof host's global install was stale at 0.81.1 while the published release was 0.84.4.
-On the stale package the case fails serially as well as concurrently, so it is a prerequisite rather than a concurrency result; both runs above pinned the current package with `XO_PI_PACKAGE_DIR`, and on a host whose global install is current the plain command reproduces them.
+On the stale package the case fails serially as well as concurrently, so it is a prerequisite rather than a concurrency result; both runs above selected a passing package with `XO_PI_PACKAGE_DIR`.
+Reproduce them against the Pi version pinned in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which owns that pin: the stock-parity case fails on a Pi line newer than the pin as well as on one older than it, so a latest global install is not a safe substitute.
 
 ## Production runner effect of the 2026-09-03 admissions
 
