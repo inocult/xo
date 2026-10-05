@@ -786,44 +786,61 @@ test_free_text_from_the_estate_cannot_break_a_record() {
   pass "estate free text containing a record separator is neutralised rather than shifting every later field"
 }
 
-test_a_record_whose_last_field_is_empty_estate_text_keeps_every_field() {
-  local root bin model
-  root=$(xo_test_tmproot xo-estate-review-empty-text) || fail "no fixture root"
-  bin=$(xo_fakebin "$root")
-  write_fixtures "$root/fixtures"
-  keep_only_widgets "$root/fixtures"
-  # Both shapes GitHub really returns for a commit with nothing on its subject
-  # line: a message that opens with a newline, and a message that is empty.
-  cat > "$root/fixtures/commits-widgets.json" <<'JSON'
+test_a_record_whose_last_field_is_blank_estate_text_keeps_every_field() {
+  local root bin model title shape
+  # gh-axi hands over a non-JSON body trimmed, so a record whose final field is
+  # blank reaches the reader with the separator before it already gone. Every
+  # shape of blank is driven through, because the field is lost whether it was
+  # empty to begin with or became whitespace when the separators were
+  # substituted out of it.
+  while IFS='|' read -r shape title; do
+    root=$(xo_test_tmproot "xo-estate-review-blank-$shape") || fail "no fixture root"
+    bin=$(xo_fakebin "$root")
+    write_fixtures "$root/fixtures"
+    keep_only_widgets "$root/fixtures"
+    # The three subject lines GitHub really returns with nothing on them: no
+    # message at all, a message opening with a newline, and a message with CRLF
+    # endings opening with a blank line, whose subject is a lone carriage return.
+    # The last of them is the page's last record, so its field is the one the
+    # body trim reaches.
+    cat > "$root/fixtures/commits-widgets.json" <<'JSON'
 [
- {"sha":"e1","author":{"login":"ada","type":"User"},"parents":[{"sha":"e0"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"message":"\nbody only"}},
- {"sha":"e2","author":{"login":"brooke","type":"User"},"parents":[{"sha":"e1"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-01-11T00:00:00Z"},"committer":{"email":"brooke@example.com","date":"2026-01-11T00:00:00Z"},"message":""}}
+ {"sha":"e1","author":{"login":"ada","type":"User"},"parents":[{"sha":"e0"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-10T00:00:00Z"},"message":""}},
+ {"sha":"e2","author":{"login":"ada","type":"User"},"parents":[{"sha":"e1"}],"commit":{"author":{"email":"ada@example.com","date":"2026-01-11T00:00:00Z"},"committer":{"email":"ada@example.com","date":"2026-01-11T00:00:00Z"},"message":"\nbody only"}},
+ {"sha":"e3","author":{"login":"brooke","type":"User"},"parents":[{"sha":"e2"}],"commit":{"author":{"email":"brooke@example.com","date":"2026-01-12T00:00:00Z"},"committer":{"email":"brooke@example.com","date":"2026-01-12T00:00:00Z"},"message":"\r\nbody only"}}
 ]
 JSON
-  # And the same at the end of a pull-request record: the stalled pull request
-  # carries no title.
-  local prs
-  for prs in prs-widgets prs-open-widgets; do
-    jq '.data.repository.pullRequests.nodes |= map(if .number == 5 then .title = "" else . end)' \
-      "$root/fixtures/$prs.json" > "$root/fixtures/$prs.tmp" ||
-      fail "could not empty the pull-request title in $prs"
-    mv "$root/fixtures/$prs.tmp" "$root/fixtures/$prs.json"
-  done
-  install_fake_gh_axi "$bin" "$root/fixtures" ok
-  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
-    fail "an estate carrying a commit with no subject produced no model at all"
-  printf '%s' "$model" > "$root/model.json"
-  assert_equals "0" "$(jq -r '.unread | length' "$root/model.json")" \
-    "a commit with no subject is read rather than costing the repository its commit read"
-  assert_equals "2" "$(jq -r '.quality.commits.commits' "$root/model.json")" \
-    "both subjectless commits are counted"
-  assert_equals "5" "$(jq -r '.risk.stalled_pull_requests[0].number' "$root/model.json")" \
-    "the untitled pull request's own number survives the record"
-  assert_equals "brooke" "$(jq -r '.risk.stalled_pull_requests[0].author' "$root/model.json")" \
-    "the fields before the empty title did not shift"
-  assert_equals "-" "$(jq -r '.risk.stalled_pull_requests[0].title' "$root/model.json")" \
-    "an empty title arrives as the script's own absent-value mark, not as a missing field"
-  pass "a record whose final field is empty estate text keeps every field through the gh-axi body"
+    # And the same at the end of a pull-request record. The stalled pull request
+    # is the only node its pages carry and it carries no review, so its title
+    # really is the payload's final field rather than a field with records after it.
+    local prs
+    for prs in prs-widgets prs-open-widgets; do
+      jq --arg t "$title" '.data.repository.pullRequests.nodes |=
+        [.[] | select(.number == 5) | .title = $t | .reviews = {totalCount: 0, nodes: []}]' \
+        "$root/fixtures/$prs.json" > "$root/fixtures/$prs.tmp" ||
+        fail "could not blank the pull-request title in $prs"
+      mv "$root/fixtures/$prs.tmp" "$root/fixtures/$prs.json"
+    done
+    install_fake_gh_axi "$bin" "$root/fixtures" ok
+    model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+      fail "the $shape case produced no model at all: a blank final field aborted the whole review"
+    printf '%s' "$model" > "$root/model.json"
+    assert_equals "0" "$(jq -r '.unread | length' "$root/model.json")" \
+      "the $shape case reads the commits rather than costing the repository its commit read"
+    assert_equals "3" "$(jq -r '.quality.commits.commits' "$root/model.json")" \
+      "the $shape case counts all three blank-subject commits"
+    assert_equals "5" "$(jq -r '.risk.stalled_pull_requests[0].number' "$root/model.json")" \
+      "the $shape case keeps the untitled pull request's own number"
+    assert_equals "brooke" "$(jq -r '.risk.stalled_pull_requests[0].author' "$root/model.json")" \
+      "the $shape case did not shift the fields before the blank title"
+    assert_equals "-" "$(jq -r '.risk.stalled_pull_requests[0].title' "$root/model.json")" \
+      "the $shape case renders the absent-value mark rather than a lost field or the text null"
+  done <<EOF
+empty|
+tab|	
+spaces|   
+EOF
+  pass "a record whose final field is blank estate text keeps every field through the gh-axi body, whether the field was empty or whitespace"
 }
 
 test_a_pull_request_read_that_returned_no_repository_is_a_gap_not_a_complete_read() {
@@ -1770,7 +1787,7 @@ test_a_commit_whose_workflow_ran_twice_counts_every_attempt
 test_an_account_reaching_the_table_only_through_a_merged_pull_request_is_whole
 test_a_table_cell_carrying_a_pipe_stays_one_cell
 test_a_commit_is_counted_in_the_window_it_landed_in
-test_a_record_whose_last_field_is_empty_estate_text_keeps_every_field
+test_a_record_whose_last_field_is_blank_estate_text_keeps_every_field
 test_a_pull_request_read_that_returned_no_repository_is_a_gap_not_a_complete_read
 
 echo "# xo-estate-review.test.sh: all assertions passed"
