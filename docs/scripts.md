@@ -151,6 +151,8 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
 | `xo-mail.sh`             | General-purpose mail plane: read unseen IMAP mail, send one SMTP message, or surface new mail as a `check` wake via `poll` (configuration in the home's gitignored `.env`) |
 | `xo-mail.py`             | The IMAP/SMTP engine behind `xo-mail.sh` |
 | `xo-mail-check.sh`       | Standing received-mail poll: `arm` registers a watcher check that runs `xo-mail.sh poll` on the watcher cadence (new mail still wakes via the poll; the check's own line also wakes unless the poll is a proven no-op), `disarm` removes it |
+| `xo-paperclip-check.sh`  | Standing Paperclip dispatch-intake poll: `arm` registers a watcher check that turns a board ticket assigned to this home's agent seat into a captain inbox note, `disarm` removes it (configuration in the home's gitignored `.env`) |
+| `xo-paperclip-api.py`    | The Paperclip REST reader behind `xo-paperclip-check.sh`: verifies the board has a sole human principal, then stages one note body per undelivered assigned ticket |
 | `xo-voice-relay.py`      | Hold the spoken conversation on this host, answer from the records, and hand real work to `xo-inbox.sh` ([voice-relay.md](voice-relay.md)) |
 | `xo-voice-client.py`     | The laptop end of the spoken interface: capture, playback, and turn timing over SSH; audio devices unverified |
 | `xo_voice_frame.py`      | The wire format both machines share, copied to the laptop beside the client          |

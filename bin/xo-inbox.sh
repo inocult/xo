@@ -8,6 +8,11 @@
 #           answer. Writes a durable record and appends ONE `check` wake, so the
 #           note survives a crash and is presented at xo's next drain.
 #           This is the only subcommand that touches xo's wake queue.
+#           The record's `source=` says where the body came from, and it
+#           defaults to `text`, the captain typing into a terminal. A machine
+#           intake that captures on the captain's behalf names itself with
+#           `--source <name>` instead, so a drain can tell a body the captain
+#           wrote from one some other surface handed over.
 #   say     Same as `note`, but the body comes from spoken audio on stdin.
 #           Speech is an INPUT METHOD here, not an architecture: it transcribes
 #           and then takes exactly the `note` path.
@@ -19,7 +24,7 @@
 #           fleet work and must not become fleet work.
 #
 # Usage:
-#   xo-inbox.sh note <text>...          | xo-inbox.sh note -   (body from stdin)
+#   xo-inbox.sh note [--source <name>] <text>...   | note [--source <name>] -
 #   xo-inbox.sh say  [<file.wav>]       (default: audio on stdin)
 #   xo-inbox.sh status
 #   xo-inbox.sh ask  <question>...
@@ -195,8 +200,20 @@ queue_note() {
   fi
 }
 
+# A source name goes verbatim into the record's own KEY=VALUE line, so it is
+# held to one token: anything else could forge a second field or a body.
 cmd_note() {
-  local body
+  local body source=text
+  if [ "${1:-}" = "--source" ]; then
+    shift
+    [ "$#" -gt 0 ] || die "usage: xo-inbox.sh note --source <name> <text>..."
+    source=$1
+    shift
+    case "$source" in
+      ''|*[!a-z0-9_-]*) die "a note source is lowercase letters, digits, hyphen, or underscore: $source" ;;
+    esac
+    [ "${#source}" -le 32 ] || die "a note source is at most 32 characters: $source"
+  fi
   if [ "$#" -eq 0 ]; then
     die "usage: xo-inbox.sh note <text>...   (or: note - to read stdin)"
   elif [ "$1" = "-" ]; then
@@ -204,7 +221,7 @@ cmd_note() {
   else
     body="$*"
   fi
-  queue_note text "$body"
+  queue_note "$source" "$body"
 }
 
 # ---------------------------------------------------------------- say

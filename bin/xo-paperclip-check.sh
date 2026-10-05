@@ -20,20 +20,30 @@
 # `disarm` removes the shim, its trust binding, and the report record.
 #
 # Board configuration is read from the home's own gitignored .env, so arming
-# needs no configuration of its own and a home can be armed before its boards
-# are wired. See docs/configuration.md "Paperclip dispatch intake" for the
-# schema: XO_PAPERCLIP_BOARDS names the boards, and each board contributes
-# XO_PAPERCLIP_<BOARD>_URL, _COMPANY, _AGENT, and _KEY. More than one board is
-# the normal case, because one captain works across organizations and each has
-# its own instance.
+# needs no configuration of its own and a home can be armed before its board is
+# wired. One home reaches one board, through the four values
+# XO_PAPERCLIP_URL, XO_PAPERCLIP_COMPANY, XO_PAPERCLIP_AGENT, and
+# XO_PAPERCLIP_KEY. See docs/configuration.md "Paperclip dispatch intake".
+#
+# WHO MAY DISPATCH. A board-dispatched ticket becomes work done in the captain's
+# own home with his credentials, so bin/xo-paperclip-api.py takes a dispatch
+# only from a board the captain is the sole human principal of, verified against
+# the board itself on every poll. A board with more principals, and a membership
+# read that does not answer, both refuse the whole poll loudly through the same
+# reporting path as every other finding here. The note a dispatch becomes
+# carries source=board rather than the source=text a captain-typed note carries,
+# so the durable record says which surface handed the work over.
 #
 # DELIVERED EXACTLY ONCE, AND NEVER LOST. state/.paperclip-seen is the durable
-# per-board cursor of delivered ticket ids. Delivery writes the note FIRST and
-# records the cursor after, deliberately: a crash between the two costs one
+# cursor of delivered ticket ids, one per line. Delivery writes the note FIRST
+# and records the cursor after, deliberately: a crash between the two costs one
 # duplicate note naming the same ticket, which xo can see for what it is,
 # while recording first would let the same crash drop a dispatch with nothing
 # anywhere to recover it from. A cursor that cannot be written is reported, so
-# the duplicate is never a silent surprise.
+# the duplicate is never a silent surprise. That accepted duplicate is scoped to
+# exactly that crash: a hand-run `check` overlapping the watcher's standing shim
+# cannot produce one, because the poll is serialized on
+# state/.paperclip-seen.lock the way bin/xo-mail.sh serializes its own polls.
 #
 # REPORTS KEEP REPORTING. A board that cannot be reached, or whose key is
 # rejected, is the failure that matters most here, because the captain's
@@ -44,18 +54,18 @@
 # the notes the delivery queued. A healthy poll with nothing waiting is the
 # only silence.
 #
-# A malformed board list, a board missing one of its four values, and an
-# unreadable cursor are all actionable conditions, reported on that same
-# cadence rather than skipped.
+# An unconfigured board, a board missing one of its four values, a plaintext
+# board URL, and an unreadable cursor are all actionable conditions, reported on
+# that same cadence rather than skipped.
 #
 # The poll must finish inside the watcher's per-check bound (XO_CHECK_TIMEOUT,
 # default 30, read from this check's own environment because the watcher runs
 # it as a direct child). The internal budget XO_PAPERCLIP_CHECK_BUDGET
 # (default 15, valid 5..25) is cut down to whatever fits inside that bound and
-# then split across the configured boards, so one unreachable instance cannot
-# spend another board's share. XO_PAPERCLIP_CHECK_MAX (default 10, valid
-# 1..100) bounds the notes one poll may queue per board; the rest arrive on the
-# next poll, which keeps the wake queue bounded without dropping a dispatch.
+# then belongs whole to the one board, which spends it as a single deadline
+# across its own requests. XO_PAPERCLIP_CHECK_MAX (default 10, valid 1..100)
+# bounds the notes one poll may queue; the rest arrive on the next poll, which
+# keeps the wake queue bounded without dropping a dispatch.
 set -u
 export LC_ALL=C
 
@@ -64,11 +74,15 @@ XO_HOME="${XO_HOME:-${XO_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/.." && pwd)}}"
 STATE="${XO_STATE_OVERRIDE:-$XO_HOME/state}"
 RECORD="$STATE/.paperclip-check"
 SEEN="$STATE/.paperclip-seen"
+POLL_LOCK="$SEEN.lock"
 CHECK_ID=paperclip
 CHECK_SHIM="$STATE/$CHECK_ID.check.sh"
 CHECK_TRUST="$STATE/$CHECK_ID.check-trust"
 API_BIN="$SCRIPT_DIR/xo-paperclip-api.py"
 INBOX_BIN="$SCRIPT_DIR/xo-inbox.sh"
+WAKE_LIB="$SCRIPT_DIR/xo-wake-lib.sh"
+# The board is not the captain, so its dispatches are not captain-typed notes.
+NOTE_SOURCE=board
 REGISTER_BIN="$SCRIPT_DIR/xo-check-register.sh"
 RECORD_SCHEMA=xo-paperclip-check-v1
 MAX_LINE=240
@@ -86,21 +100,20 @@ ENV_FILE="$XO_HOME/.env"
 usage() {
   cat <<'EOF'
 Usage:
-  xo-paperclip-check.sh [check]   poll every configured board; one line when xo should wake
+  xo-paperclip-check.sh [check]   poll the configured board; one line when xo should wake
   xo-paperclip-check.sh arm       write and register state/paperclip.check.sh
   xo-paperclip-check.sh disarm    remove the check shim, its trust binding, and the record
   xo-paperclip-check.sh --help    print this help
 
 Board configuration lives in <XO_HOME>/.env, which is gitignored:
 
-  XO_PAPERCLIP_BOARDS=atb,acme          comma- or space-separated board names
-  XO_PAPERCLIP_ATB_URL=https://...      instance base URL
-  XO_PAPERCLIP_ATB_COMPANY=<uuid>       company id (the UUID, not the ATB prefix)
-  XO_PAPERCLIP_ATB_AGENT=<uuid>         this home's agent seat id
-  XO_PAPERCLIP_ATB_KEY=pcp_...          agent API key for that seat
+  XO_PAPERCLIP_URL=https://...      instance base URL; https unless it is loopback
+  XO_PAPERCLIP_COMPANY=<uuid>       company id (the UUID, not the ticket prefix)
+  XO_PAPERCLIP_AGENT=<uuid>         this home's agent seat id
+  XO_PAPERCLIP_KEY=pcp_...          agent API key for that seat
 
-A board name is lowercase letters, digits, hyphen, or underscore; its variables
-use the uppercased name with hyphens as underscores. The key is never printed.
+A dispatch is taken only from a board the captain is the sole human principal
+of, checked against the board on every poll. The key is never printed.
 See docs/configuration.md "Paperclip dispatch intake" for the schema.
 EOF
 }
@@ -181,40 +194,45 @@ env_get() {
   printf '%s' "$val"
 }
 
-# The variable suffix for a board name: uppercased, hyphens as underscores.
-board_suffix() {
-  printf '%s' "$1" | tr 'a-z-' 'A-Z_'
-}
-
-board_valid() {
-  case "$1" in
-    ''|*[!a-z0-9_-]*) return 1 ;;
-  esac
-  [ "${#1}" -le 32 ]
-}
-
 # --- cursor ---------------------------------------------------------------
-
-# Already-delivered ticket ids for one board, as the lines the reader filters on.
-SEEN_SLICE=
-seen_slice_for() {
-  local board=$1
-  SEEN_SLICE=$(mktemp "$STATE/.xo-paperclip-seen.XXXXXX" 2>/dev/null) || return 1
-  chmod 0600 "$SEEN_SLICE" 2>/dev/null || { rm -f -- "$SEEN_SLICE"; SEEN_SLICE=; return 1; }
-  if [ -f "$SEEN" ]; then
-    awk -F'\t' -v b="$board" '$1 == b { print $2 }' "$SEEN" >> "$SEEN_SLICE" 2>/dev/null \
-      || { rm -f -- "$SEEN_SLICE"; SEEN_SLICE=; return 1; }
-  fi
-  return 0
-}
 
 # Record one ticket as delivered. Called only AFTER its note is on disk, so a
 # failure here costs a duplicate note rather than a dropped dispatch.
 seen_record() {
-  local board=$1 issue=$2
-  ( umask 077; printf '%s\t%s\n' "$board" "$issue" >> "$SEEN" ) 2>/dev/null || return 1
+  local issue=$1
+  ( umask 077; printf '%s\n' "$issue" >> "$SEEN" ) 2>/dev/null || return 1
   chmod 0600 "$SEEN" 2>/dev/null || :
   return 0
+}
+
+# Two polls that both read the cursor before either appends to it would queue
+# two notes and two wakes for one ticket, which the documented single-duplicate
+# window does not cover. The lock is the same shared one bin/xo-mail.sh takes
+# around its own poll, so a hand-run check simply waits for the standing one.
+POLL_LOCK_HELD=
+poll_lock_acquire() {
+  [ -r "$WAKE_LIB" ] || return 1
+  if ! command -v xo_lock_acquire_wait >/dev/null 2>&1; then
+    # shellcheck source=bin/xo-wake-lib.sh
+    # shellcheck disable=SC1091
+    . "$WAKE_LIB" || return 1
+  fi
+  xo_lock_acquire_wait "$POLL_LOCK" || return 1
+  POLL_LOCK_HELD=1
+  # The watcher bounds this check by killing it, so the release has to survive
+  # the signal as well as the ordinary return. The lock's own stale-owner
+  # recovery covers what no trap can, a SIGKILL.
+  trap 'poll_lock_release' EXIT
+  trap 'poll_lock_release; exit 143' HUP INT TERM
+  return 0
+}
+
+# shellcheck disable=SC2329  # Registered by poll_lock_acquire's traps.
+poll_lock_release() {
+  [ -n "$POLL_LOCK_HELD" ] || return 0
+  POLL_LOCK_HELD=
+  trap - EXIT HUP INT TERM
+  xo_lock_release "$POLL_LOCK" 2>/dev/null || :
 }
 
 # --- poll -----------------------------------------------------------------
@@ -246,28 +264,31 @@ reader_summary() {
   printf '%s\n' "$line"
 }
 
-# Poll one board: list its dispatched tickets, queue a note for each, and record
+# Poll the board: list its dispatched tickets, queue a note for each, and record
 # each one as delivered only once its note exists.
 poll_board() {
-  local board=$1 slice=$2 budget=$3
-  local suffix url company agent key missing=
-  suffix=$(board_suffix "$board")
-  url=$(env_get "XO_PAPERCLIP_${suffix}_URL" "$ENV_FILE")
-  company=$(env_get "XO_PAPERCLIP_${suffix}_COMPANY" "$ENV_FILE")
-  agent=$(env_get "XO_PAPERCLIP_${suffix}_AGENT" "$ENV_FILE")
-  key=$(env_get "XO_PAPERCLIP_${suffix}_KEY" "$ENV_FILE")
-  [ -n "$url" ] || missing="$missing XO_PAPERCLIP_${suffix}_URL"
-  [ -n "$company" ] || missing="$missing XO_PAPERCLIP_${suffix}_COMPANY"
-  [ -n "$agent" ] || missing="$missing XO_PAPERCLIP_${suffix}_AGENT"
-  [ -n "$key" ] || missing="$missing XO_PAPERCLIP_${suffix}_KEY"
+  local budget=$1
+  local url company agent key missing=
+  url=$(env_get XO_PAPERCLIP_URL "$ENV_FILE")
+  company=$(env_get XO_PAPERCLIP_COMPANY "$ENV_FILE")
+  agent=$(env_get XO_PAPERCLIP_AGENT "$ENV_FILE")
+  key=$(env_get XO_PAPERCLIP_KEY "$ENV_FILE")
+  [ -n "$url" ] || missing="$missing XO_PAPERCLIP_URL"
+  [ -n "$company" ] || missing="$missing XO_PAPERCLIP_COMPANY"
+  [ -n "$agent" ] || missing="$missing XO_PAPERCLIP_AGENT"
+  [ -n "$key" ] || missing="$missing XO_PAPERCLIP_KEY"
   if [ -n "$missing" ]; then
-    add_finding "$board is not configured, missing:${missing}"
+    if [ -z "$url$company$agent$key" ]; then
+      add_finding "no board is configured; set XO_PAPERCLIP_URL, XO_PAPERCLIP_COMPANY, XO_PAPERCLIP_AGENT, and XO_PAPERCLIP_KEY in $ENV_FILE"
+    else
+      add_finding "the board is not configured, missing:${missing}"
+    fi
     return 0
   fi
 
   local outdir rc=0 out err
   outdir=$(mktemp -d "$STATE/.xo-paperclip-notes.XXXXXX" 2>/dev/null) || {
-    add_finding "$board could not stage notes under $STATE"
+    add_finding "the board's notes could not be staged under $STATE"
     return 0
   }
   err="$outdir/.stderr"
@@ -276,18 +297,18 @@ poll_board() {
     XO_PAPERCLIP_API_COMPANY="$company" \
     XO_PAPERCLIP_API_AGENT="$agent" \
     XO_PAPERCLIP_API_KEY="$key" \
-    XO_PAPERCLIP_API_SEEN="$slice" \
+    XO_PAPERCLIP_API_SEEN="$SEEN" \
     XO_PAPERCLIP_API_TIMEOUT="$budget" \
     XO_PAPERCLIP_API_MAX="$PER_POLL_MAX" \
     xo_run_timed "$((budget + 2))" python3 "$API_BIN" "$outdir" 2>"$err"
   ) || rc=$?
   if [ "$rc" -eq 124 ]; then
     rm -rf -- "$outdir"
-    add_finding "$board did not answer within ${budget}s"
+    add_finding "the board did not answer within ${budget}s"
     return 0
   fi
   if [ "$rc" -ne 0 ]; then
-    add_finding "$board: $(reader_summary "$rc" "$(cat "$err" 2>/dev/null)")"
+    add_finding "$(reader_summary "$rc" "$(cat "$err" 2>/dev/null)")"
     rm -rf -- "$outdir"
     return 0
   fi
@@ -295,8 +316,8 @@ poll_board() {
   local issue identifier path
   while IFS=$'\t' read -r _kind issue identifier path; do
     [ -n "${issue:-}" ] && [ -n "${path:-}" ] || continue
-    if ! "$INBOX_BIN" note - < "$path" >/dev/null 2>&1; then
-      add_finding "$board could not queue the note for ${identifier:-$issue}"
+    if ! "$INBOX_BIN" note --source "$NOTE_SOURCE" - < "$path" >/dev/null 2>&1; then
+      add_finding "could not queue the note for ${identifier:-$issue}"
       break
     fi
     DELIVERED_COUNT=$((DELIVERED_COUNT + 1))
@@ -305,7 +326,7 @@ poll_board() {
     else
       DELIVERED_NAMES="$DELIVERED_NAMES, ${identifier:-$issue}"
     fi
-    if ! seen_record "$board" "$issue"; then
+    if ! seen_record "$issue"; then
       add_finding "${identifier:-$issue} was queued but not recorded as delivered, so it may arrive twice"
     fi
   done <<< "$out"
@@ -355,7 +376,7 @@ record_write() {
 }
 
 action_check() {
-  local boards_raw boards board count slice line now share
+  local line now
   mkdir -p "$STATE" || return 1
 
   if [ ! -r "$API_BIN" ]; then
@@ -363,39 +384,21 @@ action_check() {
   elif [ ! -x "$INBOX_BIN" ]; then
     FINDINGS="the captain inbox is missing next to this check ($INBOX_BIN)"
   elif ! command -v python3 >/dev/null 2>&1; then
-    FINDINGS="python3 is not on PATH, so no board can be read"
+    FINDINGS="python3 is not on PATH, so the board cannot be read"
+  elif ! poll_lock_acquire; then
+    FINDINGS="the overlapping-poll lock could not be taken ($POLL_LOCK)"
   else
-    boards_raw=$(env_get XO_PAPERCLIP_BOARDS "$ENV_FILE")
-    boards=$(printf '%s' "$boards_raw" | tr ',;' '  ')
-    count=0
-    for board in $boards; do
-      count=$((count + 1))
-    done
-    if [ "$count" -eq 0 ]; then
-      FINDINGS="no boards are configured; set XO_PAPERCLIP_BOARDS in $ENV_FILE"
-    else
-      share=$((BUDGET_SECS / count))
-      [ "$share" -ge 3 ] || share=3
-      for board in $boards; do
-        if ! board_valid "$board"; then
-          add_finding "board name \"$board\" is not usable (lowercase letters, digits, hyphen, or underscore)"
-          continue
-        fi
-        if ! seen_slice_for "$board"; then
-          add_finding "$board could not read the delivered-ticket record ($SEEN)"
-          continue
-        fi
-        slice=$SEEN_SLICE
-        poll_board "$board" "$slice" "$share"
-        rm -f -- "$slice"
-        SEEN_SLICE=
-      done
-    fi
+    poll_board "$BUDGET_SECS"
+    poll_lock_release
   fi
 
   line=
   if [ "$DELIVERED_COUNT" -gt 0 ]; then
-    line="$DELIVERED_COUNT dispatched from the board: $DELIVERED_NAMES"
+    if [ "$DELIVERED_COUNT" = 1 ]; then
+      line="1 ticket dispatched from the board: $DELIVERED_NAMES"
+    else
+      line="$DELIVERED_COUNT tickets dispatched from the board: $DELIVERED_NAMES"
+    fi
   fi
   if [ -n "$FINDINGS" ]; then
     if [ -n "$line" ]; then
