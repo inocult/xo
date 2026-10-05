@@ -803,7 +803,7 @@ test_a_record_whose_last_field_is_blank_estate_text_keeps_every_field() {
     case $shape in
       empty) subject=$'\nbody only'; title='' ;;
       whitespace) subject=$'\r\nbody only'; title=$'\t' ;;
-      byte-order-mark) subject=$'﻿\nbody only'; title=$'﻿' ;;
+      byte-order-mark) subject=$'\357\273\277\nbody only'; title=$'\357\273\277' ;;
     esac
     root=$(xo_test_tmproot "xo-estate-review-blank-$shape") || fail "no fixture root"
     bin=$(xo_fakebin "$root")
@@ -848,6 +848,21 @@ test_a_record_whose_last_field_is_blank_estate_text_keeps_every_field() {
       "the $shape case renders the absent-value mark rather than a lost field or the text null"
   done
   pass "a record whose final field is blank estate text keeps every field through the gh-axi body, whether the field was empty, whitespace, or the byte-order mark"
+}
+
+test_the_skills_own_script_passes_shellcheck() {
+  # The script sits outside bin/xo-lint.sh's canonical roots, so the skill runs
+  # the analyser over its own artifact rather than widening a shared definition.
+  # ShellCheck's findings are the contract here, not the file's text.
+  local out code
+  command -v shellcheck > /dev/null 2>&1 || {
+    printf 'skip: shellcheck absent, so the estate-review script could not be analysed\n'
+    return 0
+  }
+  out=$(shellcheck --norc --external-sources -- "$REVIEW" 2>&1) && code=0 || code=$?
+  [ "$code" = 0 ] || fail "shellcheck reported findings against the estate-review script:
+$out"
+  pass "the skill's own script is analysed by shellcheck from the skill's own suite and reports no findings"
 }
 
 test_a_pull_request_read_that_returned_no_repository_is_a_gap_not_a_complete_read() {
@@ -1593,6 +1608,51 @@ test_a_direction_is_measured_against_the_earlier_mean_not_the_period_before() {
   pass "a direction is measured against the mean of the earlier periods, and the report describes that comparison once"
 }
 
+test_the_direction_rule_is_stated_even_where_no_commit_or_merge_landed() {
+  local root bin model report row
+  root=$(xo_test_tmproot xo-estate-review-trendless) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  keep_only_widgets "$root/fixtures"
+  # An estate where nothing landed and nothing merged, but pull requests were
+  # opened across the later periods. Section 4.1 still prints a Direction for the
+  # opened row, so the rule behind that label has to be printed with it.
+  printf '[]\n' > "$root/fixtures/commits-widgets.json"
+  jq -n '{data: {repository: {pullRequests: {
+      pageInfo: {hasNextPage: false, endCursor: null},
+      nodes: [["2026-02-20T00:00:00Z", 1], ["2026-03-05T00:00:00Z", 2],
+              ["2026-03-20T00:00:00Z", 3], ["2026-03-20T00:00:00Z", 4]]
+        | map({number: .[1], state: "OPEN", isDraft: false,
+               createdAt: .[0], updatedAt: .[0], mergedAt: null, closedAt: null,
+               additions: 1, deletions: 1, changedFiles: 1,
+               headRefName: "f/\(.[1])", title: "opened \(.[1])",
+               author: {login: "ada", __typename: "User"},
+               commits: {nodes: [{commit: {committedDate: .[0]}}]},
+               reviews: {totalCount: 0, nodes: []}, reviewThreads: {totalCount: 0}})}}}}' \
+    > "$root/fixtures/prs-widgets.json" || fail "could not write the opened-only pull requests"
+  cp "$root/fixtures/prs-widgets.json" "$root/fixtures/prs-open-widgets.json"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "0" "$(jq -r '.quality.commits.total' "$root/model.json")" "no commit landed in the window"
+  assert_equals "0" "$(jq -r '.velocity.merged.per_period | add' "$root/model.json")" "no pull request merged in the window"
+  assert_equals "[0,0,0,1,1,2]" "$(jq -c '.velocity.opened.per_period' "$root/model.json")" \
+    "the pull requests opened are spread across the later periods"
+  assert_equals "rising" "$(jq -r '.velocity.opened.trend' "$root/model.json")" "that series carries a direction"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_fixed_shape "$report" "an estate where nothing landed but pull requests were opened"
+  row=$(sed -n '/^### 4.1 Throughput/,/^### 4.2 /p' "$report" | grep '^| Pull requests opened |')
+  assert_contains "$row" "rising" "section 4.1 prints a Direction for the opened row"
+  assert_grep "Direction compares the last period against the mean of the earlier ones." "$report" \
+    "the rule behind that label is stated even though nothing landed or merged"
+  assert_grep "No commit or merge landed in this window" "$report" \
+    "the absent-data sentence is printed beside the rule rather than in place of it"
+  pass "the rule a Direction label means is stated in every report, including one where nothing landed or merged"
+}
+
 test_a_last_period_with_no_measurement_reports_no_direction() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-sparse) || fail "no fixture root"
@@ -1790,6 +1850,8 @@ test_a_review_on_an_open_pull_request_is_counted_once
 test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound
 test_a_direction_is_measured_against_the_earlier_mean_not_the_period_before
 test_a_last_period_with_no_measurement_reports_no_direction
+test_the_direction_rule_is_stated_even_where_no_commit_or_merge_landed
+test_the_skills_own_script_passes_shellcheck
 test_a_commit_whose_workflow_ran_twice_counts_every_attempt
 test_an_account_reaching_the_table_only_through_a_merged_pull_request_is_whole
 test_a_table_cell_carrying_a_pipe_stays_one_cell

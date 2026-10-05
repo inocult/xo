@@ -1158,11 +1158,12 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 + [row(["Commits authored"] + $m.velocity.commits.per_period + [($m.velocity.commits.trend | trendword)]),
    row(["Pull requests opened"] + $m.velocity.opened.per_period + [($m.velocity.opened.trend | trendword)]),
    row(["Pull requests merged"] + $m.velocity.merged.per_period + [($m.velocity.merged.trend | trendword)])]
++ [""]
++ (if ($m.quality.commits.total == 0) and (($m.velocity.merged.per_period | add) == 0)
+   then [absent_in_window("commit or merge landed"; ""; $commit_reads + $merged_pr_reads)]
+   else [] end)
 + [
-  "",
-  (if ($m.quality.commits.total == 0) and (($m.velocity.merged.per_period | add) == 0)
-   then absent_in_window("commit or merge landed"; ""; $commit_reads + $merged_pr_reads)
-   else "Direction compares the last period against the mean of the earlier ones." end),
+  "Direction compares the last period against the mean of the earlier ones.",
   "",
   "### 4.2 Cycle time, first commit to merge",
   ""

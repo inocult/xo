@@ -417,10 +417,6 @@ jobs:
             echo "::error::expected at least one *.sh under skills/ in the parse inventory, found none"
             exit 1
           }
-          grep -qxF 'skills/in-progress/estate-review/scripts/estate-review.sh' "$RUNNER_TEMP/xo-skill-scripts" || {
-            echo "::error::skills/in-progress/estate-review/scripts/estate-review.sh is missing from the parse inventory; if it moved, this assertion needs its new path"
-            exit 1
-          }
           cat "$RUNNER_TEMP/xo-skill-scripts" >> "$shell_inventory"
           parse_fail=0
           while IFS= read -r f; do
