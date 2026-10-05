@@ -1,16 +1,17 @@
 ---
-name: estate
+name: estate-review
 description: >-
   Review an engineering estate - a GitHub organization or one of its repositories - and report who did what, how fast work is moving, whether quality is holding, and where risk is concentrated.
-  Use when the captain invokes /estate or asks for an estate review, an engineering review of an organization, a contribution or velocity or quality report across repositories, or "who has been doing what" across a set of repositories.
-  Plain /estate answers in chat; /estate file also writes the dated report artifact under data/.
+  Use when the captain invokes /estate-review or asks for an estate review, an engineering review of an organization, a contribution or velocity or quality report across repositories, or "who has been doing what" across a set of repositories.
+  Plain /estate-review answers in chat; /estate-review file also writes the dated report artifact under data/.
   The report has the same shape on every run against every estate, which is what makes two of them comparable.
 user-invocable: true
-metadata:
-  internal: true
 ---
 
-# estate
+# estate-review
+
+A human invokes this skill in their harness.
+XO neither loads nor dispatches it, so it is not XO runtime code and carries no XO runtime guarantees.
 
 Review an estate and tell the captain what is actually happening in it.
 
@@ -62,7 +63,7 @@ Lead with the two or three findings that would change a decision, name the numbe
 
 Never paste the report into chat.
 It is a document to read, and section 1 alone is longer than any answer should be.
-When the captain invoked `/estate file`, write it to `data/estate-review-<scope>-<YYYY-MM-DD>.md` (with `/` in a repository scope replaced by `-`) and give the captain that path.
+When the captain invoked `/estate-review file`, write it to `data/estate-review-<scope>-<YYYY-MM-DD>.md` (with `/` in a repository scope replaced by `-`) and give the captain that path.
 Otherwise keep the report out of the home unless the captain asks for it.
 
 Translate the internal vocabulary before you speak, as `AGENTS.md` section 9 requires: say the investigation, the change, the review, the local copy, not the tool's nouns.
