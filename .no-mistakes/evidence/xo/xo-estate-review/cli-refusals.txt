@@ -1,0 +1,99 @@
+### Adversarial: the period is the only thing a flag may change
+
+$ estate-review.sh jqlang --window 5
+exit=2
+  estate-review.sh: the window must be at least 6 days long, one day for each of the 6 periods the trend splits it into, but this one is 5; a shorter window gives two periods the same date and the report dates a period rather than timing it
+
+$ estate-review.sh jqlang --window 6 --json-only
+exit=2
+  estate-review.sh: unknown flag '--json-only' (see --help)
+
+$ estate-review.sh --from-json /tmp/model-jqlang.json --window 30
+exit=2
+  estate-review.sh: --window cannot be applied to a stored model: it chooses the window, and the stored model's per-period tallies are already cut, so it needs a fresh collection; re-run the review against the estate with --window
+
+$ estate-review.sh --from-json /tmp/model-jqlang.json --since 2026-01-01
+exit=2
+  estate-review.sh: --since cannot be applied to a stored model: it chooses the window, and the stored model's per-period tallies are already cut, so it needs a fresh collection; re-run the review against the estate with --since
+
+$ estate-review.sh --from-json /tmp/model-jqlang.json --until 2026-01-01
+exit=2
+  estate-review.sh: --until cannot be applied to a stored model: it chooses the window, and the stored model's per-period tallies are already cut, so it needs a fresh collection; re-run the review against the estate with --until
+
+$ estate-review.sh --from-json /tmp/model-jqlang.json --stalled-days 30
+exit=2
+  estate-review.sh: unknown flag '--stalled-days' (see --help)
+
+$ estate-review.sh jqlang --max-repos 10
+exit=2
+  estate-review.sh: unknown flag '--max-repos' (see --help)
+
+$ estate-review.sh jqlang --trend-band 25
+exit=2
+  estate-review.sh: unknown flag '--trend-band' (see --help)
+
+$ estate-review.sh jqlang --no-forks
+exit=2
+  estate-review.sh: unknown flag '--no-forks' (see --help)
+
+### Adversarial: an estate that is not an organization or repository
+
+$ estate-review.sh torvalds
+exit=2
+  estate-review.sh: GitHub reports owner 'torvalds' as type 'User', not an organization; an estate is an organization or one of its repositories as owner/repo
+
+$ estate-review.sh jqlang/jq/extra
+exit=2
+  estate-review.sh: 'jqlang/jq/extra' is not an estate scope: give an organization or owner/repo
+
+$ estate-review.sh 
+exit=2
+  usage: estate-review.sh <org|owner/repo> [flags]
+         estate-review.sh --from-json <file>
+  
+  Read-only estate review. Prints the same nine sections in the same order for
+  every estate; a surface with no data is stated as empty, never omitted.
+  
+    --since <YYYY-MM-DD>  window start (default: --window days before --until)
+    --until <YYYY-MM-DD>  window end (default: today, UTC)
+    --window <days>       window length when --since is absent (default 90)
+    --json                print the derived model (contract xo-estate-review.v1)
+    --from-json <file>    render the report from a stored model, making no network call
+    -h, --help            this usage
+  
+  Choosing the period is all these flags do. Every other setting - the trend
+  periods, the stalled and unmaintained thresholds, the repository, pull-request
+  and risk-row caps, and the fork and archived selection - is a constant, so two
+  reports cannot differ for a reason the reader cannot see. The report states the
+  window, the thresholds and the selection, and its collection log names every
+  read that stopped at a cap.
+  
+  HOW COLLECTION IS BOUNDED. The commit, workflow-run, open-issue and repository
+  listing reads are paged walks that stop at a page bound. Pull requests take two
+  walks per repository: one descends by update time until it leaves the window,
+  spending its pull-request cap only on those updated before the window ended, and
+  one walks open pull requests oldest-first, not bounded by the window because a
+  pull request nobody has touched for a year is the stalled work the report has to
+  name, spending that same cap on every open pull request it reads. One pull
+  request's reviews are read in a single page of the review cap, and a pull request
+  carrying more is disclosed as a cap of its own. Each bound's value is in the
+  model's `options`, which --json prints; none of them is a flag.
+  
+  The window must hold at least one day per trend period, because the periods are
+  dated rather than timed and a shorter window would date two of them the same.
+  A window below that is refused and the refusal names the minimum.
+  
+  With --from-json only --json applies. --since, --until and --window are refused
+  by name: the window is already cut into the stored model and a different one
+  needs a fresh collection.
+  
+  It never writes to the estate it reviews.
+  estate-review.sh: an estate scope is required: an organization or owner/repo
+
+$ estate-review.sh this-org-does-not-exist-9f3a1c
+exit=1
+  estate-review.sh: could not read the owner 'this-org-does-not-exist-9f3a1c': error: "gh: Not Found (HTTP 404)" code: NOT_FOUND 
+
+$ estate-review.sh --from-json /etc/hostname
+exit=1
+  estate-review.sh: /etc/hostname is not a xo-estate-review.v1 model

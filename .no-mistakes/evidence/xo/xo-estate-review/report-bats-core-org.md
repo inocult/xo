@@ -1,9 +1,9 @@
-# Estate review: jqlang
+# Estate review: bats-core
 
-- Estate: organization `jqlang`
+- Estate: organization `bats-core`
 - Window: 2026-07-07T00:00:00Z to 2026-10-05T00:00:00Z (90 days, 6 periods of 15 days)
-- Repositories: 5 matched the selection, 5 reviewed, 4 read completely, 1 read with at least one gap
-- Generated: 2026-10-05T19:51:22Z by `estate-review.sh`, report contract `xo-estate-review.v1`
+- Repositories: 6 matched the selection, 6 reviewed, 6 read completely, 0 read with at least one gap
+- Generated: 2026-10-05T19:52:36Z by `estate-review.sh`, report contract `xo-estate-review.v1`
 
 ## 1. Scope and method
 
@@ -36,10 +36,10 @@ Definitions, which are the same in every report:
 
 | Measure | Value | Unit | Direction over the window |
 | --- | --- | --- | --- |
-| Pull requests merged | 26 | pull requests | rising |
-| Cycle time, first commit to merge | 29 | hours (median) | falling |
-| Merged pull requests reviewed by another account | 88.5 | percent | not tracked over periods |
-| Continuous integration latest-attempt pass rate | 94.2 | percent | not tracked over periods |
+| Pull requests merged | 33 | pull requests | rising |
+| Cycle time, first commit to merge | 38.6 | hours (median) | flat |
+| Merged pull requests reviewed by another account | 87.9 | percent | not tracked over periods |
+| Continuous integration latest-attempt pass rate | 73.1 | percent | not tracked over periods |
 | Repositories where one account authored over half the commits | 1 | repositories | not tracked over periods |
 
 A rising cycle time means work is getting slower; a rising merged count means more is landing.
@@ -53,60 +53,26 @@ This table is a record of participation, not a ranking, and the counts carry no 
 
 | Account | Automation, at collection | Commits | Pull requests opened | Pull requests merged | Reviews submitted | Pull requests reviewed | Repositories touched |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0-wiz-0 | no | 1 | 0 | 1 | 0 | 0 | 1 |
-| 4RH1T3CT0R7 | no | 1 | 2 | 1 | 0 | 0 | 1 |
-| A4-Tacks | no | 2 | 4 | 2 | 0 | 0 | 1 |
-| AbhinavMir | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| AetherAI3 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| Boulea7 | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| EdelmarSchneider | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| HarmfulBreeze | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| Hugohong258 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| Jorge-Polanco-Roque | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| MbappeWU | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| Pandapip1 | no | 0 | 0 | 0 | 2 | 1 | 1 |
-| Solaris-star | no | 0 | 3 | 0 | 0 | 0 | 1 |
-| amtbsl | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| arhxam | no | 0 | 2 | 0 | 0 | 0 | 1 |
-| arifthpe | no | 2 | 2 | 2 | 0 | 0 | 1 |
-| christf | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| copilot-pull-request-reviewer | yes | 0 | 0 | 0 | 3 | 3 | 1 |
-| cosine0 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| cuishuang | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| davidscottpope-gif | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| ded-furby | no | 1 | 0 | 1 | 0 | 0 | 1 |
-| dependabot | yes | 5 | 29 | 5 | 0 | 0 | 2 |
-| fzlzjerry | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| glaziermag | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| happyaron | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| herley-shaori | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| hkbu-kennycheng | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| itchyny | no | 6 | 8 | 6 | 26 | 19 | 1 |
-| jegarian83 | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| julianw | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| kanwren | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| ksh368-bit | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| maruixin-kls | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| mikamikasuki | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| mvanslobbe | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| neilpang | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| nujufas | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| oodadoudou | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| owenthereal | no | 0 | 0 | 0 | 5 | 5 | 1 |
-| pavelkuliaka | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| pkoppstein | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| qatcod | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| rfon6ngy | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| ricardocabral | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| santhiprakash | no | 0 | 4 | 0 | 0 | 0 | 1 |
-| sorena-paydar | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| thalha-a9 | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| wader | no | 0 | 0 | 0 | 16 | 11 | 1 |
-| winklemad | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| zachary-krepelka | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| zafnz | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| VXNCXNX | no | 1 | 1 | 1 | 0 | 0 | 1 |
+| Wuodan | no | 15 | 16 | 9 | 8 | 5 | 3 |
+| akinomyoga | no | 1 | 0 | 1 | 0 | 0 | 1 |
+| aprylewu | no | 5 | 2 | 2 | 0 | 0 | 1 |
+| brokenpip3 | no | 0 | 0 | 0 | 2 | 2 | 1 |
+| copilot-pull-request-reviewer | yes | 0 | 0 | 0 | 2 | 2 | 1 |
+| darettau | no | 4 | 1 | 1 | 0 | 0 | 1 |
+| dependabot | yes | 8 | 28 | 9 | 0 | 0 | 2 |
+| fzlzjerry | no | 2 | 1 | 1 | 0 | 0 | 1 |
+| hcartiaux | no | 0 | 0 | 1 | 0 | 0 | 1 |
+| henning-schild | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| kolyshkin | no | 2 | 3 | 1 | 0 | 0 | 1 |
+| martin-schulze-vireso | no | 8 | 6 | 4 | 31 | 29 | 1 |
+| mvanhorn | no | 0 | 0 | 1 | 0 | 0 | 1 |
+| natejswenson | no | 2 | 1 | 1 | 0 | 0 | 1 |
+| sb123sb123 | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| vjymisal0 | no | 2 | 1 | 1 | 0 | 0 | 1 |
+| yogch | no | 0 | 1 | 0 | 0 | 0 | 1 |
 
-Automation accounts in this table: 2 of 52.
+Automation accounts in this table: 2 of 18.
 
 ### 3.2 Review participation
 
@@ -114,17 +80,12 @@ Reviews given matter as much as authorship and are the half most tooling drops, 
 
 | Account | Automation, at collection | Reviews submitted | Pull requests reviewed |
 | --- | --- | --- | --- |
-| Pandapip1 | no | 2 | 1 |
-| christf | no | 1 | 1 |
-| copilot-pull-request-reviewer | yes | 3 | 3 |
-| itchyny | no | 26 | 19 |
-| jegarian83 | no | 1 | 1 |
-| kanwren | no | 1 | 1 |
-| owenthereal | no | 5 | 5 |
-| pkoppstein | no | 1 | 1 |
-| wader | no | 16 | 11 |
+| Wuodan | no | 8 | 5 |
+| brokenpip3 | no | 2 | 2 |
+| copilot-pull-request-reviewer | yes | 2 | 2 |
+| martin-schulze-vireso | no | 31 | 29 |
 
-23 of 26 merged pull requests carried a review by an account other than the author (88.5%).
+29 of 33 merged pull requests carried a review by an account other than the author (87.9%).
 
 ## 4. Velocity
 
@@ -134,33 +95,33 @@ Each period is 15 days; the earliest period begins at the window start.
 
 | Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 | Direction |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commits authored | 3 | 1 | 2 | 6 | 9 | 5 | rising |
-| Pull requests opened | 14 | 12 | 13 | 18 | 17 | 14 | flat |
-| Pull requests merged | 3 | 1 | 2 | 6 | 9 | 5 | rising |
+| Commits authored | 11 | 7 | 4 | 0 | 16 | 12 | rising |
+| Pull requests opened | 11 | 13 | 8 | 2 | 21 | 8 | falling |
+| Pull requests merged | 7 | 9 | 0 | 0 | 9 | 8 | rising |
 
 Direction compares the last period against the mean of the earlier ones.
 
 ### 4.2 Cycle time, first commit to merge
 
-- Median: 29 h over 26 merged pull requests
-- p90: 790 h
-- Direction: falling (rising means slower)
+- Median: 38.6 h over 33 merged pull requests
+- p90: 794.6 h
+- Direction: flat (rising means slower)
 - Unmeasurable: 0 merged pull requests had no readable first commit
 
 | Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Median hours | 70.5 | 19 | 3.7 | 256 | 44.3 | 0.2 |
+| Median hours | 20.5 | 38.4 | not measurable | not measurable | 65.6 | 43.4 |
 
 ### 4.3 Review latency, opened to first review by another account
 
-- Median: 19 h over 23 merged pull requests
-- p90: 791.7 h
+- Median: 52.8 h over 29 merged pull requests
+- p90: 899.4 h
 - Direction: falling (rising means longer waits)
-- Not included: 3 merged pull requests had no review from another account
+- Not included: 4 merged pull requests had no review from another account
 
 | Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Median hours | 44.9 | 19 | 0.8 | 14.1 | 154.1 | 4.3 |
+| Median hours | 2587.8 | 38.5 | not measurable | not measurable | 60.5 | 54.4 |
 
 ## 5. Quality
 
@@ -169,23 +130,23 @@ A quality signal that is presented without that boundary invites a conclusion th
 
 ### 5.1 Reverts and hotfixes
 
-- Reverts: 0 of 26 authored commits (0%)
-- Hotfixes: 0 of 26 authored commits (0%)
+- Reverts: 0 of 50 authored commits (0%)
+- Hotfixes: 0 of 50 authored commits (0%)
 
 This counts what the estate labelled.
 It evidences how often the estate itself declared a change wrong; it does not evidence the defect rate, because a fix that was never called a revert or a hotfix is invisible here.
 
 ### 5.2 Change size
 
-- Median merged pull request: 16.5 lines changed
-- p90 merged pull request: 113 lines changed
+- Median merged pull request: 8 lines changed
+- p90 merged pull request: 98 lines changed
 
 | Lines changed | Merged pull requests |
 | --- | --- |
-| under 10 | 11 |
-| 10 to 49 | 9 |
-| 50 to 249 | 4 |
-| 250 to 999 | 2 |
+| under 10 | 17 |
+| 10 to 49 | 7 |
+| 50 to 249 | 8 |
+| 250 to 999 | 1 |
 | 1000 or more | 0 |
 
 Size evidences how much a reviewer was asked to hold at once.
@@ -193,18 +154,18 @@ It does not evidence difficulty or risk: a one-line change can be the dangerous 
 
 ### 5.3 Review depth
 
-- Merged pull requests reviewed by another account: 23 of 26 (88.5%)
+- Merged pull requests reviewed by another account: 29 of 33 (87.9%)
 - Median review threads per merged pull request: 0
-- Total review threads on merged pull requests: 6
+- Total review threads on merged pull requests: 7
 
 Thread count evidences how much conversation a change drew.
 It does not evidence how carefully anything was read: a correct change reviewed closely can draw no comment at all.
 
 ### 5.4 Continuous integration latest-attempt pass rate
 
-- Latest-attempt pass rate: 94.2% (437 passed, 27 failed)
-- Inconclusive runs excluded from the rate: 0
-- Checks that needed more than one attempt on the same commit: 0
+- Latest-attempt pass rate: 73.1% (283 passed, 104 failed)
+- Inconclusive runs excluded from the rate: 45
+- Checks that needed more than one attempt on the same commit: 58
 
 This evidences how a check ended up, not how it started: the runs list reports each run's latest attempt, so a check that failed and was re-run to green on the same commit counts as a pass here.
 It cannot separate a real defect from a flaky job, and it sees only GitHub Actions: checks reported by any other system are invisible to it.
@@ -214,56 +175,57 @@ The attempt count says only that a check on that commit was attempted more than 
 
 ### 6.1 Knowledge concentration
 
-- Accounts that authored commits: 15
-- Accounts covering half the estate's authored commits: 4
-- Largest single share: itchyny at 23.1%
+- Accounts that authored commits: 11
+- Accounts covering half the estate's authored commits: 3
+- Largest single share: Wuodan at 30%
 
 Repositories where one account authored more than half the commits in this window: 1.
 
 | Repository | Account | Share | Authors | Authored commits |
 | --- | --- | --- | --- | --- |
-| jqlang/awesome-jq | zachary-krepelka | 100% | 1 | 1 |
+| bats-core/bats-detik | Wuodan | 100% | 1 | 2 |
 
 This evidences where the estate's recorded history sits with one account.
 It does not evidence who understands what: someone who reviewed every change may hold the knowledge without a commit to show for it.
 
 ### 6.2 Unmaintained repositories, as at collection
 
-Repositories archived, never pushed to, or unpushed for 180 days or more as at 2026-10-05T19:51:22Z: 2.
+Repositories archived, never pushed to, or unpushed for 180 days or more as at 2026-10-05T19:52:36Z: 3.
 
 | Repository | Days since last push, at collection | Archived, at collection | Commits in window |
 | --- | --- | --- | --- |
-| jqlang/.github | 1203 | no | 0 |
-| jqlang/bazel_rules_jq | 1062 | no | 0 |
+| bats-core/bats-backports | 1595 | no | 0 |
+| bats-core/.github | 343 | no | 0 |
+| bats-core/bats-vscode | 315 | no | 0 |
 
 ### 6.3 Stalled work, as at collection
 
-Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at 2026-10-05T19:51:22Z.
+Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at 2026-10-05T19:52:36Z.
 
-- Open pull requests: 133
-- Open issues: 335
+- Open pull requests: 40
+- Open issues: 108
 
-Open pull requests idle for 14 days or more: 113, longest idle first.
+Open pull requests idle for 14 days or more: 27, longest idle first.
 
 | Repository | Number | Idle days, at collection | Age days, at collection | Author | Draft, at collection | Title |
 | --- | --- | --- | --- | --- | --- | --- |
-| jqlang/jq | 1062 | 1220 | 3925 | pkoppstein | no | project/1, query/1 and unify/1 added to builtin.jq, with tests and documentation |
-| jqlang/jq | 1767 | 1220 | 2884 | ayappanec | no | Patches for AIX |
-| jqlang/jq | 1907 | 1220 | 2693 | bit2shift | no | Unify/simplify the MultiByteToWideChar() code and add wrappers for open()/stat() |
-| jqlang/jq | 2241 | 1220 | 2101 | unattributed | no | Added base/1 and unbase/1 |
-| jqlang/awesome-jq | 47 | 742 | 742 | loggerhead | no | add JSON For You |
-| jqlang/playground | 224 | 259 | 623 | owenthereal | no | Improve repository with various enhancements |
-| jqlang/playground | 280 | 259 | 434 | ThisIsMissEm | no | Replace prisma with sqlite, remove sentry |
-| jqlang/jq | 673 | 146 | 4275 | joelpurra | yes | Working module/package system |
-| jqlang/jq | 1032 | 146 | 3960 | nicowilliams | no | Dump block |
-| jqlang/jq | 1127 | 146 | 3835 | WaffleSouffle | no | Ignore jq.exe, fixed gcc compiler warnings for msys2 (windows). |
-| jqlang/jq | 1201 | 146 | 3709 | ltrager | no | Add snap packaging support |
-| jqlang/jq | 1215 | 146 | 3699 | mark-kubacki | no | Add support for seccomp |
-| jqlang/jq | 1228 | 146 | 3682 | dbohdan | no | Define format in jq code |
-| jqlang/jq | 1246 | 146 | 3654 | dequis | no | jv: Add some support for 64 bit ints in a very conservative way |
-| jqlang/jq | 1327 | 146 | 3536 | nicowilliams | no | jv: Add some support for 64 bit ints in a very conservative way (ALTERNATIVE) |
+| bats-core/bats-core | 275 | 1728 | 2366 | andrewfowlie | no | add todo and done features |
+| bats-core/bats-core | 968 | 792 | 792 | edsantiago | no | WIP: Export and document two new envariables to tests: |
+| bats-core/bats-core | 882 | 751 | 942 | soda480 | no | Add variable to track bats call arguments |
+| bats-core/bats-core | 196 | 746 | 2771 | cyphar | no | bats: add support for deteriministic --shuffle |
+| bats-core/bats-core | 1133 | 359 | 410 | jasonkarns | yes | Remove files handled by .github repo |
+| bats-core/.github | 8 | 358 | 411 | dependabot | no | Bump actions/setup-node from 3 to 4 |
+| bats-core/.github | 10 | 358 | 398 | dependabot | no | Bump actions/checkout from 3 to 5 |
+| bats-core/bats-core | 826 | 356 | 1028 | cyphar | yes | parallel: drop --keep-order to stream test output with -j |
+| bats-core/.github | 12 | 336 | 370 | dependabot | no | Bump step-security/harden-runner from 2.13.0 to 2.13.1 |
+| bats-core/.github | 13 | 315 | 350 | dependabot | no | Bump ossf/scorecard-action from 2.4.2 to 2.4.3 |
+| bats-core/.github | 14 | 308 | 343 | dependabot | no | Bump actions/dependency-review-action from 4.7.1 to 4.8.1 |
+| bats-core/bats-core | 1167 | 305 | 336 | dependabot | no | build(deps): bump github/codeql-action from 4.30.8 to 4.31.2 |
+| bats-core/bats-core | 1179 | 299 | 299 | giner | no | Add more tests |
+| bats-core/bats-core | 1193 | 231 | 231 | martin-schulze-vireso | no | feat: detect collisions of other functions with test |
+| bats-core/bats-core | 1194 | 228 | 230 | jzacsh | no | fix missing linebreaks on bootstrap errors for BATS_TMPDIR |
 
-98 further pull requests are in this report's model but not listed above; `--json` prints the model, which carries every one of them.
+12 further pull requests are in this report's model but not listed above; `--json` prints the model, which carries every one of them.
 
 ## 7. Per-repository detail
 
@@ -272,11 +234,12 @@ An organization review is this table plus the aggregate above; a single-reposito
 
 | Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps, at collection |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| jqlang/.github | 0 | 0 | 0 | not measurable | not measurable | not measurable | 0 | 1203 | no | none |
-| jqlang/awesome-jq | 2 | 1 | 7 | 6.6 h | 0% | not measurable | 1 | 49 | no | none |
-| jqlang/bazel_rules_jq | 0 | 0 | 0 | not measurable | not measurable | not measurable | 0 | 1062 | no | none |
-| jqlang/jq | 25 | 25 | 106 | 32.3 h | 92% | 93.9% | 14 | 4 | no | pull_request_reviews |
-| jqlang/playground | 0 | 0 | 20 | not measurable | not measurable | 100% | 0 | 4 | no | none |
+| bats-core/.github | 0 | 0 | 7 | not measurable | not measurable | not measurable | 0 | 343 | no | none |
+| bats-core/bats-backports | 0 | 0 | 0 | not measurable | not measurable | not measurable | 0 | 1595 | no | none |
+| bats-core/bats-core | 80 | 31 | 28 | 38.6 h | 87.1% | 72.5% | 11 | 9 | no | none |
+| bats-core/bats-detik | 4 | 2 | 0 | 2.7 h | 100% | 100% | 1 | 16 | no | none |
+| bats-core/bats-vscode | 0 | 0 | 0 | not measurable | not measurable | not measurable | 0 | 315 | no | none |
+| bats-core/homebrew-bats-core | 0 | 0 | 5 | not measurable | not measurable | 78.6% | 0 | 7 | no | none |
 
 ## 8. What these numbers do not measure
 
@@ -296,7 +259,7 @@ These are the templates each read was built from, one per surface, with this run
 They are not a transcript to paste: `<owner>/<repo>` and `<default_branch>` stand for each repository in section 7, and the two GraphQL reads name their query rather than printing its body.
 Filled in that way and run against the same estate and window, they return the data every figure above was derived from.
 
-- `gh-axi api /orgs/jqlang/repos?type=all&sort=full_name --paginate`
+- `gh-axi api /orgs/bats-core/repos?type=all&sort=full_name --paginate`
 - `gh-axi api /repos/<owner>/<repo>/commits?sha=<default_branch>&since=2026-07-07T00:00:00Z&until=2026-10-05T00:00:00Z --paginate`
 - `gh-axi api POST graphql --input <pull-requests-updated-desc-until-2026-07-07T00:00:00Z>`
 - `gh-axi api POST graphql --input <open-pull-requests-created-asc>`
@@ -307,17 +270,14 @@ Filled in that way and run against the same estate and window, they return the d
 
 | Repository | Commits | Pull requests | Open pull requests | CI runs | Issues |
 | --- | --- | --- | --- | --- | --- |
-| jqlang/.github | read | read | read | read | read |
-| jqlang/awesome-jq | read | read | read | read | read |
-| jqlang/bazel_rules_jq | read | read | read | read | read |
-| jqlang/jq | read | read | read | read | read |
-| jqlang/playground | read | read | read | read | read |
+| bats-core/.github | read | read | read | read | read |
+| bats-core/bats-backports | read | read | read | read | read |
+| bats-core/bats-core | read | read | read | read | read |
+| bats-core/bats-detik | read | read | read | read | read |
+| bats-core/bats-vscode | read | read | read | read | read |
+| bats-core/homebrew-bats-core | read | read | read | read | read |
 
 No read this report uses failed: every reviewed repository answered every one of them.
 
-Reads that hit a cap, so the figures they feed describe the collected subset rather than the whole window:
-
-| Repository | Signal | Cap |
-| --- | --- | --- |
-| jqlang/jq | pull_request_reviews | 1 pull request carries more than 50 reviews; only the first 50 of each were read |
+No read hit a collection cap.
 

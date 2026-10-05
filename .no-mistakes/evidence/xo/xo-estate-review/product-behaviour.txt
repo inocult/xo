@@ -1,0 +1,42 @@
+A. Every fixed constant the command no longer lets a flag change is still disclosed in the report
+   Selection: forks excluded, archived repositories included and labelled, at most 100 repositories.
+   Thresholds: an open pull request idle for 14 days or more is stalled; a repository unpushed for 180 days or more is unmaintained; the trend band section 4.1 reports a direction outside is 15%.
+   Section 6's lists show at most 15 worst-first rows and state how many there are in total; the counts are always complete even where the rows are bounded.
+   and the model's options block, printed by --json, carries each value:
+   {"window_days":90,"periods":6,"stalled_days":14,"unmaintained_days":180,"max_repos":100,"max_prs":300,"max_listed":15,"include_forks":false,"reviews_per_pull_request":50,"page_limit":30,"pull_request_page_limit":40,"pull_request_page_size":50,"trend_band_pct":15}
+
+B. The direction rule is stated once, in section 4.1, and its label matches the rule
+   report-bats-core-org.md                  occurrences=1, inside 4.1=1
+   report-jqlang-dotgithub-silent.md        occurrences=1, inside 4.1=1
+   report-jqlang-jq-6day.md                 occurrences=1, inside 4.1=1
+   report-jqlang-jq-repo.md                 occurrences=1, inside 4.1=1
+   report-jqlang-org.md                     occurrences=1, inside 4.1=1
+   bats-core merged pull requests 7,9,0,0,9,8: last 8 vs mean of earlier 5 = +60% -> rising
+   | Pull requests merged | 7 | 9 | 0 | 0 | 9 | 8 | rising |
+   (a period-over-period reading of 9 -> 8 would be -11%, inside the 15% band, i.e. flat)
+
+C. A count of one reads as one
+   stalled list of 16 rows against a bound of 15 -> 1 further pull request is in this report's model but not listed above
+   stalled list of 17 rows against a bound of 15 -> 2 further pull requests are in this report's model but not listed above
+   a single pull request over the review cap -> 1 pull request carries more than 50 reviews; only the first 50 of each were read
+
+D. Read-only: every gh-axi call a live single-repository review made
+        52 GET
+         4 POST
+   every POST, with the query body elided:
+   api POST graphql --input <query-body>
+   calls carrying PUT, PATCH, DELETE or -X:
+   0
+
+E. A stored model renders the same report twice, and renders it with gh-axi absent from PATH
+   render 1 vs render 2: byte-identical (19945 bytes)
+   render with PATH=/usr/bin:/bin (gh-axi absent): byte-identical to the online render
+   collection with gh-axi absent:      estate-review.sh: gh-axi is required for estate collection
+
+F. Section 9.1's published commands re-derive the report's own figures
+   section 7: | jqlang/awesome-jq | 2 | 1 | 7 | 6.6 h | 0% | not measurable | 1 | 49 | no | none |
+   section 6.1: | jqlang/awesome-jq | zachary-krepelka | 100% | 1 | 1 |
+   re-run of the section 9.1 commits template:
+     authored_non_merge: 1
+     authors[1]: zachary-krepelka
+     commits_in_window: 2

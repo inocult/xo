@@ -1,0 +1,56 @@
+api /repos/jqlang/jq --full --jq ["repo",.full_name,.name,.owner.login,(.default_branch//"-"),(.archived|tostring),(.fork|tostring),(.pushed_at//"-"),(.private|tostring)]|@tsv
+api /repos/jqlang/jq/commits?sha=master&since=2026-09-29T00:00:00Z&until=2026-10-05T00:00:00Z&per_page=100&page=1 --full --jq (["items\t" + (length|tostring)] + [.[]|["commit",(.sha//"-"),(.author.login//"-"),(.author.type//"-"),(.commit.author.email//"-"),(.commit.committer.date//"-"),(.parents|length|tostring),((.commit.message//"")|split("\n")|(.[0]//"")|gsub("[\\t\\r]";" ")|if test("^[[:space:]\\x{feff}]*$") then "-" else . end)]|@tsv])|join("\n")
+api POST graphql --input /tmp/xo-estate-review.wwLoBk/read/prq.json --full --jq 
+  .data.repository.pullRequests as $p
+  | (["page\t" + (($p.pageInfo.hasNextPage)|tostring) + "\t" + (($p.pageInfo.endCursor)//"-")]
+      + [ $p.nodes[]
+          | ["pr",(.number|tostring),(.state//"-"),(.isDraft|tostring),(.createdAt//"-"),(.updatedAt//"-"),
+             ((.mergedAt)//"-"),((.closedAt)//"-"),(.additions|tostring),(.deletions|tostring),(.changedFiles|tostring),
+             ((.author.login)//"-"),((.author.__typename)//"-"),((.commits.nodes[0].commit.committedDate)//"-"),
+             (.reviews.totalCount|tostring),(.reviewThreads.totalCount|tostring),((.headRefName)//"-"),
+             ((.title//"")|gsub("[\\t\\r\\n]";" ")|if test("^[[:space:]\\x{feff}]*$") then "-" else . end)]|@tsv ]
+      + [ $p.nodes[] as $n | $n.reviews.nodes[]
+          | ["review",($n.number|tostring),((.author.login)//"-"),((.author.__typename)//"-"),((.submittedAt)//"-"),(.state//"-")]|@tsv ])
+  | join("\n")
+api POST graphql --input /tmp/xo-estate-review.wwLoBk/read/prq.json --full --jq 
+  .data.repository.pullRequests as $p
+  | (["page\t" + (($p.pageInfo.hasNextPage)|tostring) + "\t" + (($p.pageInfo.endCursor)//"-")]
+      + [ $p.nodes[]
+          | ["pr",(.number|tostring),(.state//"-"),(.isDraft|tostring),(.createdAt//"-"),(.updatedAt//"-"),
+             ((.mergedAt)//"-"),((.closedAt)//"-"),(.additions|tostring),(.deletions|tostring),(.changedFiles|tostring),
+             ((.author.login)//"-"),((.author.__typename)//"-"),((.commits.nodes[0].commit.committedDate)//"-"),
+             (.reviews.totalCount|tostring),(.reviewThreads.totalCount|tostring),((.headRefName)//"-"),
+             ((.title//"")|gsub("[\\t\\r\\n]";" ")|if test("^[[:space:]\\x{feff}]*$") then "-" else . end)]|@tsv ]
+      + [ $p.nodes[] as $n | $n.reviews.nodes[]
+          | ["review",($n.number|tostring),((.author.login)//"-"),((.author.__typename)//"-"),((.submittedAt)//"-"),(.state//"-")]|@tsv ])
+  | join("\n")
+api POST graphql --input /tmp/xo-estate-review.wwLoBk/read/prq.json --full --jq 
+  .data.repository.pullRequests as $p
+  | (["page\t" + (($p.pageInfo.hasNextPage)|tostring) + "\t" + (($p.pageInfo.endCursor)//"-")]
+      + [ $p.nodes[]
+          | ["pr",(.number|tostring),(.state//"-"),(.isDraft|tostring),(.createdAt//"-"),(.updatedAt//"-"),
+             ((.mergedAt)//"-"),((.closedAt)//"-"),(.additions|tostring),(.deletions|tostring),(.changedFiles|tostring),
+             ((.author.login)//"-"),((.author.__typename)//"-"),((.commits.nodes[0].commit.committedDate)//"-"),
+             (.reviews.totalCount|tostring),(.reviewThreads.totalCount|tostring),((.headRefName)//"-"),
+             ((.title//"")|gsub("[\\t\\r\\n]";" ")|if test("^[[:space:]\\x{feff}]*$") then "-" else . end)]|@tsv ]
+      + [ $p.nodes[] as $n | $n.reviews.nodes[]
+          | ["review",($n.number|tostring),((.author.login)//"-"),((.author.__typename)//"-"),((.submittedAt)//"-"),(.state//"-")]|@tsv ])
+  | join("\n")
+api POST graphql --input /tmp/xo-estate-review.wwLoBk/read/prq.json --full --jq 
+  .data.repository.pullRequests as $p
+  | (["page\t" + (($p.pageInfo.hasNextPage)|tostring) + "\t" + (($p.pageInfo.endCursor)//"-")]
+      + [ $p.nodes[]
+          | ["pr",(.number|tostring),(.state//"-"),(.isDraft|tostring),(.createdAt//"-"),(.updatedAt//"-"),
+             ((.mergedAt)//"-"),((.closedAt)//"-"),(.additions|tostring),(.deletions|tostring),(.changedFiles|tostring),
+             ((.author.login)//"-"),((.author.__typename)//"-"),((.commits.nodes[0].commit.committedDate)//"-"),
+             (.reviews.totalCount|tostring),(.reviewThreads.totalCount|tostring),((.headRefName)//"-"),
+             ((.title//"")|gsub("[\\t\\r\\n]";" ")|if test("^[[:space:]\\x{feff}]*$") then "-" else . end)]|@tsv ]
+      + [ $p.nodes[] as $n | $n.reviews.nodes[]
+          | ["review",($n.number|tostring),((.author.login)//"-"),((.author.__typename)//"-"),((.submittedAt)//"-"),(.state//"-")]|@tsv ])
+  | join("\n")
+api /repos/jqlang/jq/actions/runs?event=pull_request&created=2026-09-29..2026-10-05&per_page=100&page=1 --full --jq (["items\t" + (.workflow_runs|length|tostring)] + [.workflow_runs[]|["run",(.workflow_id|tostring),(.head_sha//"-"),(.run_number|tostring),(.run_attempt|tostring),(.conclusion//"-"),(.created_at//"-")]|@tsv])|join("\n")
+api /repos/jqlang/jq/issues?state=open&per_page=100&page=1 --full --jq (["items\t" + (length|tostring)] + [.[]|select(.pull_request==null)|["issue",(.number|tostring),(.created_at//"-"),(.updated_at//"-")]|@tsv])|join("\n")
+api /repos/jqlang/jq/issues?state=open&per_page=100&page=2 --full --jq (["items\t" + (length|tostring)] + [.[]|select(.pull_request==null)|["issue",(.number|tostring),(.created_at//"-"),(.updated_at//"-")]|@tsv])|join("\n")
+api /repos/jqlang/jq/issues?state=open&per_page=100&page=3 --full --jq (["items\t" + (length|tostring)] + [.[]|select(.pull_request==null)|["issue",(.number|tostring),(.created_at//"-"),(.updated_at//"-")]|@tsv])|join("\n")
+api /repos/jqlang/jq/issues?state=open&per_page=100&page=4 --full --jq (["items\t" + (length|tostring)] + [.[]|select(.pull_request==null)|["issue",(.number|tostring),(.created_at//"-"),(.updated_at//"-")]|@tsv])|join("\n")
+api /repos/jqlang/jq/issues?state=open&per_page=100&page=5 --full --jq (["items\t" + (length|tostring)] + [.[]|select(.pull_request==null)|["issue",(.number|tostring),(.created_at//"-"),(.updated_at//"-")]|@tsv])|join("\n")

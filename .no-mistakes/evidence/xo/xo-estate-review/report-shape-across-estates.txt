@@ -1,0 +1,43 @@
+Four live estates, four reports, one shape.
+Heading structure extracted with: grep -E '^#{1,3} ' <report>
+
+jqlang (organization, 5 repositories, 90-day window):
+  ## 1. Scope and method
+  ## 2. Headline
+  ## 3. Who did what
+  ### 3.1 Contribution by person
+  ### 3.2 Review participation
+  ## 4. Velocity
+  ### 4.1 Throughput
+  ### 4.2 Cycle time, first commit to merge
+  ### 4.3 Review latency, opened to first review by another account
+  ## 5. Quality
+  ### 5.1 Reverts and hotfixes
+  ### 5.2 Change size
+  ### 5.3 Review depth
+  ### 5.4 Continuous integration latest-attempt pass rate
+  ## 6. Risk and concentration
+  ### 6.1 Knowledge concentration
+  ### 6.2 Unmaintained repositories, as at collection
+  ### 6.3 Stalled work, as at collection
+  ## 7. Per-repository detail
+  ## 8. What these numbers do not measure
+  ## 9. Collection log
+  ### 9.1 Commands
+  ### 9.2 What was read
+
+Diff of that structure against each other estate:
+  report-bats-core-org                 identical - same 23 headings, same order
+  report-jqlang-jq-repo                identical - same 23 headings, same order
+  report-jqlang-jq-6day                identical - same 23 headings, same order
+  report-jqlang-dotgithub-silent       identical - same 23 headings, same order
+
+Only the title line differs, because it names the estate:
+  # Estate review: jqlang
+  # Estate review: bats-core
+  # Estate review: jqlang/jq
+  # Estate review: jqlang/jq
+  # Estate review: jqlang/.github
+
+The silent estate (jqlang/.github: 0 commits, 0 pull requests, 0 issues, no CI)
+keeps every one of those headings and states each surface empty rather than dropping it.

@@ -1,9 +1,9 @@
-# Estate review: jqlang/jq
+# Estate review: jqlang/.github
 
-- Estate: repository `jqlang/jq`
+- Estate: repository `jqlang/.github`
 - Window: 2026-07-07T00:00:00Z to 2026-10-05T00:00:00Z (90 days, 6 periods of 15 days)
-- Repositories: 1 matched the selection, 1 reviewed, 0 read completely, 1 read with at least one gap
-- Generated: 2026-10-05T19:53:39Z by `estate-review.sh`, report contract `xo-estate-review.v1`
+- Repositories: 1 matched the selection, 1 reviewed, 1 read completely, 0 read with at least one gap
+- Generated: 2026-10-05T19:54:11Z by `estate-review.sh`, report contract `xo-estate-review.v1`
 
 ## 1. Scope and method
 
@@ -36,13 +36,13 @@ Definitions, which are the same in every report:
 
 | Measure | Value | Unit | Direction over the window |
 | --- | --- | --- | --- |
-| Pull requests merged | 25 | pull requests | rising |
-| Cycle time, first commit to merge | 32.3 | hours (median) | falling |
-| Merged pull requests reviewed by another account | 92 | percent | not tracked over periods |
-| Continuous integration latest-attempt pass rate | 93.9 | percent | not tracked over periods |
+| Pull requests merged | 0 | pull requests | flat |
+| Cycle time, first commit to merge | not measurable | hours (median) | not reported: the last period has no measurement |
+| Merged pull requests reviewed by another account | not measurable | percent | not tracked over periods |
+| Continuous integration latest-attempt pass rate | not measurable | percent | not tracked over periods |
 | Repositories where one account authored over half the commits | 0 | repositories | not tracked over periods |
 
-A rising cycle time means work is getting slower; a rising merged count means more is landing.
+No commit, pull request, review, or workflow run in this window, so every measure above is zero or unmeasurable rather than low.
 
 ## 3. Who did what
 
@@ -51,73 +51,16 @@ A rising cycle time means work is getting slower; a rising merged count means mo
 Sorted by account name, never by volume.
 This table is a record of participation, not a ranking, and the counts carry no judgement about anyone's effort, difficulty of work, or worth.
 
-| Account | Automation, at collection | Commits | Pull requests opened | Pull requests merged | Reviews submitted | Pull requests reviewed | Repositories touched |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0-wiz-0 | no | 1 | 0 | 1 | 0 | 0 | 1 |
-| 4RH1T3CT0R7 | no | 1 | 2 | 1 | 0 | 0 | 1 |
-| A4-Tacks | no | 2 | 4 | 2 | 0 | 0 | 1 |
-| AbhinavMir | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| AetherAI3 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| Boulea7 | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| HarmfulBreeze | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| Hugohong258 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| Jorge-Polanco-Roque | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| MbappeWU | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| Pandapip1 | no | 0 | 0 | 0 | 2 | 1 | 1 |
-| Solaris-star | no | 0 | 3 | 0 | 0 | 0 | 1 |
-| amtbsl | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| arhxam | no | 0 | 2 | 0 | 0 | 0 | 1 |
-| arifthpe | no | 2 | 2 | 2 | 0 | 0 | 1 |
-| christf | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| copilot-pull-request-reviewer | yes | 0 | 0 | 0 | 3 | 3 | 1 |
-| cosine0 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| cuishuang | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| davidscottpope-gif | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| ded-furby | no | 1 | 0 | 1 | 0 | 0 | 1 |
-| dependabot | yes | 5 | 5 | 5 | 0 | 0 | 1 |
-| fzlzjerry | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| glaziermag | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| happyaron | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| herley-shaori | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| hkbu-kennycheng | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| itchyny | no | 6 | 8 | 6 | 26 | 19 | 1 |
-| jegarian83 | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| kanwren | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| ksh368-bit | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| maruixin-kls | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| mikamikasuki | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| mvanslobbe | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| neilpang | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| oodadoudou | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| owenthereal | no | 0 | 0 | 0 | 5 | 5 | 1 |
-| pavelkuliaka | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| pkoppstein | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| qatcod | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| santhiprakash | no | 0 | 4 | 0 | 0 | 0 | 1 |
-| sorena-paydar | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| thalha-a9 | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| wader | no | 0 | 0 | 0 | 16 | 11 | 1 |
-| winklemad | no | 1 | 1 | 1 | 0 | 0 | 1 |
-
-Automation accounts in this table: 2 of 45.
+No account committed, opened a pull request, or reviewed one in this window.
 
 ### 3.2 Review participation
 
 Reviews given matter as much as authorship and are the half most tooling drops, so they get their own section whether or not the estate has any.
 
-| Account | Automation, at collection | Reviews submitted | Pull requests reviewed |
-| --- | --- | --- | --- |
-| Pandapip1 | no | 2 | 1 |
-| christf | no | 1 | 1 |
-| copilot-pull-request-reviewer | yes | 3 | 3 |
-| itchyny | no | 26 | 19 |
-| jegarian83 | no | 1 | 1 |
-| kanwren | no | 1 | 1 |
-| owenthereal | no | 5 | 5 |
-| pkoppstein | no | 1 | 1 |
-| wader | no | 16 | 11 |
+No account submitted a review of another account's pull request in this window.
 
-23 of 25 merged pull requests carried a review by an account other than the author (92%).
+Of 0 merged pull requests, 0 carried a review by another account.
+That is a fact about this estate's recorded review activity, not evidence that the work went unexamined: review can happen in a channel GitHub never sees.
 
 ## 4. Velocity
 
@@ -127,33 +70,22 @@ Each period is 15 days; the earliest period begins at the window start.
 
 | Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 | Direction |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commits authored | 3 | 1 | 1 | 6 | 9 | 5 | rising |
-| Pull requests opened | 8 | 5 | 7 | 16 | 9 | 12 | rising |
-| Pull requests merged | 3 | 1 | 1 | 6 | 9 | 5 | rising |
+| Commits authored | 0 | 0 | 0 | 0 | 0 | 0 | flat |
+| Pull requests opened | 0 | 0 | 0 | 0 | 0 | 0 | flat |
+| Pull requests merged | 0 | 0 | 0 | 0 | 0 | 0 | flat |
 
+No commit or merge landed in this window.
 Direction compares the last period against the mean of the earlier ones.
 
 ### 4.2 Cycle time, first commit to merge
 
-- Median: 32.3 h over 25 merged pull requests
-- p90: 790 h
-- Direction: falling (rising means slower)
-- Unmeasurable: 0 merged pull requests had no readable first commit
-
-| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
-| --- | --- | --- | --- | --- | --- | --- |
-| Median hours | 70.5 | 19 | 0.8 | 256 | 44.3 | 0.2 |
+No merged pull request with a readable first commit in this window, so cycle time is unmeasurable here.
+0 merged pull requests were excluded for that reason.
 
 ### 4.3 Review latency, opened to first review by another account
 
-- Median: 19 h over 23 merged pull requests
-- p90: 791.7 h
-- Direction: falling (rising means longer waits)
-- Not included: 2 merged pull requests had no review from another account
-
-| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
-| --- | --- | --- | --- | --- | --- | --- |
-| Median hours | 44.9 | 19 | 0.8 | 14.1 | 154.1 | 4.3 |
+No merged pull request with a review from another account in this window, so review latency is unmeasurable here.
+That is the same fact section 3.2 reports, stated as a waiting time rather than as coverage.
 
 ## 5. Quality
 
@@ -162,92 +94,43 @@ A quality signal that is presented without that boundary invites a conclusion th
 
 ### 5.1 Reverts and hotfixes
 
-- Reverts: 0 of 25 authored commits (0%)
-- Hotfixes: 0 of 25 authored commits (0%)
-
-This counts what the estate labelled.
-It evidences how often the estate itself declared a change wrong; it does not evidence the defect rate, because a fix that was never called a revert or a hotfix is invisible here.
+No authored commit landed on a default branch in this window, so there is no revert or hotfix rate to report.
 
 ### 5.2 Change size
 
-- Median merged pull request: 17 lines changed
-- p90 merged pull request: 113 lines changed
-
-| Lines changed | Merged pull requests |
-| --- | --- |
-| under 10 | 10 |
-| 10 to 49 | 9 |
-| 50 to 249 | 4 |
-| 250 to 999 | 2 |
-| 1000 or more | 0 |
-
-Size evidences how much a reviewer was asked to hold at once.
-It does not evidence difficulty or risk: a one-line change can be the dangerous one, and a large generated diff can be trivial.
+No pull request merged in this window, so there is no change-size distribution to report.
 
 ### 5.3 Review depth
 
-- Merged pull requests reviewed by another account: 23 of 25 (92%)
-- Median review threads per merged pull request: 0
-- Total review threads on merged pull requests: 6
-
-Thread count evidences how much conversation a change drew.
-It does not evidence how carefully anything was read: a correct change reviewed closely can draw no comment at all.
+No pull request merged in this window, so there is no review depth to report.
 
 ### 5.4 Continuous integration latest-attempt pass rate
 
-- Latest-attempt pass rate: 93.9% (413 passed, 27 failed)
-- Inconclusive runs excluded from the rate: 0
-- Checks that needed more than one attempt on the same commit: 0
-
-This evidences how a check ended up, not how it started: the runs list reports each run's latest attempt, so a check that failed and was re-run to green on the same commit counts as a pass here.
-It cannot separate a real defect from a flaky job, and it sees only GitHub Actions: checks reported by any other system are invisible to it.
-The attempt count says only that a check on that commit was attempted more than once; it does not say why.
+No GitHub Actions pull-request run in this window, so there is no latest-attempt pass rate to report.
+An estate whose checks run outside GitHub Actions will always read this way here, because this report does not see those checks.
 
 ## 6. Risk and concentration
 
 ### 6.1 Knowledge concentration
 
-- Accounts that authored commits: 14
-- Accounts covering half the estate's authored commits: 3
-- Largest single share: itchyny at 24%
-
-No repository has more than half its authored commits from a single account in this window.
-
-This evidences where the estate's recorded history sits with one account.
-It does not evidence who understands what: someone who reviewed every change may hold the knowledge without a commit to show for it.
+No authored commit landed in this window, so concentration is unmeasurable.
 
 ### 6.2 Unmaintained repositories, as at collection
 
-No reviewed repository is archived, has never been pushed to, or had gone 180 days without a push when this review collected.
+Repositories archived, never pushed to, or unpushed for 180 days or more as at 2026-10-05T19:54:11Z: 1.
+
+| Repository | Days since last push, at collection | Archived, at collection | Commits in window |
+| --- | --- | --- | --- |
+| jqlang/.github | 1203 | no | 0 |
 
 ### 6.3 Stalled work, as at collection
 
-Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at 2026-10-05T19:53:39Z.
+Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at 2026-10-05T19:54:11Z.
 
-- Open pull requests: 106
-- Open issues: 322
+- Open pull requests: 0
+- Open issues: 0
 
-Open pull requests idle for 14 days or more: 88, longest idle first.
-
-| Repository | Number | Idle days, at collection | Age days, at collection | Author | Draft, at collection | Title |
-| --- | --- | --- | --- | --- | --- | --- |
-| jqlang/jq | 1062 | 1220 | 3925 | pkoppstein | no | project/1, query/1 and unify/1 added to builtin.jq, with tests and documentation |
-| jqlang/jq | 1767 | 1220 | 2884 | ayappanec | no | Patches for AIX |
-| jqlang/jq | 1907 | 1220 | 2693 | bit2shift | no | Unify/simplify the MultiByteToWideChar() code and add wrappers for open()/stat() |
-| jqlang/jq | 2241 | 1220 | 2101 | unattributed | no | Added base/1 and unbase/1 |
-| jqlang/jq | 673 | 146 | 4275 | joelpurra | yes | Working module/package system |
-| jqlang/jq | 1032 | 146 | 3960 | nicowilliams | no | Dump block |
-| jqlang/jq | 1127 | 146 | 3835 | WaffleSouffle | no | Ignore jq.exe, fixed gcc compiler warnings for msys2 (windows). |
-| jqlang/jq | 1201 | 146 | 3709 | ltrager | no | Add snap packaging support |
-| jqlang/jq | 1215 | 146 | 3699 | mark-kubacki | no | Add support for seccomp |
-| jqlang/jq | 1228 | 146 | 3682 | dbohdan | no | Define format in jq code |
-| jqlang/jq | 1246 | 146 | 3654 | dequis | no | jv: Add some support for 64 bit ints in a very conservative way |
-| jqlang/jq | 1327 | 146 | 3536 | nicowilliams | no | jv: Add some support for 64 bit ints in a very conservative way (ALTERNATIVE) |
-| jqlang/jq | 1643 | 146 | 3106 | andremarianiello | no | Add mul builtin |
-| jqlang/jq | 1703 | 146 | 2985 | mumoshu | no | wip: feat: terminate jq immediately after the outgoing pipe closed |
-| jqlang/jq | 1726 | 146 | 2930 | jgarvin | no | Rename gen_* functions to jq_gen_* |
-
-73 further pull requests are in this report's model but not listed above; `--json` prints the model, which carries every one of them.
+No open pull request has been idle for 14 days or more as at collection.
 
 ## 7. Per-repository detail
 
@@ -256,7 +139,7 @@ An organization review is this table plus the aggregate above; a single-reposito
 
 | Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps, at collection |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| jqlang/jq | 25 | 25 | 106 | 32.3 h | 92% | 93.9% | 14 | 4 | no | pull_request_reviews |
+| jqlang/.github | 0 | 0 | 0 | not measurable | not measurable | not measurable | 0 | 1203 | no | none |
 
 ## 8. What these numbers do not measure
 
@@ -276,7 +159,7 @@ These are the templates each read was built from, one per surface, with this run
 They are not a transcript to paste: `<owner>/<repo>` and `<default_branch>` stand for each repository in section 7, and the two GraphQL reads name their query rather than printing its body.
 Filled in that way and run against the same estate and window, they return the data every figure above was derived from.
 
-- `gh-axi api /repos/jqlang/jq`
+- `gh-axi api /repos/jqlang/.github`
 - `gh-axi api /repos/<owner>/<repo>/commits?sha=<default_branch>&since=2026-07-07T00:00:00Z&until=2026-10-05T00:00:00Z --paginate`
 - `gh-axi api POST graphql --input <pull-requests-updated-desc-until-2026-07-07T00:00:00Z>`
 - `gh-axi api POST graphql --input <open-pull-requests-created-asc>`
@@ -287,13 +170,9 @@ Filled in that way and run against the same estate and window, they return the d
 
 | Repository | Commits | Pull requests | Open pull requests | CI runs | Issues |
 | --- | --- | --- | --- | --- | --- |
-| jqlang/jq | read | read | read | read | read |
+| jqlang/.github | read | read | read | read | read |
 
 No read this report uses failed: every reviewed repository answered every one of them.
 
-Reads that hit a cap, so the figures they feed describe the collected subset rather than the whole window:
-
-| Repository | Signal | Cap |
-| --- | --- | --- |
-| jqlang/jq | pull_request_reviews | 1 pull request carries more than 50 reviews; only the first 50 of each were read |
+No read hit a collection cap.
 

@@ -1,9 +1,9 @@
-# Estate review: jqlang
+# Estate review: jqlang/jq
 
-- Estate: organization `jqlang`
-- Window: 2026-07-07T00:00:00Z to 2026-10-05T00:00:00Z (90 days, 6 periods of 15 days)
-- Repositories: 5 matched the selection, 5 reviewed, 4 read completely, 1 read with at least one gap
-- Generated: 2026-10-05T19:51:22Z by `estate-review.sh`, report contract `xo-estate-review.v1`
+- Estate: repository `jqlang/jq`
+- Window: 2026-09-29T00:00:00Z to 2026-10-05T00:00:00Z (6 days, 6 periods of 1 days)
+- Repositories: 1 matched the selection, 1 reviewed, 0 read completely, 1 read with at least one gap
+- Generated: 2026-10-05T19:56:59Z by `estate-review.sh`, report contract `xo-estate-review.v1`
 
 ## 1. Scope and method
 
@@ -11,7 +11,7 @@ This report has a fixed shape.
 The same nine sections appear in the same order for every estate, and a section with no data says so rather than disappearing.
 Two reports of the same estate are therefore comparable line for line, and section 9 names the read every figure came from.
 
-Selection: forks excluded, archived repositories included and labelled, at most 100 repositories.
+Selection: forks included, archived repositories included and labelled, at most 100 repositories.
 Thresholds: an open pull request idle for 14 days or more is stalled; a repository unpushed for 180 days or more is unmaintained; the trend band section 4.1 reports a direction outside is 15%.
 Both of those thresholds, and every figure they select over, are measured from when this review collected rather than from inside the window, because they are facts about the estate now rather than events in it: the repository set and each default branch, the archived flag, whether an account is automation, days since last push, the open pull request and open issue counts, the stalled list with its idle and age days, and what section 9 records as read.
 Rather than list where each is labelled, the rule holds everywhere: a table column carrying a figure measured that way ends its heading `at collection`, and a column carrying a figure that does not is bounded by the window. A column that names rather than measures - a repository, an account, a pull request's number or title - carries no clock. Section 9 is the exception and is collection-time throughout, because it records the reads themselves.
@@ -36,10 +36,10 @@ Definitions, which are the same in every report:
 
 | Measure | Value | Unit | Direction over the window |
 | --- | --- | --- | --- |
-| Pull requests merged | 26 | pull requests | rising |
-| Cycle time, first commit to merge | 29 | hours (median) | falling |
-| Merged pull requests reviewed by another account | 88.5 | percent | not tracked over periods |
-| Continuous integration latest-attempt pass rate | 94.2 | percent | not tracked over periods |
+| Pull requests merged | 3 | pull requests | falling |
+| Cycle time, first commit to merge | 0 | hours (median) | not reported: the last period has no measurement |
+| Merged pull requests reviewed by another account | 66.7 | percent | not tracked over periods |
+| Continuous integration latest-attempt pass rate | 94.5 | percent | not tracked over periods |
 | Repositories where one account authored over half the commits | 1 | repositories | not tracked over periods |
 
 A rising cycle time means work is getting slower; a rising merged count means more is landing.
@@ -53,60 +53,19 @@ This table is a record of participation, not a ranking, and the counts carry no 
 
 | Account | Automation, at collection | Commits | Pull requests opened | Pull requests merged | Reviews submitted | Pull requests reviewed | Repositories touched |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0-wiz-0 | no | 1 | 0 | 1 | 0 | 0 | 1 |
-| 4RH1T3CT0R7 | no | 1 | 2 | 1 | 0 | 0 | 1 |
-| A4-Tacks | no | 2 | 4 | 2 | 0 | 0 | 1 |
-| AbhinavMir | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| AetherAI3 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| Boulea7 | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| EdelmarSchneider | no | 0 | 1 | 0 | 0 | 0 | 1 |
 | HarmfulBreeze | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| Hugohong258 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| Jorge-Polanco-Roque | no | 0 | 1 | 0 | 0 | 0 | 1 |
 | MbappeWU | no | 0 | 1 | 0 | 0 | 0 | 1 |
 | Pandapip1 | no | 0 | 0 | 0 | 2 | 1 | 1 |
-| Solaris-star | no | 0 | 3 | 0 | 0 | 0 | 1 |
-| amtbsl | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| arhxam | no | 0 | 2 | 0 | 0 | 0 | 1 |
-| arifthpe | no | 2 | 2 | 2 | 0 | 0 | 1 |
 | christf | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| copilot-pull-request-reviewer | yes | 0 | 0 | 0 | 3 | 3 | 1 |
-| cosine0 | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| cuishuang | no | 0 | 1 | 0 | 0 | 0 | 1 |
 | davidscottpope-gif | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| ded-furby | no | 1 | 0 | 1 | 0 | 0 | 1 |
-| dependabot | yes | 5 | 29 | 5 | 0 | 0 | 2 |
-| fzlzjerry | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| glaziermag | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| happyaron | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| herley-shaori | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| hkbu-kennycheng | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| itchyny | no | 6 | 8 | 6 | 26 | 19 | 1 |
-| jegarian83 | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| julianw | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| kanwren | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| ksh368-bit | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| maruixin-kls | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| dependabot | yes | 2 | 2 | 2 | 0 | 0 | 1 |
+| itchyny | no | 1 | 1 | 1 | 2 | 2 | 1 |
 | mikamikasuki | no | 0 | 1 | 0 | 0 | 0 | 1 |
 | mvanslobbe | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| neilpang | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| nujufas | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| oodadoudou | no | 1 | 1 | 1 | 0 | 0 | 1 |
 | owenthereal | no | 0 | 0 | 0 | 5 | 5 | 1 |
-| pavelkuliaka | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| pkoppstein | no | 0 | 0 | 0 | 1 | 1 | 1 |
-| qatcod | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| rfon6ngy | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| ricardocabral | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| santhiprakash | no | 0 | 4 | 0 | 0 | 0 | 1 |
-| sorena-paydar | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| thalha-a9 | no | 0 | 1 | 0 | 0 | 0 | 1 |
-| wader | no | 0 | 0 | 0 | 16 | 11 | 1 |
-| winklemad | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| zachary-krepelka | no | 1 | 1 | 1 | 0 | 0 | 1 |
-| zafnz | no | 0 | 1 | 0 | 0 | 0 | 1 |
+| wader | no | 0 | 0 | 0 | 1 | 1 | 1 |
 
-Automation accounts in this table: 2 of 52.
+Automation accounts in this table: 1 of 11.
 
 ### 3.2 Review participation
 
@@ -116,51 +75,47 @@ Reviews given matter as much as authorship and are the half most tooling drops, 
 | --- | --- | --- | --- |
 | Pandapip1 | no | 2 | 1 |
 | christf | no | 1 | 1 |
-| copilot-pull-request-reviewer | yes | 3 | 3 |
-| itchyny | no | 26 | 19 |
-| jegarian83 | no | 1 | 1 |
-| kanwren | no | 1 | 1 |
+| itchyny | no | 2 | 2 |
 | owenthereal | no | 5 | 5 |
-| pkoppstein | no | 1 | 1 |
-| wader | no | 16 | 11 |
+| wader | no | 1 | 1 |
 
-23 of 26 merged pull requests carried a review by an account other than the author (88.5%).
+2 of 3 merged pull requests carried a review by an account other than the author (66.7%).
 
 ## 4. Velocity
 
 ### 4.1 Throughput
 
-Each period is 15 days; the earliest period begins at the window start.
+Each period is 1 days; the earliest period begins at the window start.
 
-| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 | Direction |
+| Period beginning | 2026-09-29 | 2026-09-30 | 2026-10-01 | 2026-10-02 | 2026-10-03 | 2026-10-04 | Direction |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commits authored | 3 | 1 | 2 | 6 | 9 | 5 | rising |
-| Pull requests opened | 14 | 12 | 13 | 18 | 17 | 14 | flat |
-| Pull requests merged | 3 | 1 | 2 | 6 | 9 | 5 | rising |
+| Commits authored | 0 | 0 | 3 | 0 | 0 | 0 | falling |
+| Pull requests opened | 1 | 1 | 4 | 0 | 1 | 1 | falling |
+| Pull requests merged | 0 | 0 | 3 | 0 | 0 | 0 | falling |
 
 Direction compares the last period against the mean of the earlier ones.
 
 ### 4.2 Cycle time, first commit to merge
 
-- Median: 29 h over 26 merged pull requests
-- p90: 790 h
-- Direction: falling (rising means slower)
+- Median: 0 h over 3 merged pull requests
+- p90: 0.2 h
+- Direction: not reported, because the last period has no measurement; periods beginning 2026-09-29, 2026-09-30, 2026-10-02, 2026-10-03, 2026-10-04 had none
 - Unmeasurable: 0 merged pull requests had no readable first commit
 
-| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
+| Period beginning | 2026-09-29 | 2026-09-30 | 2026-10-01 | 2026-10-02 | 2026-10-03 | 2026-10-04 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Median hours | 70.5 | 19 | 3.7 | 256 | 44.3 | 0.2 |
+| Median hours | not measurable | not measurable | 0 | not measurable | not measurable | not measurable |
 
 ### 4.3 Review latency, opened to first review by another account
 
-- Median: 19 h over 23 merged pull requests
-- p90: 791.7 h
-- Direction: falling (rising means longer waits)
-- Not included: 3 merged pull requests had no review from another account
+- Median: 0 h over 2 merged pull requests
+- p90: 0 h
+- Direction: not reported, because the last period has no measurement; periods beginning 2026-09-29, 2026-09-30, 2026-10-02, 2026-10-03, 2026-10-04 had none
+- Not included: 1 merged pull request had no review from another account
 
-| Period beginning | 2026-07-07 | 2026-07-22 | 2026-08-06 | 2026-08-21 | 2026-09-05 | 2026-09-20 |
+| Period beginning | 2026-09-29 | 2026-09-30 | 2026-10-01 | 2026-10-02 | 2026-10-03 | 2026-10-04 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Median hours | 44.9 | 19 | 0.8 | 14.1 | 154.1 | 4.3 |
+| Median hours | not measurable | not measurable | 0 | not measurable | not measurable | not measurable |
 
 ## 5. Quality
 
@@ -169,23 +124,23 @@ A quality signal that is presented without that boundary invites a conclusion th
 
 ### 5.1 Reverts and hotfixes
 
-- Reverts: 0 of 26 authored commits (0%)
-- Hotfixes: 0 of 26 authored commits (0%)
+- Reverts: 0 of 3 authored commits (0%)
+- Hotfixes: 0 of 3 authored commits (0%)
 
 This counts what the estate labelled.
 It evidences how often the estate itself declared a change wrong; it does not evidence the defect rate, because a fix that was never called a revert or a hotfix is invisible here.
 
 ### 5.2 Change size
 
-- Median merged pull request: 16.5 lines changed
-- p90 merged pull request: 113 lines changed
+- Median merged pull request: 8 lines changed
+- p90 merged pull request: 354 lines changed
 
 | Lines changed | Merged pull requests |
 | --- | --- |
-| under 10 | 11 |
-| 10 to 49 | 9 |
-| 50 to 249 | 4 |
-| 250 to 999 | 2 |
+| under 10 | 2 |
+| 10 to 49 | 0 |
+| 50 to 249 | 0 |
+| 250 to 999 | 1 |
 | 1000 or more | 0 |
 
 Size evidences how much a reviewer was asked to hold at once.
@@ -193,16 +148,16 @@ It does not evidence difficulty or risk: a one-line change can be the dangerous 
 
 ### 5.3 Review depth
 
-- Merged pull requests reviewed by another account: 23 of 26 (88.5%)
+- Merged pull requests reviewed by another account: 2 of 3 (66.7%)
 - Median review threads per merged pull request: 0
-- Total review threads on merged pull requests: 6
+- Total review threads on merged pull requests: 0
 
 Thread count evidences how much conversation a change drew.
 It does not evidence how carefully anything was read: a correct change reviewed closely can draw no comment at all.
 
 ### 5.4 Continuous integration latest-attempt pass rate
 
-- Latest-attempt pass rate: 94.2% (437 passed, 27 failed)
+- Latest-attempt pass rate: 94.5% (52 passed, 3 failed)
 - Inconclusive runs excluded from the rate: 0
 - Checks that needed more than one attempt on the same commit: 0
 
@@ -214,36 +169,31 @@ The attempt count says only that a check on that commit was attempted more than 
 
 ### 6.1 Knowledge concentration
 
-- Accounts that authored commits: 15
-- Accounts covering half the estate's authored commits: 4
-- Largest single share: itchyny at 23.1%
+- Accounts that authored commits: 2
+- Accounts covering half the estate's authored commits: 1
+- Largest single share: dependabot at 66.7%
 
 Repositories where one account authored more than half the commits in this window: 1.
 
 | Repository | Account | Share | Authors | Authored commits |
 | --- | --- | --- | --- | --- |
-| jqlang/awesome-jq | zachary-krepelka | 100% | 1 | 1 |
+| jqlang/jq | dependabot | 66.7% | 2 | 3 |
 
 This evidences where the estate's recorded history sits with one account.
 It does not evidence who understands what: someone who reviewed every change may hold the knowledge without a commit to show for it.
 
 ### 6.2 Unmaintained repositories, as at collection
 
-Repositories archived, never pushed to, or unpushed for 180 days or more as at 2026-10-05T19:51:22Z: 2.
-
-| Repository | Days since last push, at collection | Archived, at collection | Commits in window |
-| --- | --- | --- | --- |
-| jqlang/.github | 1203 | no | 0 |
-| jqlang/bazel_rules_jq | 1062 | no | 0 |
+No reviewed repository is archived, has never been pushed to, or had gone 180 days without a push when this review collected.
 
 ### 6.3 Stalled work, as at collection
 
-Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at 2026-10-05T19:51:22Z.
+Like section 6.2 and unlike the sections before it, this subsection is the state of the estate when this review collected rather than a quantity inside the window: what is open now, and how long it has been sitting as at 2026-10-05T19:56:59Z.
 
-- Open pull requests: 133
-- Open issues: 335
+- Open pull requests: 106
+- Open issues: 322
 
-Open pull requests idle for 14 days or more: 113, longest idle first.
+Open pull requests idle for 14 days or more: 88, longest idle first.
 
 | Repository | Number | Idle days, at collection | Age days, at collection | Author | Draft, at collection | Title |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -251,9 +201,6 @@ Open pull requests idle for 14 days or more: 113, longest idle first.
 | jqlang/jq | 1767 | 1220 | 2884 | ayappanec | no | Patches for AIX |
 | jqlang/jq | 1907 | 1220 | 2693 | bit2shift | no | Unify/simplify the MultiByteToWideChar() code and add wrappers for open()/stat() |
 | jqlang/jq | 2241 | 1220 | 2101 | unattributed | no | Added base/1 and unbase/1 |
-| jqlang/awesome-jq | 47 | 742 | 742 | loggerhead | no | add JSON For You |
-| jqlang/playground | 224 | 259 | 623 | owenthereal | no | Improve repository with various enhancements |
-| jqlang/playground | 280 | 259 | 434 | ThisIsMissEm | no | Replace prisma with sqlite, remove sentry |
 | jqlang/jq | 673 | 146 | 4275 | joelpurra | yes | Working module/package system |
 | jqlang/jq | 1032 | 146 | 3960 | nicowilliams | no | Dump block |
 | jqlang/jq | 1127 | 146 | 3835 | WaffleSouffle | no | Ignore jq.exe, fixed gcc compiler warnings for msys2 (windows). |
@@ -262,8 +209,11 @@ Open pull requests idle for 14 days or more: 113, longest idle first.
 | jqlang/jq | 1228 | 146 | 3682 | dbohdan | no | Define format in jq code |
 | jqlang/jq | 1246 | 146 | 3654 | dequis | no | jv: Add some support for 64 bit ints in a very conservative way |
 | jqlang/jq | 1327 | 146 | 3536 | nicowilliams | no | jv: Add some support for 64 bit ints in a very conservative way (ALTERNATIVE) |
+| jqlang/jq | 1643 | 146 | 3106 | andremarianiello | no | Add mul builtin |
+| jqlang/jq | 1703 | 146 | 2985 | mumoshu | no | wip: feat: terminate jq immediately after the outgoing pipe closed |
+| jqlang/jq | 1726 | 146 | 2930 | jgarvin | no | Rename gen_* functions to jq_gen_* |
 
-98 further pull requests are in this report's model but not listed above; `--json` prints the model, which carries every one of them.
+73 further pull requests are in this report's model but not listed above; `--json` prints the model, which carries every one of them.
 
 ## 7. Per-repository detail
 
@@ -272,11 +222,7 @@ An organization review is this table plus the aggregate above; a single-reposito
 
 | Repository | Commits | Merged | Open now, at collection | Median cycle | Reviewed | Latest-attempt CI | Authors | Idle days, at collection | Archived, at collection | Gaps, at collection |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| jqlang/.github | 0 | 0 | 0 | not measurable | not measurable | not measurable | 0 | 1203 | no | none |
-| jqlang/awesome-jq | 2 | 1 | 7 | 6.6 h | 0% | not measurable | 1 | 49 | no | none |
-| jqlang/bazel_rules_jq | 0 | 0 | 0 | not measurable | not measurable | not measurable | 0 | 1062 | no | none |
-| jqlang/jq | 25 | 25 | 106 | 32.3 h | 92% | 93.9% | 14 | 4 | no | pull_request_reviews |
-| jqlang/playground | 0 | 0 | 20 | not measurable | not measurable | 100% | 0 | 4 | no | none |
+| jqlang/jq | 3 | 3 | 106 | 0 h | 66.7% | 94.5% | 2 | 4 | no | pull_request_reviews |
 
 ## 8. What these numbers do not measure
 
@@ -296,22 +242,18 @@ These are the templates each read was built from, one per surface, with this run
 They are not a transcript to paste: `<owner>/<repo>` and `<default_branch>` stand for each repository in section 7, and the two GraphQL reads name their query rather than printing its body.
 Filled in that way and run against the same estate and window, they return the data every figure above was derived from.
 
-- `gh-axi api /orgs/jqlang/repos?type=all&sort=full_name --paginate`
-- `gh-axi api /repos/<owner>/<repo>/commits?sha=<default_branch>&since=2026-07-07T00:00:00Z&until=2026-10-05T00:00:00Z --paginate`
-- `gh-axi api POST graphql --input <pull-requests-updated-desc-until-2026-07-07T00:00:00Z>`
+- `gh-axi api /repos/jqlang/jq`
+- `gh-axi api /repos/<owner>/<repo>/commits?sha=<default_branch>&since=2026-09-29T00:00:00Z&until=2026-10-05T00:00:00Z --paginate`
+- `gh-axi api POST graphql --input <pull-requests-updated-desc-until-2026-09-29T00:00:00Z>`
 - `gh-axi api POST graphql --input <open-pull-requests-created-asc>`
-- `gh-axi api /repos/<owner>/<repo>/actions/runs?event=pull_request&created=2026-07-07..2026-10-05 --paginate`
+- `gh-axi api /repos/<owner>/<repo>/actions/runs?event=pull_request&created=2026-09-29..2026-10-05 --paginate`
 - `gh-axi api /repos/<owner>/<repo>/issues?state=open --paginate`
 
 ### 9.2 What was read
 
 | Repository | Commits | Pull requests | Open pull requests | CI runs | Issues |
 | --- | --- | --- | --- | --- | --- |
-| jqlang/.github | read | read | read | read | read |
-| jqlang/awesome-jq | read | read | read | read | read |
-| jqlang/bazel_rules_jq | read | read | read | read | read |
 | jqlang/jq | read | read | read | read | read |
-| jqlang/playground | read | read | read | read | read |
 
 No read this report uses failed: every reviewed repository answered every one of them.
 
