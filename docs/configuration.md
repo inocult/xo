@@ -624,6 +624,39 @@ A fail-closed poll that already queued a wake, and a timeout, always print so th
 `XO_MAIL_CHECK_BUDGET` (default 15, valid 5..25) bounds one standing poll and is cut down to fit `XO_CHECK_TIMEOUT`.
 `bin/xo-mail-check.sh disarm` removes the standing check.
 
+## Paperclip dispatch intake (.env)
+
+The intake half of the Paperclip board link: a ticket assigned to this home's own agent seat becomes a captain inbox note, so a dispatch made on the board reaches XO the same way an out-of-band note does.
+`bin/xo-paperclip-check.sh` is its single owner and its header owns the exact mechanics.
+Writing ticket state back to the board is a separate path and never happens here; an agent API key cannot write at all, because Paperclip binds agent writes to a heartbeat run it started.
+It is off until the home's gitignored `.env` names at least one board, and the standing check is armed in the live home with `bin/xo-paperclip-check.sh arm`.
+This section is the single owner of the dispatch-intake configuration schema; for direct invocations, environment values override `.env`, matching the mail-plane and Relay contract.
+
+A home may be bound to more than one board, because one captain works across organizations and each has its own instance.
+`XO_PAPERCLIP_BOARDS` names them, comma- or space-separated, and each board contributes four values under its own uppercased name (hyphens become underscores):
+
+```sh
+XO_PAPERCLIP_BOARDS=atb,acme        # board names: lowercase letters, digits, hyphen, underscore
+XO_PAPERCLIP_ATB_URL=              # instance base URL, for example https://boards.example
+XO_PAPERCLIP_ATB_COMPANY=          # company id, the UUID rather than the ticket prefix
+XO_PAPERCLIP_ATB_AGENT=            # this home's agent seat id, whose assignments are dispatches
+XO_PAPERCLIP_ATB_KEY=              # agent API key for that seat, created from the board UI
+```
+
+The company id and the seat id are both UUIDs; `GET /api/agents/me` with the seat's own key returns them as `companyId` and `id`.
+The key is scoped to that one seat, is never printed by any command here, and belongs only in the gitignored `.env`.
+
+Each poll lists the company's tickets, keeps the ones assigned to the configured seat, skips the ones already closed (`done`, `cancelled`, `canceled`, `archived`), and queues one captain inbox note per new ticket carrying its identifier, title, state, project, board URL, and description.
+`state/.paperclip-seen` is the durable per-board cursor of delivered tickets, so a ticket is delivered once; it deliberately survives `disarm`, so re-arming a home does not re-deliver every ticket on its seat.
+The trade is deliberate: the note is queued before the cursor records it, so a crash between the two costs one duplicate note naming the same ticket rather than a dropped dispatch, and a cursor write that fails is reported instead of becoming a silent surprise.
+
+A board that cannot be reached, whose key is rejected, or whose configuration is incomplete is reported and keeps being reported every `XO_PAPERCLIP_CHECK_REREPORT` seconds (default 1800, valid 60..86400), because a dispatch that silently never arrives is this channel's worst failure.
+A poll that delivered anything always prints, so the watcher wakes to drain the notes it queued.
+A reachable board with nothing waiting is the only silence.
+`XO_PAPERCLIP_CHECK_BUDGET` (default 15, valid 5..25) bounds one standing poll, is cut down to fit `XO_CHECK_TIMEOUT`, and is then split across the configured boards.
+`XO_PAPERCLIP_CHECK_MAX` (default 10, valid 1..100) bounds the notes one poll may queue per board; the rest arrive on the next poll.
+`bin/xo-paperclip-check.sh disarm` removes the standing check.
+
 ## Relay (.env)
 
 Relay lets an XO instance answer public mentions and act on normal reversible mention requests through XO's normal lifecycle.
@@ -1062,6 +1095,15 @@ XO_IMAP_HOST=      # mail-plane IMAP server hostname
 XO_IMAP_PORT=993   # mail-plane IMAP server port
 XO_SMTP_HOST=      # mail-plane SMTP server hostname
 XO_SMTP_PORT=465   # mail-plane SMTP server port
+XO_PAPERCLIP_BOARDS=    # board names for Paperclip dispatch intake, from .env or environment (docs/configuration.md "Paperclip dispatch intake")
+XO_PAPERCLIP_<BOARD>_URL=       # that board's instance base URL
+XO_PAPERCLIP_<BOARD>_COMPANY=   # that board's company id (UUID)
+XO_PAPERCLIP_<BOARD>_AGENT=     # this home's agent seat id on that board
+XO_PAPERCLIP_<BOARD>_KEY=       # agent API key for that seat; never printed
+XO_PAPERCLIP_CHECK_BUDGET=15    # seconds allowed for one standing dispatch poll; valid 5..25, cut to fit XO_CHECK_TIMEOUT, then split across boards
+XO_PAPERCLIP_CHECK_MAX=10       # per-board notes one dispatch poll may queue; valid 1..100, the rest arrive next poll
+XO_PAPERCLIP_CHECK_REREPORT=1800   # seconds before an unchanged dispatch-intake failure is reported again; valid 60..86400
+XO_PAPERCLIP_CHECK_NOW=         # test override for the dispatch-intake report clock
 XOX_PAIRING_TOKEN=      # Relay pairing token; .env opt-in authorizes replies and eligible lifecycle actions
 XOX_RELAY_URL=https://myfirstmate.io   # optional Relay endpoint override, mainly for local relay development
 XOX_ENV_FILE=           # optional alternate .env file for direct Relay client invocations; bootstrap still checks $XO_HOME/.env

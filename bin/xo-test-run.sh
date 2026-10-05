@@ -295,7 +295,7 @@ family_for_basename() {
     xo-supervision-events.test.sh|xo-turnend-guard.test.sh|xo-wake-daemon-lifecycle-e2e.test.sh|\
     xo-wake-drain-unread-status.test.sh|\
     xo-tool-update-check.test.sh|\
-    xo-mail.test.sh|xo-mail-check.test.sh|\
+    xo-mail.test.sh|xo-mail-check.test.sh|xo-paperclip-check.test.sh|\
     xo-wake-queue.test.sh|xo-watch-arm.test.sh|xo-watch-checkpoint.test.sh|xo-watch-recovery-loop.test.sh|\
     xo-watch-triage.test.sh|xo-task-inbox.test.sh|\
     xo-watcher-lock.test.sh|xo-inactive-reconcile.test.sh)
