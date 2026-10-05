@@ -391,6 +391,11 @@ jobs:
 
           shell_inventory="$RUNNER_TEMP/xo-shell-inventory"
           bin/xo-lint.sh --list-files > "$shell_inventory"
+          # Skill-owned scripts are appended to this sweep's own inventory rather
+          # than widened into xo-lint.sh's canonical set: a stock-Bash parse error
+          # in a skill people are meant to copy surfaces only for whoever copied
+          # it, and this is the one job running a shell old enough to catch it.
+          find skills -type f -name '*.sh' -path '*/scripts/*' | LC_ALL=C sort >> "$shell_inventory"
           parse_fail=0
           while IFS= read -r f; do
             /bin/bash -n "$f" || { echo "::error::stock macOS Bash 3.2 failed to parse $f"; parse_fail=1; }

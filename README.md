@@ -205,7 +205,8 @@ Estate review invocation examples:
 - `/estate-review acme file` also writes `data/estate-review-acme-<YYYY-MM-DD>.md`.
 
 The period is the only thing a run chooses.
-Every other setting - the trend periods, the stalled and unmaintained thresholds, the repository and pull-request caps, and the fork and archived selection - is fixed and stated in the report itself, so two reports cannot differ for a reason their reader cannot see.
+Every other setting is fixed, so two reports cannot differ for a reason their reader cannot see.
+The report states the window, the thresholds, the selection and the repository bound, and names every collection bound a run actually hit in section 9.2; the rest of the fixed values are in `--help` and the skill's reference file.
 
 Bearings invocation examples:
 

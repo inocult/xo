@@ -532,10 +532,11 @@ read_prs() {
   done
 }
 
-# pr_detail <pull-request-cap-message>: the disclosure for a pull-request walk
-# that succeeded, which is "complete" only when neither the pull-request cap nor
-# the page bound on the walk was reached. Only the pull-request cap's wording
-# depends on which pass is walking, so only that one is the caller's to supply.
+# pr_detail <count-cap-message> <page-cap-message>: the disclosure for a
+# pull-request walk that succeeded, which is "complete" only when neither the
+# pull-request cap nor the page bound on the walk was reached. Both wordings
+# depend on which pass is walking, so both are the caller's to supply: the window
+# pass stops where the window does and the open pass is never window-bounded.
 #
 # Each bound is filed against the signal it actually bounds and never a wider
 # one: hedging an exact figure teaches a reader to ignore the caveat, which costs
@@ -543,7 +544,7 @@ read_prs() {
 pr_detail() {
   case $PR_CAPPED in
     prs) printf '%s' "$1" ;;
-    pages) printf '%s' "capped at $MAX_PR_PAGES pages of $PR_PAGE_SIZE pull requests before the walk left the window, so every pull-request figure for this repository describes what was reached and a zero does not mean none" ;;
+    pages) printf '%s' "$2" ;;
     *) printf 'complete' ;;
   esac
 }
@@ -609,7 +610,7 @@ collect() {
       printf 'signal\t%s\tcommits\tunread\tthe repository reports no default branch\n' "$full" >> "$RECORDS"
     elif rest_pages "/repos/$full/commits?sha=$branch&since=$since&until=$until" "$COMMITS_JQ"; then
       detail=complete
-      [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of 100 commits"
+      [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of $REST_PER_PAGE commits"
       printf 'signal\t%s\tcommits\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
       sed "s|^commit$TAB|commit$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
     else
@@ -617,11 +618,13 @@ collect() {
     fi
 
     if read_prs "$owner" "$name" "$PR_QUERY" "$since" "$until" 1; then
-      detail=$(pr_detail "capped at $MAX_PRS pull requests updated before the window ended")
+      detail=$(pr_detail "capped at $MAX_PRS pull requests updated before the window ended" \
+        "capped at $MAX_PR_PAGES pages of $PR_PAGE_SIZE pull requests before the walk left the window, so every pull-request figure for this repository describes what was reached and a zero does not mean none")
       printf 'signal\t%s\tpull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
       sed -e "s|^pr$TAB|pr$TAB$full$TAB|" -e "s|^review$TAB|review$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
       if read_prs "$owner" "$name" "$OPEN_PR_QUERY" "$since" "$until" 0; then
-        detail=$(pr_detail "capped at $MAX_PRS open pull requests, so the open and stalled counts describe the oldest $MAX_PRS")
+        detail=$(pr_detail "capped at $MAX_PRS open pull requests, so the open and stalled counts describe the oldest $MAX_PRS" \
+          "capped at $MAX_PR_PAGES pages of $PR_PAGE_SIZE open pull requests, so the open and stalled counts describe the oldest the walk reached")
         printf 'signal\t%s\topen_pull_requests\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
         sed -e "s|^pr$TAB|pr$TAB$full$TAB|" -e "s|^review$TAB|review$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
       else
@@ -638,7 +641,7 @@ collect() {
 
     if rest_pages "/repos/$full/actions/runs?event=pull_request&created=$since_date..$until_date" "$RUNS_JQ"; then
       detail=complete
-      [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of 100 runs"
+      [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of $REST_PER_PAGE runs"
       printf 'signal\t%s\tci_runs\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
       sed "s|^run$TAB|run$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
     else
@@ -647,7 +650,7 @@ collect() {
 
     if rest_pages "/repos/$full/issues?state=open" "$ISSUES_JQ"; then
       detail=complete
-      [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of 100 issues"
+      [ "$REST_CAPPED" = 0 ] || detail="capped at $REST_MAX_PAGES pages of $REST_PER_PAGE issues"
       printf 'signal\t%s\tissues\tread\t%s\n' "$full" "$detail" >> "$RECORDS"
       sed "s|^issue$TAB|issue$TAB$full$TAB|" "$GH_RECORDS" >> "$RECORDS"
     else
@@ -982,7 +985,6 @@ IFS= read -r -d '' RENDER_JQ <<'JQ' || :
 def num: if . == null then "not measurable" else tostring end;
 def pc: if . == null then "not measurable" else ((tostring) + "%") end;
 def hrs: if . == null then "not measurable" else ((tostring) + " h") end;
-def days: if . == null then "unknown" else ((tostring) + " d") end;
 def dash: if . == null or . == "" then "-" else tostring end;
 def yn($b): if $b then "yes" else "no" end;
 def trendword: if . == "rising" then "rising"
@@ -1017,8 +1019,8 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 # like a silent one, so both ways a read falls short count: one that failed saw
 # nothing, one that stopped at a cap saw part, and either can make a figure read
 # as a zero it is not. Takes a subject rather than a finished sentence, so it
-# cannot silently no-op on wording spelled differently.
-# site instead of right once here.
+# cannot silently no-op on wording spelled differently at each site instead of
+# right once here.
 | def readnote($signals):
     ([$m.unread[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $failed
     | ([$m.caps[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $capped

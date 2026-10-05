@@ -3,7 +3,7 @@ name: estate-review
 description: >-
   Review an engineering estate - a GitHub organization or one of its repositories - and report who did what, how fast work is moving, whether quality is holding, and where risk is concentrated.
   Use when the captain invokes /estate-review or asks for an estate review, an engineering review of an organization, a contribution or velocity or quality report across repositories, or "who has been doing what" across a set of repositories.
-  Plain /estate-review answers in chat; /estate-review file also writes the dated report artifact under data/.
+  Plain /estate-review answers in chat; /estate-review file also writes the dated report to a file and names the path.
   The report has the same shape on every run against every estate, which is what makes two of them comparable.
 user-invocable: true
 ---
@@ -21,6 +21,18 @@ Review an estate and tell the captain what is actually happening in it.
 It needs `gh-axi` on PATH for every GitHub read and `jq` for derivation and rendering; both are hard requirements the script checks before it starts.
 This skill owns which estate and window to point it at, what the captain hears back, and the two boundaries that matter: the review never writes to the estate, and it never ranks people.
 
+## Host expectations
+
+The script needs nothing outside this directory.
+This page is written for the harness it was built in and names three things it expects from a host rather than assumes:
+
+- A candidate list of estates, which in the XO repository is `data/projects.md`.
+  Where there is none, ask which estate to review instead of opening a file that is not there.
+- A `data/` directory for the dated report artifact.
+  Where there is none, write the report beside the invocation and give the captain that path.
+- Conventions for translating internal vocabulary and for filing follow-up work, which in the XO repository are `AGENTS.md` sections 9 and 10.
+  The substance a reader needs is stated inline below; where the host has no such document, follow the inline rule.
+
 ## 1. Resolve the estate and the window
 
 An estate is an organization by default, because that is the unit a captain asks about.
@@ -28,7 +40,7 @@ The command also accepts a single `owner/repo`, and an organization review is th
 It accepts nothing else: an owner GitHub reports as anything but an organization is refused with the type it reported.
 
 - The captain named an organization or repository: use it.
-- The captain named no estate: ask one concise question naming the candidates you can see, which are the owners of the projects in `data/projects.md`.
+- The captain named no estate: ask one concise question naming the candidates you can see, which in the XO repository are the owners of the projects in `data/projects.md`; where that list does not exist, just ask which estate to review.
   Do not guess, and do not review every organization the account can reach.
 - The captain asked about "our repos" or similar in a home with exactly one project owner: use that owner and name it in your answer so a wrong reading is cheap to correct.
 
@@ -66,10 +78,11 @@ Lead with the two or three findings that would change a decision, name the numbe
 
 Never paste the report into chat.
 It is a document to read, and section 1 alone is longer than any answer should be.
-When the captain invoked `/estate-review file`, write it to `data/estate-review-<scope>-<YYYY-MM-DD>.md` (with `/` in a repository scope replaced by `-`) and give the captain that path.
+When the captain invoked `/estate-review file`, write it to `estate-review-<scope>-<YYYY-MM-DD>.md` (with `/` in a repository scope replaced by `-`) under the host's report directory - `data/` in the XO repository, and beside the invocation where there is no such directory - and give the captain that path.
 Otherwise keep the report out of the home unless the captain asks for it.
 
-Translate the internal vocabulary before you speak, as `AGENTS.md` section 9 requires: say the investigation, the change, the review, the local copy, not the tool's nouns.
+Translate the internal vocabulary before you speak: say the investigation, the change, the review, the local copy, not the tool's nouns.
+In the XO repository this is `AGENTS.md` section 9.
 
 ## 4. What you must not do with these numbers
 
@@ -93,5 +106,5 @@ The review observes an estate and never changes one.
 Do not open an issue, post a comment, apply a label, close a stalled pull request, or push anything as part of running it, and do not ask a worker to.
 
 A finding is evidence, not authorization.
-When the report exposes work worth doing - a stalled pull request to chase, an unmaintained repository to retire, a single-account repository to spread - take it to the captain as a decision, or file it as its own work item under `AGENTS.md` section 10, and dispatch only what the captain authorizes.
+When the report exposes work worth doing - a stalled pull request to chase, an unmaintained repository to retire, a single-account repository to spread - take it to the captain as a decision, or file it as its own work item wherever the host tracks work (`AGENTS.md` section 10 in the XO repository), and dispatch only what the captain authorizes.
 A repository the command could not read is named in section 9.2 and excluded from the figures it could not supply; relay that gap rather than reporting the aggregate as complete.

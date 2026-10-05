@@ -3,6 +3,9 @@
 Mechanics behind `scripts/estate-review.sh`.
 The script's `--help` lists the flags; this file holds everything a maintainer needs that a reader of a report does not.
 
+The script references nothing outside this skill directory: `gh-axi` and `jq` on PATH are its only requirements and it writes only inside a temporary directory it creates.
+`SKILL.md` additionally documents what it expects from the harness invoking it, under Host expectations.
+
 ## Contents
 
 1. [What an estate is](#1-what-an-estate-is)
@@ -116,10 +119,10 @@ A surface with no data states that it is empty rather than disappearing, because
 
 1. Scope and method - the window, the thresholds, the selection
 2. Headline
-3. Who did what - 3.1 per person, 3.2 automation
+3. Who did what - 3.1 Contribution by person, 3.2 Review participation
 4. Velocity - 4.1 throughput, 4.2 cycle time, 4.3 review latency
 5. Quality - 5.1 reverts and hotfixes, 5.2 change size, 5.3 review depth, 5.4 CI
-6. Risk and concentration - 6.1 ownership, 6.2 unmaintained, 6.3 stalled work
+6. Risk and concentration - 6.1 Knowledge concentration, 6.2 Unmaintained repositories, 6.3 Stalled work
 7. Per-repository detail
 8. What these numbers do not measure
 9. Collection log - 9.1 commands, 9.2 what was read
@@ -160,8 +163,8 @@ Tab-separated records are the one shape that survives the round trip.
 That coupling lives in exactly one function, `gh_read`, which refuses loudly with the installed gh-axi version rather than degrading to empty data when the envelope is not the shape it knows.
 An empty estate and an unreadable one must never read the same, because the reader acts on the difference.
 
-`tests/xo-estate-review.test.sh` pins the decode against a fake gh-axi that applies the script's own `--jq` programs to real GitHub-shaped JSON.
-`tests/xo-estate-review-live-e2e.test.sh` proves the real gh-axi still emits that envelope.
+Provenance, for a reader working in the XO repository this skill was written in: `tests/xo-estate-review.test.sh` there pins the decode against a fake gh-axi that applies the script's own `--jq` programs to real GitHub-shaped JSON, and `tests/xo-estate-review-live-e2e.test.sh` proves the real gh-axi still emits that envelope.
+Neither is something the skill requires; a copied skill directory runs without them.
 
 ## 10. What the review never does
 
