@@ -1336,14 +1336,17 @@ async function assertStockHtmlRendering(command, submitData) {
       result.details,
       result.isError,
     );
+    // Order matters: a pre-1.0 Pi ignores getToolRenderers and renders no
+    // tool at all, so the falsy-callHtml check below would fire first and
+    // report this as Calm hiding rows. Diagnose the rename as a rename.
+    if (lookups.count === 0) {
+      throw new Error(
+        `Pi's HTML tool renderer did not call getToolRenderers for ${command}: its renderer-lookup dependency was renamed again`,
+      );
+    }
     if (!callHtml || !resultHtml?.expanded) {
       throw new Error(`${name} disappeared from ${command} HTML while calm mode was on`);
     }
-  }
-  if (lookups.count === 0) {
-    throw new Error(
-      `Pi's HTML tool renderer did not call getToolRenderers for ${command}: its renderer-lookup dependency was renamed again`,
-    );
   }
   editorText = "";
   await new Promise((resolve) => setTimeout(resolve, 0));

@@ -71,6 +71,24 @@ export const Type = {
   Object(properties) {
     return { type: "object", properties, additionalProperties: false };
   },
+  String(options) {
+    return { type: "string", ...(options ?? {}) };
+  },
+  Number(options) {
+    return { type: "number", ...(options ?? {}) };
+  },
+  Integer(options) {
+    return { type: "integer", ...(options ?? {}) };
+  },
+  Boolean(options) {
+    return { type: "boolean", ...(options ?? {}) };
+  },
+  Array(items, options) {
+    return { type: "array", items, ...(options ?? {}) };
+  },
+  Optional(schema) {
+    return { ...schema, optional: true };
+  },
 };
 JS
 }
@@ -213,6 +231,56 @@ EOF
   expect_code 0 "$status" "Pi custom tool must expose first-cycle or repair-only metadata and return Pi's AgentToolResult shape"
   [ -z "$out" ] || fail "Pi tool-result test printed output: $out"
   pass "Pi custom tool exposes repair-only metadata and returns automatic-continuation guidance"
+}
+
+# xo_watch_arm_pi renders its own shell, so it reproduces Pi's tool-call header
+# through .pi/extensions/lib/xo-stock-tool-header.ts, which covers only what
+# scalar arguments reach. This asserts XO's own schema stays inside that scope
+# and so is deliberately not gated on the installed Pi version: a string, array
+# or object parameter added here must fail by name rather than silently put the
+# helper out of step with Pi's format.
+test_pi_stock_header_tool_keeps_scalar_parameters() {
+  local repo home plugin out status
+  repo="$TMP_ROOT/pi-stock-header-scalar-root"
+  home="$TMP_ROOT/pi-stock-header-scalar-home"
+  mkdir -p "$repo/bin" "$home/state" "$home/config"
+  install_pi_watch_extension_fixture "$repo"
+  plugin="$repo/.pi/extensions/xo-primary-pi-watch.ts"
+  out=$(PLUGIN="$plugin" XO_HOME="$home" XO_ROOT_OVERRIDE="$repo" node --input-type=module 2>&1 <<'EOF'
+import { pathToFileURL } from "node:url";
+
+let tool = null;
+const pi = {
+  on() {},
+  registerCommand() {},
+  registerTool(candidate) {
+    if (candidate.name === "xo_watch_arm_pi") tool = candidate;
+  },
+  sendUserMessage: async () => {},
+};
+const mod = await import(pathToFileURL(process.env.PLUGIN).href);
+mod.default(pi);
+if (!tool) throw new Error("Pi watch tool was not registered");
+if (tool.renderShell !== "self") {
+  throw new Error(`xo_watch_arm_pi no longer renders its own shell (${JSON.stringify(tool.renderShell)}), so it no longer owns Pi's call header`);
+}
+if (tool.parameters?.type !== "object") {
+  throw new Error(`xo_watch_arm_pi parameters are not an object schema: ${JSON.stringify(tool.parameters)}`);
+}
+const SCALAR_TYPES = new Set(["number", "integer", "boolean"]);
+for (const [property, declared] of Object.entries(tool.parameters.properties ?? {})) {
+  if (!SCALAR_TYPES.has(declared?.type)) {
+    throw new Error(
+      `xo_watch_arm_pi parameter ${property} is declared ${JSON.stringify(declared?.type ?? declared)}, which xo-stock-tool-header.ts does not reproduce; reproduce and compare Pi's format for that shape before adding it`,
+    );
+  }
+}
+EOF
+)
+  status=$?
+  expect_code 0 "$status" "xo_watch_arm_pi must keep the scalar parameters the stock header reproduces: $out"
+  [ -z "$out" ] || fail "Pi stock header scalar parameter test printed output: $out"
+  pass "xo_watch_arm_pi keeps scalar-only parameters"
 }
 
 test_pi_redundant_tool_call_is_owned_noop() {
@@ -3977,6 +4045,7 @@ EOF
 
 test_pi_extension_reports_external_healthy_watcher
 test_pi_tool_returns_agent_tool_result
+test_pi_stock_header_tool_keeps_scalar_parameters
 test_pi_redundant_tool_call_is_owned_noop
 test_pi_scheduled_retry_call_is_owned_noop
 test_pi_actionable_close_starts_single_successor_before_delivery

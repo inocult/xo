@@ -4352,9 +4352,39 @@ if (JSON.stringify(actualRow.render(100)) !== JSON.stringify(stockRow.render(100
   throw new Error("ToolExecutionComponent rendering did not restore after live toggle");
 }
 
+// Pi renamed createToolHtmlRenderer's renderer-lookup dependency from
+// getToolDefinition to getToolRenderers in 1.0.1, and the renderer swallows an
+// unrecognized dependency and renders no tool. Undefined is also exactly how
+// this API signals "delegate to the structured fallback", so the wrong
+// spelling makes the delegation assertion below pass while reaching nothing.
+// Count the lookups, and prove the reachable case first.
+const htmlLookups = { stock: 0, actual: 0 };
+const stockHtml = createToolHtmlRenderer({
+  getToolRenderers: () => { htmlLookups.stock += 1; return stockDefinition; },
+  theme,
+  cwd: process.cwd(),
+});
+const actualHtml = createToolHtmlRenderer({
+  getToolRenderers: () => { htmlLookups.actual += 1; return actualDefinition; },
+  theme,
+  cwd: process.cwd(),
+});
+// Calm-off first: the extension's renderers do run here, so this is the
+// positive control that distinguishes "the throw delegated" from "Pi never
+// reached the definition at all".
+const reachableCall = actualHtml.renderCall("reachable-html", "xo_branch_outcomes", args);
+const reachableResult = actualHtml.renderResult("reachable-html", "xo_branch_outcomes", result.content, result.details, false);
+if (htmlLookups.actual === 0) {
+  throw new Error("Pi's HTML tool renderer called neither getToolRenderers nor getToolDefinition: its renderer-lookup dependency was renamed again");
+}
+if (!reachableCall || !reachableResult) {
+  throw new Error(`Calm-off HTML export did not reach the extension's own renderers: ${JSON.stringify({ reachableCall, reachableResult })}`);
+}
+if (stockHtml.renderCall("reachable-stock-html", "xo_branch_outcomes", args) !== undefined) {
+  throw new Error("a definition with no custom renderers produced custom HTML, so undefined no longer means delegation");
+}
+
 pi.events.emit("xo:calm-presentation", { active: true, stockExportRendering: true });
-const stockHtml = createToolHtmlRenderer({ getToolDefinition: () => stockDefinition, theme, cwd: process.cwd() });
-const actualHtml = createToolHtmlRenderer({ getToolDefinition: () => actualDefinition, theme, cwd: process.cwd() });
 const stockCall = stockHtml.renderCall("stock-html", "xo_branch_outcomes", args);
 const actualCall = actualHtml.renderCall("actual-html", "xo_branch_outcomes", args);
 const stockResult = stockHtml.renderResult("stock-html", "xo_branch_outcomes", result.content, result.details, false);
@@ -4362,12 +4392,117 @@ const actualResult = actualHtml.renderResult("actual-html", "xo_branch_outcomes"
 if (actualCall !== undefined || actualResult !== undefined || stockCall !== undefined || stockResult !== undefined) {
   throw new Error("stock export rendering did not delegate to Pi's structured fallback");
 }
+if (htmlLookups.stock === 0 || htmlLookups.actual === 0) {
+  throw new Error("Pi's HTML tool renderer stopped consulting its renderer-lookup dependency, so the delegation assertion proved nothing");
+}
+
+// Every arg shape the three caller schemas admit, collapsed and expanded,
+// against the installed Pi's own rendering of the same row. The header
+// XO reproduces for a self-rendered shell is the only thing that varies
+// across these shapes, so a shape Pi formats differently shows up here.
+pi.events.emit("xo:calm-presentation", { active: false, stockExportRendering: false });
+const sweepResult = {
+  content: [{ type: "text", text: "SWEPT_OUTCOME" }],
+  details: { ok: true },
+  isError: false,
+};
+const sweepShapes = [
+  ["xo_branch_outcomes", {}],
+  ["xo_branch_outcomes", { recent: 2 }],
+  ["xo_branch_processed", { through: 7 }],
+];
+for (const [toolName, shape] of sweepShapes) {
+  const registered = tools.find((tool) => tool.name === toolName);
+  if (!registered) throw new Error(`${toolName} was not registered`);
+  const stripped = { ...registered };
+  delete stripped.renderShell;
+  delete stripped.renderCall;
+  delete stripped.renderResult;
+  const label = `${toolName} ${JSON.stringify(shape)}`;
+  const sweepStock = new ToolExecutionComponent(toolName, `sweep-stock-${label}`, shape, { showImages: false }, stripped, ui, process.cwd());
+  const sweepActual = new ToolExecutionComponent(toolName, `sweep-actual-${label}`, shape, { showImages: false }, registered, ui, process.cwd());
+  for (const row of [sweepStock, sweepActual]) {
+    row.markExecutionStarted();
+    row.setArgsComplete();
+    row.updateResult(sweepResult);
+  }
+  for (const expanded of [false, true]) {
+    sweepStock.setExpanded(expanded);
+    sweepActual.setExpanded(expanded);
+    sweepStock.invalidate();
+    sweepActual.invalidate();
+    const wanted = sweepStock.render(100);
+    const got = sweepActual.render(100);
+    if (JSON.stringify(got) !== JSON.stringify(wanted)) {
+      throw new Error(
+        `${label} ${expanded ? "expanded" : "collapsed"} differs from Pi stock: ${JSON.stringify({ wanted, got })}`,
+      );
+    }
+    if (!wanted.join("\n").includes(toolName)) {
+      throw new Error(`${label} ${expanded ? "expanded" : "collapsed"} fixture rendered no title, so the comparison proved nothing`);
+    }
+  }
+}
 JS
   )
   status=$?
   expect_code 0 "$status" "Pi outcomes rendering consumers must preserve stock behavior: $out"
   [ -z "$out" ] || fail "Pi outcomes rendering consumer test printed output: $out"
   pass "xo_branch_outcomes hides through ToolExecutionComponent while Calm-off and HTML export stay stock"
+}
+
+# .pi/extensions/lib/xo-stock-tool-header.ts reproduces only the part of Pi's
+# tool-call header that scalar arguments reach: one `key=value` pair per entry
+# collapsed, one `key: value` line expanded. Pi additionally truncates a long
+# collapsed line, expands tabs and indents multiline continuations, and XO does
+# not reproduce any of that because no caller schema can produce it. That is a
+# claim about XO's own schemas, so it is checked without Pi installed: add a
+# string, array or object parameter to one of these tools and this names it,
+# instead of leaving the helper quietly disagreeing with Pi at runtime.
+test_stock_header_callers_keep_scalar_parameters() {
+  local repo out status
+  repo="$TMP_ROOT/stock-header-scalar-params"
+  install_pi_branch_extension_fixture "$repo"
+  out=$(cd "$repo" && EXT="$repo/.pi/extensions/xo-branch-supervision.ts" node --input-type=module 2>&1 <<'JS'
+import { pathToFileURL } from "node:url";
+
+const tools = [];
+const pi = {
+  events: { on() {}, emit() {} },
+  on() {},
+  registerCommand() {},
+  registerMessageRenderer() {},
+  registerTool(tool) { tools.push(tool); },
+  sendMessage() {},
+  sendUserMessage() {},
+};
+const extension = await import(pathToFileURL(process.env.EXT).href);
+extension.default(pi);
+
+const SCALAR_TYPES = new Set(["number", "integer", "boolean"]);
+for (const name of ["xo_branch_outcomes", "xo_branch_processed"]) {
+  const tool = tools.find((candidate) => candidate.name === name);
+  if (!tool) throw new Error(`${name} was not registered`);
+  if (tool.renderShell !== "self") {
+    throw new Error(`${name} no longer renders its own shell (${JSON.stringify(tool.renderShell)}), so it no longer owns Pi's call header`);
+  }
+  if (tool.parameters?.type !== "object") {
+    throw new Error(`${name} parameters are not an object schema: ${JSON.stringify(tool.parameters)}`);
+  }
+  for (const [property, declared] of Object.entries(tool.parameters.properties ?? {})) {
+    if (!SCALAR_TYPES.has(declared?.type)) {
+      throw new Error(
+        `${name} parameter ${property} is declared ${JSON.stringify(declared?.type ?? declared)}, which xo-stock-tool-header.ts does not reproduce; reproduce and compare Pi's format for that shape before adding it`,
+      );
+    }
+  }
+}
+JS
+  )
+  status=$?
+  expect_code 0 "$status" "self-shelled tools must keep the scalar parameters the stock header reproduces: $out"
+  [ -z "$out" ] || fail "stock header scalar parameter test printed output: $out"
+  pass "xo_branch_outcomes and xo_branch_processed keep scalar-only parameters"
 }
 
 # The delivery path runs on Pi's single JS thread, so a delivery that blocks
@@ -4937,6 +5072,7 @@ EOF
 }
 
 test_outcomes_tool_uses_stock_execution_and_export_consumers
+test_stock_header_callers_keep_scalar_parameters
 test_real_pi_picker_primitives_stay_bounded_and_searchable
 test_branch_dispatch_two_stage_filter_and_prefix_contract
 test_requested_healthy_outcome_and_unsolicited_routine_outcome_delivery

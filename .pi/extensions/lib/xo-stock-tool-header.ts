@@ -25,13 +25,21 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 // to a character budget, expands tabs, and indents multiline continuations;
 // none of that is reproduced, because a faithful reproduction of code no
 // schema can reach and no test compares is an untested claim of fidelity,
-// not fidelity. A caller whose schema admits a long, tabbed, or multiline
-// value needs that part of Pi's format reproduced and compared, not assumed.
+// not fidelity.
 //
-// What is actually compared against Pi's own fallback is two arg shapes:
-// tests/xo-calm-pi-extension.test.sh renders `{}` collapsed, and
-// tests/xo-pi-branch-extension.test.sh renders `{recent: 2}` collapsed and
-// expanded.
+// Two cases hold that scope, and together they are what makes the parity
+// claim above checkable rather than asserted. tests/xo-pi-branch-extension.sh
+// sweeps every arg shape the schemas admit - `{}` and `{recent: 2}` for
+// xo_branch_outcomes, `{through: 7}` for xo_branch_processed - collapsed and
+// expanded, comparing each rendered row against the same row rendered by the
+// installed Pi itself, so no Pi constant, format or spelling is restated
+// here. A companion case walks those same tools' registered schemas and
+// fails, naming the property and its type, if a parameter that is not a
+// scalar is ever added; tests/xo-pi-watch-extension.test.sh does the same for
+// xo_watch_arm_pi. Adding a long, tabbed, multiline or non-scalar parameter
+// therefore breaks that guard instead of silently putting this helper out of
+// scope, and the part of Pi's format it needs must be reproduced and compared
+// before the parameter lands.
 export function formatStockToolCallHeader(
   title: string,
   args: unknown,
@@ -43,10 +51,7 @@ export function formatStockToolCallHeader(
   const entries = Object.entries(args as Record<string, unknown>);
   if (entries.length === 0) return header;
   if (expanded) {
-    const lines = entries.map(([key, value]) => {
-      const text = typeof value === "string" ? value : (JSON.stringify(value) ?? String(value));
-      return `  ${key}: ${text}`;
-    });
+    const lines = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value) ?? String(value)}`);
     return `${header}\n${theme.fg("muted", lines.join("\n"))}`;
   }
   const pairs = entries
