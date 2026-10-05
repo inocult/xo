@@ -15,10 +15,15 @@ set -u
 TMP_ROOT=$(xo_test_tmproot xo-pi-branch-extension)
 EXT="$ROOT/.pi/extensions/xo-branch-supervision.ts"
 export NODE_NO_WARNINGS=1
-# The Pi release whose stock renderer stopped supplying an implicit reset at
-# multiline boundaries, which is the contract this file's renderer cases
-# compare against.
-PI_STOCK_RENDER_FLOOR=0.84.4
+# Oldest Pi whose stock tool rendering matches what the extension's own
+# renderers emit, and so the oldest Pi this file's renderer cases can compare
+# against. Two stock changes set it, and the newer one binds:
+#   0.84.4 stopped supplying an implicit reset at multiline boundaries, which
+#          the extension now emits itself;
+#   0.99.0 replaced the bare-title tool-call header with title-plus-arguments
+#          (formatToolCallWithArgs), which the extension reproduces through
+#          .pi/extensions/lib/xo-stock-tool-header.ts.
+PI_STOCK_RENDER_FLOOR=0.99.0
 
 # Semantic-version floor for a version string this file already holds (Pi's
 # package.json field). bin/xo-bootstrap.sh's tool_version_at_least is the same
@@ -55,6 +60,7 @@ install_pi_branch_extension_fixture() {
   cp "$EXT" "$repo/.pi/extensions/xo-branch-supervision.ts"
   cp "$ROOT/.pi/extensions/lib/xo-branch-dispatch.ts" "$repo/.pi/extensions/lib/xo-branch-dispatch.ts"
   cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$repo/.pi/extensions/lib/xo-native-contract.ts"
+  cp "$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts" "$repo/.pi/extensions/lib/xo-stock-tool-header.ts"
   cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$repo/.pi/extensions/lib/xo-async-exec.ts"
   cp "$ROOT/.pi/extensions/lib/xo-branch-model-picker.ts" "$repo/.pi/extensions/lib/xo-branch-model-picker.ts"
   cp "$ROOT/.pi/extensions/lib/xo-calm-visibility.ts" "$repo/.pi/extensions/lib/xo-calm-visibility.ts"
@@ -3809,6 +3815,7 @@ test_branch_dispatch_classifies_main_only_rows_and_writes_the_eligible_snapshot(
   mkdir -p "$repo/.pi/extensions/lib" "$home/state" "$home/projects/approved"
   cp "$ROOT/.pi/extensions/lib/xo-branch-dispatch.ts" "$repo/.pi/extensions/lib/xo-branch-dispatch.ts"
   cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$repo/.pi/extensions/lib/xo-native-contract.ts"
+  cp "$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts" "$repo/.pi/extensions/lib/xo-stock-tool-header.ts"
   cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$repo/.pi/extensions/lib/xo-async-exec.ts"
   cp "$ROOT/.pi/extensions/lib/xo-branch-model-picker.ts" "$repo/.pi/extensions/lib/xo-branch-model-picker.ts"
   printf 'project=%s/projects/approved\nwindow=xo-window\n' "$home" > "$home/state/task-a.meta"
@@ -4220,12 +4227,11 @@ test_outcomes_tool_uses_stock_execution_and_export_consumers() {
   fi
   # This case compares the extension's own renderers against Pi's stock
   # rendering, so its verdict is only meaningful against the vendor contract
-  # those renderers target: since Pi 0.84.4 the stock renderer no longer
-  # supplies an implicit reset at multiline boundaries, and the extension
-  # emits that reset itself. An older installed Pi still supplies it, so the
-  # two legitimately differ there and a comparison would report a defect that
-  # is really a version skew. Name the version and skip rather than degrade
-  # quietly; a package whose version cannot be read at all is still a failure.
+  # those renderers target (PI_STOCK_RENDER_FLOOR owns which release that is).
+  # Against an older Pi the two legitimately differ, and a comparison would
+  # report a defect that is really a version skew. Name the version and skip
+  # rather than degrade quietly; a package whose version cannot be read at all
+  # is still a failure.
   package_version=$(node -p 'require(process.argv[1]).version || ""' "$package_dir/package.json" 2>/dev/null || printf '')
   [ -n "$package_version" ] \
     || fail "installed @earendil-works/pi-coding-agent has no readable version at $package_dir"
@@ -4238,6 +4244,7 @@ test_outcomes_tool_uses_stock_execution_and_export_consumers() {
   cp "$EXT" "$fixture/.pi/extensions/xo-branch-supervision.ts"
   cp "$ROOT/.pi/extensions/lib/xo-branch-dispatch.ts" "$fixture/.pi/extensions/lib/xo-branch-dispatch.ts"
   cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$fixture/.pi/extensions/lib/xo-native-contract.ts"
+  cp "$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts" "$fixture/.pi/extensions/lib/xo-stock-tool-header.ts"
   cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$fixture/.pi/extensions/lib/xo-async-exec.ts"
   cp "$ROOT/.pi/extensions/lib/xo-branch-model-picker.ts" "$fixture/.pi/extensions/lib/xo-branch-model-picker.ts"
   cp "$ROOT/.pi/extensions/lib/xo-calm-visibility.ts" "$fixture/.pi/extensions/lib/xo-calm-visibility.ts"

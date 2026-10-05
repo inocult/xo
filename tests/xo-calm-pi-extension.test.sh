@@ -14,6 +14,7 @@ WORKING_SHIP="$ROOT/.pi/extensions/lib/xo-calm-working-ship.ts"
 WATCH_EXT="$ROOT/.pi/extensions/xo-primary-pi-watch.ts"
 OPERATIONAL_INPUT="$ROOT/bin/xo-operational-input.sh"
 PI_OPERATIONAL_INPUT="$ROOT/.pi/extensions/lib/xo-operational-input.ts"
+STOCK_TOOL_HEADER="$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts"
 PI_PACKAGE_DIR=${XO_PI_PACKAGE_DIR:-"$(npm root -g 2>/dev/null)/@earendil-works/pi-coding-agent"}
 TMUX_SOCKET="xo-calm-$$"
 TMUX_SESSION="xo-calm-e2e"
@@ -172,6 +173,7 @@ test_home_resolution() {
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/xo-calm-visibility.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/xo-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/xo-operational-input.ts"
+  cp "$STOCK_TOOL_HEADER" "$fixture/project/.pi/extensions/lib/xo-stock-tool-header.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
   ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-tui" "$fixture/project/node_modules/@earendil-works/pi-tui"
   ln -s "$PI_PACKAGE_DIR/node_modules/typebox" "$fixture/project/node_modules/typebox"
@@ -294,6 +296,7 @@ test_pi_compat_degraded_adapter() {
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/xo-calm-visibility.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/xo-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/xo-operational-input.ts"
+  cp "$STOCK_TOOL_HEADER" "$fixture/project/.pi/extensions/lib/xo-stock-tool-header.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
   ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-tui" "$fixture/project/node_modules/@earendil-works/pi-tui"
   ln -s "$PI_PACKAGE_DIR/node_modules/typebox" "$fixture/project/node_modules/typebox"
@@ -393,6 +396,7 @@ test_pi_compat_missing_adapter_exports() {
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/xo-calm-visibility.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/xo-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/xo-operational-input.ts"
+  cp "$STOCK_TOOL_HEADER" "$fixture/project/.pi/extensions/lib/xo-stock-tool-header.ts"
   printf '%s\n' '{"type":"module"}' >"$fixture/project/package.json"
   printf '%s\n' \
     '{"name":"@earendil-works/pi-coding-agent","type":"module","exports":"./index.js"}' \
@@ -453,6 +457,7 @@ test_builtin_gate_load_time() {
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/xo-calm-visibility.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/xo-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/xo-operational-input.ts"
+  cp "$STOCK_TOOL_HEADER" "$fixture/project/.pi/extensions/lib/xo-stock-tool-header.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
   ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-tui" "$fixture/project/node_modules/@earendil-works/pi-tui"
   ln -s "$PI_PACKAGE_DIR/node_modules/typebox" "$fixture/project/node_modules/typebox"
@@ -539,6 +544,7 @@ test_calm_activation_collision_and_regression_bound() {
   cp "$VISIBILITY" "$fixture/project/.pi/extensions/lib/xo-calm-visibility.ts"
   cp "$WORKING_SHIP" "$fixture/project/.pi/extensions/lib/xo-calm-working-ship.ts"
   cp "$PI_OPERATIONAL_INPUT" "$fixture/project/.pi/extensions/lib/xo-operational-input.ts"
+  cp "$STOCK_TOOL_HEADER" "$fixture/project/.pi/extensions/lib/xo-stock-tool-header.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/project/node_modules/@earendil-works/pi-coding-agent"
   ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-tui" "$fixture/project/node_modules/@earendil-works/pi-tui"
   ln -s "$PI_PACKAGE_DIR/node_modules/typebox" "$fixture/project/node_modules/typebox"
@@ -757,6 +763,7 @@ test_rendering_and_session_lifecycle() {
   cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$fixture/lib/xo-native-contract.ts"
   cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$fixture/lib/xo-async-exec.ts"
   cp "$WATCH_EXT" "$fixture/xo-primary-pi-watch.ts"
+  cp "$STOCK_TOOL_HEADER" "$fixture/lib/xo-stock-tool-header.ts"
   ln -s "$PI_PACKAGE_DIR" "$fixture/node_modules/@earendil-works/pi-coding-agent"
   ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-tui" "$fixture/node_modules/@earendil-works/pi-tui"
   ln -s "$PI_PACKAGE_DIR/node_modules/typebox" "$fixture/node_modules/typebox"
@@ -1292,14 +1299,30 @@ for (const { name, actual } of rows) {
     throw new Error(`${name} was not hidden before export rendering`);
   }
 }
-async function assertStockHtmlRendering(command, submitData) {
-  editorText = command;
-  terminalInputHandler(submitData);
-  const htmlRenderer = createToolHtmlRenderer({
-    getToolDefinition: (name) => tools.find((tool) => tool.name === name),
+// Pi renamed createToolHtmlRenderer's renderer-lookup dependency from
+// getToolDefinition to getToolRenderers in 1.0.1. Supply both names so this
+// fixture stands in for either export host, and count the lookups: Pi swallows
+// a throwing or missing dependency and simply renders no tool, so without this
+// counter a third rename would leave the case passing while asserting nothing.
+function createExportHostRenderer() {
+  const lookups = { count: 0 };
+  const getToolRenderers = (name) => {
+    lookups.count += 1;
+    return tools.find((tool) => tool.name === name);
+  };
+  const renderer = createToolHtmlRenderer({
+    getToolRenderers,
+    getToolDefinition: getToolRenderers,
     theme,
     cwd: process.cwd(),
   });
+  return { renderer, lookups };
+}
+
+async function assertStockHtmlRendering(command, submitData) {
+  editorText = command;
+  terminalInputHandler(submitData);
+  const { renderer: htmlRenderer, lookups } = createExportHostRenderer();
   const exportCases = [
     ...cases.filter(([toolName]) => toolName === "grep" || toolName === "find"),
     ["xo_watch_arm_pi", watchArgs, watchResult],
@@ -1318,6 +1341,11 @@ async function assertStockHtmlRendering(command, submitData) {
       throw new Error(`${name} disappeared from ${command} HTML while calm mode was on`);
     }
   }
+  if (lookups.count === 0) {
+    throw new Error(
+      `Pi's HTML tool renderer called neither getToolRenderers nor getToolDefinition for ${command}: its renderer-lookup dependency was renamed again`,
+    );
+  }
   editorText = "";
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -1326,11 +1354,7 @@ await assertStockHtmlRendering("/export calm.html", "\r");
 getKeybindings().setUserBindings({ "tui.input.submit": "alt+s" });
 editorText = "/export remapped.html";
 terminalInputHandler("\r");
-const unmatchedRenderer = createToolHtmlRenderer({
-  getToolDefinition: (name) => tools.find((tool) => tool.name === name),
-  theme,
-  cwd: process.cwd(),
-});
+const { renderer: unmatchedRenderer } = createExportHostRenderer();
 if (unmatchedRenderer.renderCall("unmatched-submit", "grep", { pattern: "alpha", path: "." })) {
   throw new Error("ordinary non-submit input activated HTML export rendering");
 }
@@ -3331,6 +3355,7 @@ test_interactive_terminal_e2e() {
   cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$project/.pi/extensions/lib/xo-native-contract.ts"
   cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$project/.pi/extensions/lib/xo-async-exec.ts"
   cp "$WATCH_EXT" "$project/.pi/extensions/xo-primary-pi-watch.ts"
+  cp "$STOCK_TOOL_HEADER" "$project/.pi/extensions/lib/xo-stock-tool-header.ts"
   cp "$ROOT/.pi/extensions/xo-primary-turnend-guard.ts" "$project/.pi/extensions/xo-primary-turnend-guard.ts"
   cp \
     "$ROOT/bin/xo-sessionstart-run.sh" \

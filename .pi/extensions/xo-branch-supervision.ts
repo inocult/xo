@@ -89,6 +89,7 @@ import {
 import { Box, Container, fuzzyFilter, Input, SelectList, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { registerXoTool } from "./lib/xo-native-contract.ts";
+import { formatStockToolCallHeader } from "./lib/xo-stock-tool-header.ts";
 import { runCommandAsync } from "./lib/xo-async-exec.ts";
 import {
   type CalmPresentationState,
@@ -2071,11 +2072,15 @@ ${context.command}
       recent: Type.Optional(Type.Number({ description: "How many most-recent outcomes to read (default 20)" })),
     }),
     renderShell: "self",
-    renderCall: (_args, theme, context) => {
+    renderCall: (args, theme, context) => {
       if (calmPresentation.stockExportRendering) throw new Error("Use Pi stock export rendering");
       if (calmHides("assistant-tool-call")) return new Container();
       const shellState = context.state as OutcomesToolShellState;
-      shellState.call = new Text(theme.fg("toolTitle", theme.bold("xo_branch_outcomes")), 0, 0);
+      shellState.call = new Text(
+        formatStockToolCallHeader("xo_branch_outcomes", args, theme, context.expanded),
+        0,
+        0,
+      );
       return refreshOutcomesToolShell(shellState, theme, context);
     },
     renderResult: (result, options, theme, context) => {
@@ -2133,11 +2138,15 @@ ${context.command}
       through: Type.Number({ description: "The highest outcome sequence number this conversation has processed" }),
     }),
     renderShell: "self",
-    renderCall: (_args, theme, context) => {
+    renderCall: (args, theme, context) => {
       if (calmPresentation.stockExportRendering) throw new Error("Use Pi stock export rendering");
       if (calmHides("assistant-tool-call")) return new Container();
       const shellState = context.state as OutcomesToolShellState;
-      shellState.call = new Text(theme.fg("toolTitle", theme.bold("xo_branch_processed")), 0, 0);
+      shellState.call = new Text(
+        formatStockToolCallHeader("xo_branch_processed", args, theme, context.expanded),
+        0,
+        0,
+      );
       return refreshOutcomesToolShell(shellState, theme, context);
     },
     renderResult: (result, _options, theme, context) => {

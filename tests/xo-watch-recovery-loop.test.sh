@@ -21,6 +21,7 @@ install_pi_watch_extension_fixture() {
   cp "$ROOT/.pi/extensions/xo-primary-pi-watch.ts" "$repo/.pi/extensions/xo-primary-pi-watch.ts"
   cp "$ROOT/.pi/extensions/lib/xo-branch-dispatch.ts" "$repo/.pi/extensions/lib/xo-branch-dispatch.ts"
   cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$repo/.pi/extensions/lib/xo-native-contract.ts"
+  cp "$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts" "$repo/.pi/extensions/lib/xo-stock-tool-header.ts"
   cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$repo/.pi/extensions/lib/xo-async-exec.ts"
   cp "$ROOT/.pi/extensions/lib/xo-calm-visibility.ts" "$repo/.pi/extensions/lib/xo-calm-visibility.ts"
   cp "$ROOT/.pi/extensions/lib/xo-operational-input.ts" "$repo/.pi/extensions/lib/xo-operational-input.ts"

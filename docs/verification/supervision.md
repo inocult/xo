@@ -203,6 +203,28 @@ The Ahoy first-message boundary was reverified on 2026-07-22 with Pi 0.81.1 and 
 Marked current operational input and the two exact legacy compatibility shapes selected Bearings, while genuine near-miss captain messages remained real boundaries.
 The detailed reconciliation and task chronology stay in the private audit report and PR evidence.
 
+## Pi extension rendering parity
+
+XO's own Pi tools render their own shell so Calm can hide a row completely, which means XO reproduces Pi's stock tool-call header instead of inheriting it.
+That parity was reverified on 2026-10-05 against real installed Pi packages, both installed exactly as CI installs them (`npm install -g @earendil-works/pi-coding-agent@<version>`).
+
+```sh
+XO_PI_PACKAGE_DIR="$(npm root -g)/@earendil-works/pi-coding-agent" \
+  tests/xo-pi-branch-extension.test.sh
+XO_PI_PACKAGE_DIR="$(npm root -g)/@earendil-works/pi-coding-agent" \
+  tests/xo-calm-pi-extension.test.sh
+```
+
+| Pi installed | Branch extension | Calm extension |
+| --- | --- | --- |
+| 1.0.4 | 42 passed, 0 skipped | 13 passed |
+| 0.87.1 | 41 passed, stock-render comparison skipped by `PI_STOCK_RENDER_FLOOR` | 13 passed |
+
+Two stock changes in that interval are load-bearing and were each bisected against the published packages rather than inferred from the failures.
+Pi 0.99.0 replaced the bare-title tool-call header with title-plus-arguments, so an XO tool that still emitted a bare title diverged from every stock row beside it.
+Pi 1.0.1 renamed `createToolHtmlRenderer`'s renderer-lookup dependency from `getToolDefinition` to `getToolRenderers`; no XO extension calls that API, so this one reached only the Calm test's export-host fixture, where an unrecognized dependency is swallowed and renders no tool at all.
+The fixture now supplies both names and asserts that Pi called one of them, so a third rename fails loudly instead of passing while asserting nothing.
+
 ## Semantic busy state
 
 The per-adapter semantic sources behind [`bin/xo-busy-lib.sh`](../../bin/xo-busy-lib.sh) were live-verified on 2026-07-28 against XO-launched workers wired exactly as `xo-spawn` writes them.
