@@ -9,6 +9,20 @@ on:
 permissions:
   contents: read
 
+# Single owner of the Pi package version CI installs.
+# An unpinned install reddens every branch at once the moment the publisher
+# ships a behavior change: the two Pi extension tests compare XO's extension
+# rendering against Pi's own stock rendering, so the installed Pi build is
+# their only input. Pi 1.0.x changed that stock rendering and breaks both.
+# This pin holds CI on the pre-1.0 Pi line, which is the newest line where
+# tests/xo-calm-pi-extension.test.sh and tests/xo-pi-branch-extension.test.sh
+# both pass. It is not a decision to stay on 0.87 forever: realigning the
+# extensions to Pi 1.0 is separate work.
+# To bump deliberately: change this value only, run both named tests against
+# the candidate, and raise it only when both pass.
+env:
+  XO_PI_PACKAGE_VERSION: 0.87.1
+
 jobs:
   lint:
     name: Lint
@@ -77,7 +91,7 @@ jobs:
       - name: Install the Pi package for the Pi extension tests
         run: |
           set -eu
-          npm install -g @earendil-works/pi-coding-agent
+          npm install -g "@earendil-works/pi-coding-agent@$XO_PI_PACKAGE_VERSION"
           npm ls -g --depth 0 @earendil-works/pi-coding-agent
       - name: Run portable parallel shard 1
         run: |
@@ -183,7 +197,7 @@ jobs:
       - name: Install the Pi package for the Pi extension tests
         run: |
           set -eu
-          npm install -g @earendil-works/pi-coding-agent
+          npm install -g "@earendil-works/pi-coding-agent@$XO_PI_PACKAGE_VERSION"
           npm ls -g --depth 0 @earendil-works/pi-coding-agent
       - name: Run portable serial shard ${{ matrix.shard }}
         env:

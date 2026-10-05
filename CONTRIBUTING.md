@@ -118,6 +118,7 @@ Source those instead of copying a fake toolchain into a new suite.
 A fixture may shorten a production timeout to keep a failure path prompt, but never below what the real work inside that window costs on a loaded machine: a fork, an exec, a lock acquisition, a beacon publication, or a first-poll check.
 Where a case's assertion is not about the timeout itself, give that window headroom over the measured loaded cost, and bound the test's own waiting with iteration-counted poll loops, which stretch under load where a wall-clock budget does not.
 Tests that need a real optional backend or an explicit opt-in (real herdr/zellij/cmux smoke tests, the live Pi regression) skip themselves and print the tool or environment gate needed to enable them, so the portable suite remains safe on machines without those tools.
+The Pi extension suites compare XO's rendering against the stock rendering of whatever `@earendil-works/pi-coding-agent` build is installed, so run them against the Pi version pinned in [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which owns that pin and its rationale; a newer published Pi can fail them on its own rendering changes, and `XO_PI_PACKAGE_DIR` points a run at a specific install.
 The [Herdr backend guide](docs/herdr-backend.md#destructive-lab-safety) owns the lane's isolation boundary, while [runtime backend verification](docs/verification/runtime-backends.md#herdr) owns active empirical evidence; live harness credential tests remain opt-in.
 
 ## Questions

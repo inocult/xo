@@ -34,6 +34,8 @@ These are supported-API boundaries rather than hidden-content failures.
 ## Pi compatibility
 
 Calm has no numeric Pi version minimum or maximum and never refuses Pi solely because its version is newer than a previously verified version.
+That is a refusal policy rather than a verification claim: Calm is verified against the Pi version pinned in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which holds that pin on the pre-1.0 Pi line, and Calm's behavior on Pi 1.0.x is unverified in either direction.
+The `xo-pi-1-0-realign` follow-up task is where that answer comes from.
 The collapsed-thinking and operational-user-row presentation adapters probe the exact Pi API seam they patch when Calm loads.
 If Pi removes one of those seams, Calm logs a diagnostic naming the unavailable adapter and skips only that adapter; `/calm`, the other adapter, and unrelated Pi extensions remain available.
 
