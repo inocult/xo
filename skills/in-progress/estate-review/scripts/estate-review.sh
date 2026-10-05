@@ -1070,7 +1070,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "The same nine sections appear in the same order for every estate, and a section with no data says so rather than disappearing.",
   "Two reports of the same estate are therefore comparable line for line, and section 9 names the read every figure came from.",
   "",
-  "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories \(if $o.exclude_archived then "excluded" else "included and labelled" end), at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories.",
+  "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories included and labelled, at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories.",
   "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
   "Both of those thresholds, and every figure they select over, are measured from when this review collected rather than from inside the window, because they are facts about the estate now rather than events in it: the repository set and each default branch, the archived flag, whether an account is automation, days since last push, the open pull request and open issue counts, the stalled list with its idle and age days, and what section 9 records as read.",
   "Rather than list where each is labelled, the rule holds everywhere: a table column carrying a figure measured that way ends its heading `at collection`, and a column carrying a figure that does not is bounded by the window. A column that names rather than measures - a repository, an account, a pull request's number or title - carries no clock. Section 9 is the exception and is collection-time throughout, because it records the reads themselves.",
@@ -1423,7 +1423,6 @@ OPTIONS_JSON=$(jq -n \
     unmaintained_days: $unmaintained_days, max_repos: $max_repos, max_prs: $max_prs,
     max_listed: $max_listed,
     include_forks: ($scope_kind != "organization"),
-    exclude_archived: false,
     reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages,
     pull_request_page_limit: $pr_page_limit, pull_request_page_size: $pr_page_size,
     trend_band_pct: 15}')

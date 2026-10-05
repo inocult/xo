@@ -170,6 +170,10 @@
       "audience": "agent-runtime"
     },
     {
+      "path": "skills/in-progress/estate-review/reference.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "skills/in-progress/xo-codexapp/SKILL.md",
       "audience": "agent-runtime"
     },

@@ -1098,6 +1098,33 @@ BOUNDS
   pass "every collection bound section 1 states is printed from the model, so the disclosure cannot drift from it"
 }
 
+test_an_archived_repository_is_reviewed_and_labelled() {
+  local root bin model report
+  root=$(xo_test_tmproot xo-estate-review-archived) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  # acme/attic is archived. Including it is fixed behaviour, not a setting, so
+  # two things have to hold together: it is reviewed rather than filtered out,
+  # and the reader is told it is archived. Dropping it silently would understate
+  # the estate; including it unlabelled would overstate how much of the estate
+  # is alive.
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "true" "$(jq -r '.repositories[] | select(.name == "acme/attic") | .archived' "$root/model.json")"     "the archived repository is reviewed and carries its archived flag"
+  assert_equals "2" "$(jq -r '.repositories | length' "$root/model.json")"     "it is counted in the reviewed set rather than filtered out"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_grep "archived repositories included and labelled" "$report"     "section 1 states the archived selection the code actually performs"
+  assert_grep "| acme/attic |" "$report" "the archived repository has its own row in section 7"
+  # The unmaintained list is where an archived repository has to surface, because
+  # that is the section a reader checks for what is no longer being worked on.
+  assert_equals "acme/attic" "$(jq -r '.risk.unmaintained[] | select(.archived) | .repo' "$root/model.json")"     "an archived repository reaches the unmaintained list marked as archived"
+  pass "an archived repository is reviewed, labelled, and surfaced in the unmaintained list"
+}
+
 test_an_estate_larger_than_the_caps_names_both_of_them() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-listcap) || fail "no fixture root"
@@ -1496,6 +1523,7 @@ test_scope_and_argument_validation_refuses_rather_than_guessing
 test_a_single_repository_review_is_the_same_report_with_one_row
 test_repository_selection_excludes_forks_and_discloses_it
 test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork
+test_an_archived_repository_is_reviewed_and_labelled
 test_an_estate_larger_than_the_caps_names_both_of_them
 test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged
 test_each_pull_request_walk_spends_its_own_budget
