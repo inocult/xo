@@ -1136,9 +1136,10 @@ test_a_repository_with_no_push_date_is_named_unmaintained() {
   # report must not say nothing is unmaintained while that repository is in it.
   jq '[.[] | select(.name == "widgets")] + [{full_name: "acme/placeholder", name: "placeholder",
        owner: {login: "acme"}, default_branch: "main", archived: false, fork: false,
-       pushed_at: null, private: false}]' "$root/fixtures/repos.json" > "$root/fixtures/repos.tmp" &&
-    mv "$root/fixtures/repos.tmp" "$root/fixtures/repos.json" ||
-    fail "could not write the never-pushed repository"
+       pushed_at: null, private: false}]' "$root/fixtures/repos.json" > "$root/fixtures/repos.tmp" ||
+    fail "could not build the never-pushed repository fixture"
+  mv "$root/fixtures/repos.tmp" "$root/fixtures/repos.json" ||
+    fail "could not install the never-pushed repository fixture"
   install_fake_gh_axi "$bin" "$root/fixtures" ok
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
     fail "collection failed"
@@ -1171,9 +1172,10 @@ test_a_never_pushed_repository_heads_the_bounded_unmaintained_list() {
            pushed_at: "2026-03-30T00:00:00Z", private: false}]
       + [{full_name: "acme/placeholder", name: "placeholder", owner: {login: "acme"},
            default_branch: "main", archived: false, fork: false, pushed_at: null, private: false}]' \
-    "$root/fixtures/repos.json" > "$root/fixtures/repos.tmp" &&
-    mv "$root/fixtures/repos.tmp" "$root/fixtures/repos.json" ||
-    fail "could not write the oversized unmaintained estate"
+    "$root/fixtures/repos.json" > "$root/fixtures/repos.tmp" ||
+    fail "could not build the oversized unmaintained estate fixture"
+  mv "$root/fixtures/repos.tmp" "$root/fixtures/repos.json" ||
+    fail "could not install the oversized unmaintained estate fixture"
   install_fake_gh_axi "$bin" "$root/fixtures" ok
   model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
     fail "collection failed"
