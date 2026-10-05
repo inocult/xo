@@ -218,12 +218,13 @@ XO_PI_PACKAGE_DIR="$(npm root -g)/@earendil-works/pi-coding-agent" \
 | Pi installed | Branch extension | Calm extension |
 | --- | --- | --- |
 | 1.0.4 | 42 passed, 0 skipped | 13 passed |
-| 0.87.1 | 41 passed, stock-render comparison skipped by `PI_STOCK_RENDER_FLOOR` | 13 passed |
+| 0.87.1 | 41 passed, stock-render comparison skipped by `PI_STOCK_RENDER_FLOOR` | not supported, fails at the export-host fixture |
 
 Two stock changes in that interval are load-bearing and were each bisected against the published packages rather than inferred from the failures.
 Pi 0.99.0 replaced the bare-title tool-call header with title-plus-arguments, so an XO tool that still emitted a bare title diverged from every stock row beside it.
 Pi 1.0.1 renamed `createToolHtmlRenderer`'s renderer-lookup dependency from `getToolDefinition` to `getToolRenderers`; no XO extension calls that API, so this one reached only the Calm test's export-host fixture, where an unrecognized dependency is swallowed and renders no tool at all.
-The fixture now supplies both names and asserts that Pi called one of them, so a third rename fails loudly instead of passing while asserting nothing.
+The fixture supplies the 1.0 name only and asserts that Pi called it, so both a pre-1.0 Pi and a third rename fail loudly instead of passing while asserting nothing.
+That is why the Calm suite needs Pi 1.0.1 or newer: a developer on an older Pi gets a named failure telling them to update rather than a green suite proving nothing.
 
 ## Semantic busy state
 

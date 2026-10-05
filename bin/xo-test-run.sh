@@ -1407,7 +1407,8 @@ families_for_changed_path() {
       printf '%s\n' "__script__:xo-quota-choose.test.sh"
       ;;
     .pi/extensions/xo-branch-supervision.ts|.pi/extensions/lib/xo-async-exec.ts|\
-    .pi/extensions/lib/xo-branch-dispatch.ts|.pi/extensions/lib/xo-native-contract.ts)
+    .pi/extensions/lib/xo-branch-dispatch.ts|.pi/extensions/lib/xo-native-contract.ts|\
+    .pi/extensions/lib/xo-stock-tool-header.ts)
       # The portable suites that actually load these files, named one by one.
       # Left unmapped, a Pi extension library resolves through the reference
       # scan, which widens to each referencing suite's WHOLE family - and

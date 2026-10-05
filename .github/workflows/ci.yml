@@ -13,10 +13,12 @@ permissions:
 # An unpinned install reddens every branch at once the moment the publisher
 # ships a behavior change: the two Pi extension tests compare XO's extension
 # rendering against Pi's own stock rendering, so the installed Pi build is
-# their only input. The pin exists to make that upgrade deliberate, not to
-# hold CI behind the published line - it tracks the current Pi release, so CI
-# exercises the Pi that XO users actually run.
-# To bump deliberately: change this value only, run
+# their only input. The pin exists to make that upgrade deliberate.
+# This value is bumped by hand. Nothing in this repo compares it against the
+# registry and nothing here announces a new Pi release, so the pin asserts no
+# property about currency - it records only what was true when it was last
+# set: verified 2026-10-05 against published 1.0.4.
+# To bump: change this value only, run
 # tests/xo-calm-pi-extension.test.sh and tests/xo-pi-branch-extension.test.sh
 # against the candidate, and raise it only when both pass.
 env:

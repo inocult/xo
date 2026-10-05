@@ -1300,19 +1300,18 @@ for (const { name, actual } of rows) {
   }
 }
 // Pi renamed createToolHtmlRenderer's renderer-lookup dependency from
-// getToolDefinition to getToolRenderers in 1.0.1. Supply both names so this
-// fixture stands in for either export host, and count the lookups: Pi swallows
-// a throwing or missing dependency and simply renders no tool, so without this
-// counter a third rename would leave the case passing while asserting nothing.
+// getToolDefinition to getToolRenderers in 1.0.1. Supply the 1.0 name only, so
+// a pre-1.0 Pi fails loudly here instead of passing quietly against a line XO
+// does not verify. Count the lookups too: Pi swallows a throwing or missing
+// dependency and simply renders no tool, so without this counter a third
+// rename would leave the case passing while asserting nothing.
 function createExportHostRenderer() {
   const lookups = { count: 0 };
-  const getToolRenderers = (name) => {
-    lookups.count += 1;
-    return tools.find((tool) => tool.name === name);
-  };
   const renderer = createToolHtmlRenderer({
-    getToolRenderers,
-    getToolDefinition: getToolRenderers,
+    getToolRenderers: (name) => {
+      lookups.count += 1;
+      return tools.find((tool) => tool.name === name);
+    },
     theme,
     cwd: process.cwd(),
   });
@@ -1343,7 +1342,7 @@ async function assertStockHtmlRendering(command, submitData) {
   }
   if (lookups.count === 0) {
     throw new Error(
-      `Pi's HTML tool renderer called neither getToolRenderers nor getToolDefinition for ${command}: its renderer-lookup dependency was renamed again`,
+      `Pi's HTML tool renderer did not call getToolRenderers for ${command}: its renderer-lookup dependency was renamed again`,
     );
   }
   editorText = "";

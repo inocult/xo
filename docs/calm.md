@@ -34,8 +34,9 @@ These are supported-API boundaries rather than hidden-content failures.
 ## Pi compatibility
 
 Calm has no numeric Pi version minimum or maximum and never refuses Pi solely because its version is newer than a previously verified version.
-That is a refusal policy rather than a verification claim: Calm is verified against the Pi version pinned in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which tracks the current Pi release, so CI exercises Calm on the Pi line XO users actually run.
-Calm is verified on the Pi 1.0 line, and `tests/xo-calm-pi-extension.test.sh` also passes against the pre-1.0 line because its export-host fixture accepts both names Pi has used for the renderer-lookup dependency it renamed in 1.0.1.
+That is a refusal policy rather than a verification claim: Calm is verified against the Pi version pinned in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which is bumped by hand and claims nothing about currency - it records only that it was verified on 2026-10-05 against published Pi 1.0.4.
+Nothing announces a newer Pi release, so a Pi newer than that pin is unverified rather than refused.
+Calm is verified on the Pi 1.0 line, and `tests/xo-calm-pi-extension.test.sh` requires Pi 1.0.1 or newer: its export-host fixture supplies the renderer-lookup dependency only under the name Pi has used since 1.0.1, so an older Pi fails loudly instead of passing quietly against a line XO does not verify.
 The collapsed-thinking and operational-user-row presentation adapters probe the exact Pi API seam they patch when Calm loads.
 If Pi removes one of those seams, Calm logs a diagnostic naming the unavailable adapter and skips only that adapter; `/calm`, the other adapter, and unrelated Pi extensions remain available.
 

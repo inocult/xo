@@ -13,20 +13,25 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 // format here is therefore forced by Pi's API shape, not a stylistic choice.
 //
 // Pi 0.99.0 replaced the old bare-title header with title-plus-arguments.
-// Collapsed, arguments are `key=value` pairs appended to the title line and cut
-// to COLLAPSED_ARGS_CHARS; expanded, each becomes a `key: value` line below the
-// title with continuation lines indented. Keeping byte parity matters because
-// an XO tool row sits in the same transcript as every stock tool row: a bare
-// title next to `grep pattern=...` reads as a rendering bug.
+// Collapsed, arguments are `key=value` pairs appended to the title line;
+// expanded, each becomes a `key: value` line below the title. Keeping byte
+// parity matters because an XO tool row sits in the same transcript as every
+// stock tool row: a bare title next to `grep pattern=...` reads as a
+// rendering bug.
 //
-// tests/xo-pi-branch-extension.test.sh compares a self-shelled XO row against
-// the same row rendered by Pi's own fallback and fails on any difference, so
-// this reproduction cannot drift silently.
-const COLLAPSED_ARGS_CHARS = 100;
-
-// Pi's own tab handling for header values (core/tools/render-utils.ts).
-const replaceTabs = (text: string): string => text.replace(/\t/g, "   ");
-
+// Scope is the three XO callers' parameter schemas and nothing more: `{}`,
+// `{recent?: number}` and `{through: number}`, so every entry is a scalar that
+// occupies one line. Pi's own header additionally cuts a long collapsed line
+// to a character budget, expands tabs, and indents multiline continuations;
+// none of that is reproduced, because a faithful reproduction of code no
+// schema can reach and no test compares is an untested claim of fidelity,
+// not fidelity. A caller whose schema admits a long, tabbed, or multiline
+// value needs that part of Pi's format reproduced and compared, not assumed.
+//
+// What is actually compared against Pi's own fallback is two arg shapes:
+// tests/xo-calm-pi-extension.test.sh renders `{}` collapsed, and
+// tests/xo-pi-branch-extension.test.sh renders `{recent: 2}` collapsed and
+// expanded.
 export function formatStockToolCallHeader(
   title: string,
   args: unknown,
@@ -34,23 +39,18 @@ export function formatStockToolCallHeader(
   expanded: boolean,
 ): string {
   const header = theme.fg("toolTitle", theme.bold(title));
-  if (args == null) return header;
-  const entries: [string, unknown][] =
-    typeof args === "object" && !Array.isArray(args)
-      ? Object.entries(args as Record<string, unknown>)
-      : [["args", args]];
+  if (args == null || typeof args !== "object") return header;
+  const entries = Object.entries(args as Record<string, unknown>);
   if (entries.length === 0) return header;
   if (expanded) {
     const lines = entries.map(([key, value]) => {
-      const text = typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? String(value));
-      return `  ${key}: ${replaceTabs(text).replace(/\r/g, "").split("\n").join("\n    ")}`;
+      const text = typeof value === "string" ? value : (JSON.stringify(value) ?? String(value));
+      return `  ${key}: ${text}`;
     });
     return `${header}\n${theme.fg("muted", lines.join("\n"))}`;
   }
   const pairs = entries
     .map(([key, value]) => `${key}=${JSON.stringify(value) ?? String(value)}`)
     .join(" ");
-  const preview =
-    pairs.length > COLLAPSED_ARGS_CHARS ? `${pairs.slice(0, COLLAPSED_ARGS_CHARS - 3)}...` : pairs;
-  return `${header} ${theme.fg("muted", preview)}`;
+  return `${header} ${theme.fg("muted", pairs)}`;
 }
