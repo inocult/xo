@@ -1,0 +1,15 @@
+### Is 0.87.1 really the newest version where both named tests pass?
+### npm versions between the pin and 1.0.0: 0.99.0, 0.99.1, 0.99.2 (nothing else)
+
+=== Pi 0.99.0 ===
+tests/xo-calm-pi-extension.test.sh -> exit 0 | 
+tests/xo-pi-branch-extension.test.sh -> exit 1 | not ok - Pi outcomes rendering consumers must preserve stock behavior: file:///tmp/xo-pi-branch-extension.6LmWIm/stock-render-consumers/[eva
+
+=== Pi 0.99.1 ===
+tests/xo-calm-pi-extension.test.sh -> exit 0 | 
+tests/xo-pi-branch-extension.test.sh -> exit 1 | not ok - Pi outcomes rendering consumers must preserve stock behavior: file:///tmp/xo-pi-branch-extension.QpIVtu/stock-render-consumers/[eva
+
+=== Pi 0.99.2 ===
+tests/xo-calm-pi-extension.test.sh -> exit 0 | 
+tests/xo-pi-branch-extension.test.sh -> exit 1 | not ok - Pi outcomes rendering consumers must preserve stock behavior: file:///tmp/xo-pi-branch-extension.s44dMC/stock-render-consumers/[eva
+

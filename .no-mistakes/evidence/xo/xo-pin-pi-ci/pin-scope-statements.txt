@@ -1,0 +1,29 @@
+### The pin definition as it appears in .github/workflows/ci.yml (lines 11-24)
+
+
+# Single owner of the Pi package version CI installs.
+# An unpinned install reddens every branch at once the moment the publisher
+# ships a behavior change: the two Pi extension tests compare XO's extension
+# rendering against Pi's own stock rendering, so the installed Pi build is
+# their only input. Pi 1.0.x changed that stock rendering and breaks both.
+# This pin holds CI on the pre-1.0 Pi line, which is the newest line where
+# tests/xo-calm-pi-extension.test.sh and tests/xo-pi-branch-extension.test.sh
+# both pass. It is not a decision to stay on 0.87 forever: realigning the
+# extensions to Pi 1.0 is separate work.
+# To bump deliberately: change this value only, run both named tests against
+# the candidate, and raise it only when both pass.
+env:
+  XO_PI_PACKAGE_VERSION: 0.87.1
+
+### Commit 979373e subject + the two paragraphs that scope the pin
+
+ci: pin the Pi package to 0.87.1 from one owner
+
+Version chosen by running both named tests against candidate installs: 1.0.2,
+1.0.1, 1.0.0, 0.99.2 and 0.99.0 all fail the branch-extension stock-parity
+case; 0.87.1 is the newest version where both tests pass, so the pin holds CI
+on the pre-1.0 Pi line rather than taking latest.
+
+The pin stops branches going red on an unrelated publish. It does not resolve
+the Pi 1.0 divergence - realigning the extensions to Pi 1.0 is separate work,
+and the comment at the pin definition says so.

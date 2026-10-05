@@ -1,0 +1,18 @@
+### Guard: the CI install step without the workflow env present
+
+--- A) XO_PI_PACKAGE_VERSION unset (env block removed/renamed) ---
+bash: line 2: XO_PI_PACKAGE_VERSION: unbound variable
+step exit: 1
+installed anything? ls: cannot access '/tmp/xo-pi-pin-U5seWn/prefix-guard-unset/lib/node_modules/@earendil-works': No such file or directory
+
+--- B) XO_PI_PACKAGE_VERSION set to empty string ---
+
+added 121 packages in 2s
+
+9 packages are looking for funding
+  run `npm fund` for details
+/tmp/xo-pi-pin-U5seWn/prefix-guard-empty/lib
+└── @earendil-works/pi-coding-agent@1.0.2
+
+step exit: 0
+resolved: 1.0.2
