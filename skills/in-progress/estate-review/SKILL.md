@@ -15,7 +15,10 @@ XO neither loads nor dispatches it, so it is not XO runtime code and carries no 
 
 Review an estate and tell the captain what is actually happening in it.
 
-`scripts/estate-review.sh`, beside this file, is the single owner of collection, every metric definition, and the report's shape; its header and `--help` own the flags.
+`scripts/estate-review.sh`, beside this file, is the single owner of collection, every metric definition, and the report's shape; its `--help` owns the flags.
+[`reference.md`](reference.md) holds the mechanics: the fixed constants and why each exists, the per-walk collection bounds, which cap bounds which figure, which clock every figure is measured against, the report's sections, the model contract, and the gh-axi coupling.
+
+It needs `gh-axi` on PATH for every GitHub read and `jq` for derivation and rendering; both are hard requirements the script checks before it starts.
 This skill owns which estate and window to point it at, what the captain hears back, and the two boundaries that matter: the review never writes to the estate, and it never ranks people.
 
 ## 1. Resolve the estate and the window

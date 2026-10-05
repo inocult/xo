@@ -2,135 +2,27 @@
 # estate-review.sh - read-only estate review with a fixed report shape.
 #
 # Reviews an engineering estate - a GitHub organization or one of its
-# repositories - over a bounded collection window and prints a status report whose
-# sections, headings, and order are identical on every run against every estate.
-# That fixed shape is the point: a reader who has read one of these reports can
-# read any other without re-learning where to look, and two reports of the same
-# estate taken at different times are directly comparable.
-#
-# The shape is enforced by construction. The renderer emits all nine sections
-# unconditionally; a surface with no data prints an explicit "none in the window"
-# statement rather than disappearing. A missing section and an empty section read
-# identically to a human and only one of them is honest, so a section is never
-# dropped. Every report states its estate scope, its collection window, and the
-# template of every read it made, so a figure can be traced to the read that
-# produced it and two reports can be compared line for line.
-#
-# READ-ONLY. It observes an estate and never writes to one: no push, no comment,
-# no label, no issue, no merge. The only filesystem writes are inside a private
-# temporary directory this script creates and removes, used for request bodies.
-#
-# It reports on people, and stays factual about the work: contribution counts,
-# review participation, and ownership concentration. It does not rank individuals,
-# score productivity, or infer anyone's effort or worth. The person table is
-# sorted by account name, never by volume, so it cannot be read as a leaderboard.
-# Section 8 of every report states what the numbers do not measure.
+# repositories - over a bounded window and prints a status report whose sections,
+# headings and order are identical on every run against every estate. That fixed
+# shape is the point: a reader who has read one of these reports can read any
+# other without re-learning where to look, and two reports of the same estate
+# taken at different times are directly comparable.
 #
 # Usage:
-#   scripts/estate-review.sh <org> [flags]              every repository the org owns
-#   scripts/estate-review.sh <owner>/<repo> [flags]     one repository
-#   scripts/estate-review.sh --from-json <file>         render a stored model, no network
+#   scripts/estate-review.sh <org> [flags]            every repository the org owns
+#   scripts/estate-review.sh <owner>/<repo> [flags]   one repository
+#   scripts/estate-review.sh --from-json <file>       render a stored model, no network
 #
-# An organization review is a per-repository review plus an aggregate; a single
-# repository review is the same report with one repository in it.
+# Run --help for the flags. Everything else - the fixed constants and why each
+# one exists, the per-walk collection bounds, which cap bounds which figure,
+# which clock every figure is measured against, the report's sections, the model
+# contract, the data sources and the gh-axi envelope coupling - is in
+# reference.md beside this script's directory.
 #
-# Flags. There are five, and choosing the period is the only thing they do:
-#   --since <YYYY-MM-DD>     window start (default: --window days before --until)
-#   --until <YYYY-MM-DD>     window end, exclusive of later data (default: today, UTC)
-#   --window <days>          window length when --since is absent (default 90)
-#   --json                   print the derived model instead of the report
-#   --from-json <file>       render the report from a stored model, making no network call
-#   -h, --help               usage
-#
-# WHY THERE ARE NOT MORE. A report whose whole value is that two of them are
-# comparable must not offer the caller ways to make two of them differ for
-# reasons the reader cannot see. So every other setting - the trend periods, the
-# stalled and unmaintained thresholds, and the repository, pull-request and
-# risk-row caps - is a constant declared once below, and the fork and archived
-# selection is the fixed behaviour of `collect` rather than a value at all.
-# The report states the ones a reader needs in order to read the figures - the
-# window, the thresholds and the selection - each printed from the model so the
-# disclosure cannot drift from what collection did, and the collection log names
-# every read that actually stopped at a cap. The walk mechanics behind those caps
-# are a maintainer's business and live in --help and in the model's `options`,
-# not in a section a reader has to reconcile. A disclosed constant is honest;
-# a hidden one is not, and a flag is a third thing: an invisible difference
-# between two reports that look alike. Changing one of these values is a change
-# to this script, reviewed once, applying to every report after it.
-#
-# Model contract: `xo-estate-review.v1`. --json prints it; --from-json renders a
-# report from it. The derived model carries every number the report prints, so the
-# renderer performs no arithmetic and a model and its report cannot disagree.
-#
-# WHICH FLAGS --from-json ACCEPTS. A stored model is a finished collection, so
-# the only flag honoured beside it is --json, which re-emits the model itself.
-# --since, --until and --window are refused by name rather than silently ignored,
-# because they choose the window and the per-period tallies are already cut; a
-# different window needs a fresh collection, and re-deriving one here would leave
-# the report disagreeing with the model it was rendered from.
-#
-# XO_ESTATE_REVIEW_NOW overrides the collection clock: an ISO 8601 UTC instant
-# that replaces "now" everywhere this script reads it, so a run is reproducible.
-#
-# DATA SOURCES, and what each figure does and does not evidence:
-#   gh-axi api                 repository metadata, commits on the default branch,
-#                              open issues, and GitHub Actions workflow runs
-#   gh-axi api POST graphql    pull requests with their reviews and review threads
-# No figure is ever estimated or extrapolated: a surface the estate does not
-# expose is reported as not exposed, and every collection bound this run hit is
-# named in section 9.2 rather than quietly shortening a figure.
-#
-# WHICH CLOCK EVERY FIGURE IS MEASURED AGAINST. Two clocks exist here and they
-# are not interchangeable: the WINDOW, which bounds events by when they happened,
-# and COLLECTION (XO_ESTATE_REVIEW_NOW, printed as the report's Generated line),
-# which is when the estate was read. An event has a date and belongs to the
-# window. A state - what is open, what has been pushed, what is archived - is
-# only true as of the read, so measuring it against the window end would produce
-# a negative age on any window that ended before today. Every figure the report
-# prints is below, with the clock it uses and where its label says so.
-#
-#   Figure                                             Clock       Labelled where
-#   Repositories matched / reviewed / read             collection  header bullet
-#   Generated at                                       collection  header bullet
-#   Window since, until, days, periods                 window      header bullet
-#   Headline: merged, cycle time, reviewed share,      window      section 1
-#     CI latest-attempt rate, concentrated repos
-#   Person counts: commits, opened, merged, reviews    window      section 1, 3.1
-#     submitted, pull requests reviewed, repositories
-#   Automation flag                                    collection  sections 1, 3.1, 3.2
-#   Per-period commit / opened / merged tallies        window      section 4.1
-#   Cycle time and review latency, all statistics      window      sections 4.2, 4.3
-#   Reverts, hotfixes, and their denominator           window      section 5.1
-#   Change size and its distribution                   window      section 5.2
-#   Review coverage and review threads                 window      section 5.3
-#   CI runs, pass rate, attempts                       window      section 5.4
-#   Concentration, accounts covering half              window      sections 1, 6.1
-#   Days since last push, archived flag                collection  sections 1, 6.2, 7
-#   Open pull request and open issue counts            collection  sections 1, 6.3, 7
-#   Stalled set, its idle and age days, draft flag     collection  sections 1, 6.3
-#   Oldest open issue age (model only)                 collection  this table
-#   Read statuses and the gaps they leave              collection  sections 7, 9
-#   Repository set, default branch, caps, and the      collection  section 9
-#     recorded commands
-#
-# The stalled list and the unmaintained list are collection-time throughout: the
-# set is what GitHub reports open or unpushed when the read runs, so its ages are
-# measured from the same read rather than from the window end, and their sections
-# say so rather than sitting unlabelled beside the window figures.
-#
-# Section 1 of the report states this split in words for the reader, and every
-# collection-clock row above carries its label in the section named beside it. A
-# row that changes clock has to change in three places at once - here, in the
-# derivation, and in the label the reader sees - or the report starts claiming a
-# clock it does not use.
-#
-# gh-axi ENVELOPE COUPLING. gh-axi renders every response for an agent to read,
-# so this script asks for a shaped tab-separated payload with --jq and decodes the
-# one rendered envelope field that carries it. That coupling lives in exactly one
-# function, gh_read, which refuses loudly with the installed gh-axi version rather
-# than degrading to empty data when the envelope is not the shape it knows.
-# tests/xo-estate-review.test.sh pins the decode against a fake gh-axi, and
-# tests/xo-estate-review-live-e2e.test.sh proves the real gh-axi still emits it.
+# READ-ONLY. It observes an estate and never writes to one. It reports on people
+# and stays factual about the work: it does not rank individuals or score
+# productivity, and the person table is sorted by account name so it cannot be
+# read as a leaderboard.
 set -u
 
 SCRIPT_NAME=estate-review.sh
@@ -199,24 +91,10 @@ OUTPUT=report
 FROM_JSON=
 FLAGS_GIVEN=()
 
-# The settings no flag reaches. Each one is disclosed in the report - the period
-# count in the header bullet, the rest in section 1 - so a reader can see what
-# produced the numbers without being able to vary it between two runs. They are deliberately not configurable: see WHY
-# THERE ARE NOT MORE above.
-#
-# Every value here is a lever: editing it is the supported way to change what it
-# bounds, and section 1 then reports the new value. The fork and archived
-# selection is NOT one of them and so is not a value here - it is the fixed
-# behaviour of `collect`, which reviews an archived repository and labels it, and
-# excludes an organization's forks while reviewing a repository named directly.
-# OPTIONS_JSON states that behaviour for section 1 to print rather than reading a
-# setting, so the disclosure cannot drift from what the code does.
-#
-# The three caps keep their "0 means no cap" handling even though no caller can
-# now pass 0, in both the collection guards and the renderer. Editing one of
-# these values is the supported way to change it, so 0 has to keep meaning what
-# it reads as; and the renderer also meets 0 in a stored model collected by an
-# older build, which it must still render rather than bound to nothing.
+# The settings no flag reaches; reference.md section 2 holds each one's reason.
+# Editing a value here is the supported way to change what it bounds. A cap of 0
+# still means "no cap", both here and in the renderer, which also meets 0 in a
+# model stored by an older build.
 PERIODS=6             # equal periods the window is split into for the trend
 STALLED_DAYS=14       # an open pull request idle this long is stalled
 UNMAINTAINED_DAYS=180 # a repository unpushed this long is unmaintained
@@ -312,26 +190,11 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM HUP
 
-# ---------------------------------------------------------------------------
-# The single gh-axi coupling.
-# ---------------------------------------------------------------------------
-# gh_read <gh-axi api argument>...
-#
-# Runs one gh-axi api call whose --jq program must render a tab-separated record
-# payload, and prints that payload's decoded lines on stdout. gh-axi renders every
-# response as an agent-readable document, so a shaped payload comes back as the
-# `body` field of an `api_response` envelope, JSON-string-quoted when it contains
-# characters the rendering escapes. Returning a JSON document from --jq is not an
-# option: gh-axi recognizes and re-renders it, so the payload would stop being a
-# payload. Tab-separated records are the one shape that survives the round trip,
-# which is why every caller shapes its --jq output that way and sanitizes free
-# text out of tabs and newlines at the jq boundary.
-#
-# It refuses rather than degrading. An envelope without exactly one body field, or
-# a body gh-axi marked truncated, is a changed rendering contract, not an empty
-# estate, and silently reporting it as no data would be the worst possible
-# failure for a report the captain acts on. The refusal names gh-axi's version so
-# the diagnostic points at what to check.
+# gh_read <gh-axi api argument>... - the single gh-axi coupling, explained in
+# reference.md section 9. Runs one gh-axi api call whose --jq program renders a
+# tab-separated payload, and prints that payload's decoded lines. It refuses with
+# the installed gh-axi version rather than degrading to empty data, because an
+# empty estate and an unreadable one must never read the same.
 GH_AXI_VERSION=
 gh_axi_version() {
   if [ -z "$GH_AXI_VERSION" ]; then
@@ -613,15 +476,10 @@ PR_SHAPE_JQ='
 # a pull request nobody has touched for a year is exactly the stalled work
 # section 6.3 has to name.
 #
-# MAX_PRS bounds the pull requests the report counts, which is why the
-# window-bounded walk spends it only on pull requests inside the window. That
-# walk starts at the present and descends, so on a window in the past it passes
-# over every pull request updated since the window ended; those are read on the
-# way down and reported on by nothing, and letting them spend the budget would
-# stop the walk before it reached the window and print every pull-request figure
-# as zero with no caveat on it. MAX_PR_PAGES then bounds the walk itself, because
-# passing over pull requests that cost no budget is otherwise unbounded work on a
-# busy repository.
+# MAX_PRS is spent only on pull requests inside the window: the walk descends
+# from the present, and letting recent activity spend the budget would stop it
+# before the window and print every figure as zero. MAX_PR_PAGES then bounds the
+# walk itself. reference.md section 3 has the whole contract.
 PR_PAGE_SIZE=50       # pull requests per page of the walk
 MAX_PR_PAGES=40       # pages walked per repository at most
 PR_CAPPED=0
@@ -679,14 +537,9 @@ read_prs() {
 # the page bound on the walk was reached. Only the pull-request cap's wording
 # depends on which pass is walking, so only that one is the caller's to supply.
 #
-# Each bound in this report is filed against the signal it actually bounds, and
-# never against a wider one. A figure carries a caveat only when a read behind it
-# fell short, so a bound recorded against a read it does not shorten would hedge
-# a figure that is exact - which teaches a reader to ignore the caveat, and costs
-# as much as omitting one. These two bound how far down the pull-request
-# connection the walk got, so they belong to that walk; the review page bound
-# shortens the review list inside a pull request and nothing else, so it is filed
-# separately by reviews_over.
+# Each bound is filed against the signal it actually bounds and never a wider
+# one: hedging an exact figure teaches a reader to ignore the caveat, which costs
+# as much as omitting one. reference.md section 4 maps cap to figure.
 pr_detail() {
   case $PR_CAPPED in
     prs) printf '%s' "$1" ;;
@@ -808,11 +661,7 @@ collect() {
 # ---------------------------------------------------------------------------
 # One pass turns the collected records into the `xo-estate-review.v1` model. The
 # model holds every number the report prints, so the renderer formats and never
-# calculates, and --json and its report can never disagree about a figure.
-#
-# Every metric definition lives here and nowhere else. Section 1 of the report
-# restates each one in words, because a figure a reader cannot define is a figure
-# they cannot act on, but this is the code that produces it.
+# calculates. Every metric definition lives here and nowhere else.
 DERIVE_JQ=$(
   cat <<'JQ'
 def ep: if . == null or . == "-" or . == "" then null else (try fromdateiso8601 catch null) end;
@@ -1123,16 +972,12 @@ derive() {  # reads $RECORDS, prints the model
 # ---------------------------------------------------------------------------
 # Rendering: model -> report.
 # ---------------------------------------------------------------------------
-# The renderer is the single owner of the report's shape and performs no
-# arithmetic. Every section is emitted unconditionally: an estate with no reviews
-# still gets a review section, and it says so in a sentence. A section that
-# disappeared when it had no data would be indistinguishable from a section that
-# was never part of the report, and only one of those is honest.
-# The program is read from a here-document rather than through $( ... ) because
-# it interpolates jq strings: stock macOS Bash 3.2 scans a command substitution
-# for its closing parenthesis without knowing the here-document is data, so the
-# closing parenthesis of a \( ... ) that contains a quoted string ends the
-# substitution early and the rest of the program is parsed as shell.
+# The renderer owns the report's shape and performs no arithmetic. Every section
+# is emitted unconditionally: a surface with no data says so in a sentence,
+# because a dropped section and an empty one read alike and only one is honest.
+# Read from a here-document, not $( ... ): stock macOS Bash 3.2 scans a command
+# substitution for its closing paren without knowing the here-document is data,
+# so a \( ... ) holding a quoted string would end the substitution early.
 IFS= read -r -d '' RENDER_JQ <<'JQ' || :
 def num: if . == null then "not measurable" else tostring end;
 def pc: if . == null then "not measurable" else ((tostring) + "%") end;
@@ -1167,18 +1012,12 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
 | $m.selection as $sel
 | ($w.period_labels) as $labels
 | (if $m.scope.kind == "repository" then "repository" else "organization" end) as $scope_word
-# EVERY sentence in this report that says the estate did nothing is composed
-# here and nowhere else. A read that delivered less than the whole window
-# contributes fewer records, or none, so an estate that could not be read
-# reaches the derivation looking exactly like a silent one, and a sentence
-# written the ordinary way would state as fact something no read ever saw. Both
-# ways a read falls short count here: one that failed saw nothing, and one that
-# stopped at a cap saw only part, and either can make a figure read as a zero it
-# is not. A caller supplies only what was absent, what follows from that, and
-# which reads the figure rests on; this is what owns the phrase that says how far
-# the claim reaches. That is why it takes a subject rather than a finished
-# sentence: a helper that edited the caller's wording would silently do nothing
-# to a sentence spelled differently, which is a way to get it wrong once per call
+# EVERY sentence saying the estate did nothing is composed here and nowhere
+# else. An estate that could not be read reaches the derivation looking exactly
+# like a silent one, so both ways a read falls short count: one that failed saw
+# nothing, one that stopped at a cap saw part, and either can make a figure read
+# as a zero it is not. Takes a subject rather than a finished sentence, so it
+# cannot silently no-op on wording spelled differently.
 # site instead of right once here.
 | def readnote($signals):
     ([$m.unread[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $failed
