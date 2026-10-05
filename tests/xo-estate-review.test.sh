@@ -1093,7 +1093,7 @@ max_repos|at most 7 repositories
 max_listed|at most 23 worst-first rows
 stalled_days|idle for 29 days or more
 unmaintained_days|unpushed for 31 days or more
-trend_band_pct|beyond 37%
+trend_band_pct|direction outside is 37%
 BOUNDS
   pass "every collection bound section 1 states is printed from the model, so the disclosure cannot drift from it"
 }
@@ -1418,6 +1418,42 @@ JSON
   pass "a commit whose workflow ran more than once counts the attempts of every run, not only the last"
 }
 
+test_a_direction_is_measured_against_the_earlier_mean_not_the_period_before() {
+  local root bin model report row
+  root=$(xo_test_tmproot xo-estate-review-trend) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # A series the two candidate rules disagree about, which is the only kind that
+  # proves which one is in force. Twenty commits in the fifth period and twelve
+  # in the sixth give per-period [0,0,0,0,20,12]: against the mean of the earlier
+  # five periods, 4, the last period is 200% up and the direction is rising;
+  # against the period before it, 20, it is 40% down and would read as falling.
+  jq -n '[range(20) | {sha: ("p5-" + (. | tostring)), author: {login: "ada", type: "User"},
+            parents: [{sha: "x"}],
+            commit: {author: {email: "ada@example.com", date: "2026-03-05T00:00:00Z"},
+                     committer: {email: "ada@example.com", date: "2026-03-05T00:00:00Z"},
+                     message: ("feat: fifth period " + (. | tostring))}}]
+          + [range(12) | {sha: ("p6-" + (. | tostring)), author: {login: "ada", type: "User"},
+            parents: [{sha: "x"}],
+            commit: {author: {email: "ada@example.com", date: "2026-03-20T00:00:00Z"},
+                     committer: {email: "ada@example.com", date: "2026-03-20T00:00:00Z"},
+                     message: ("feat: sixth period " + (. | tostring))}}]' \
+    > "$root/fixtures/commits-widgets.json" || fail "could not write the trend fixture"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "[0,0,0,0,20,12]" "$(jq -c '.velocity.commits.per_period' "$root/model.json")"     "the window splits into the per-period series the two rules disagree about"
+  assert_equals "rising" "$(jq -r '.velocity.commits.trend' "$root/model.json")"     "the direction is measured against the mean of the earlier periods, not against the period before"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  row=$(sed -n '/^### 4.1 Throughput/,/^### 4.2 /p' "$report" | grep '^| Commits authored |')
+  assert_contains "$row" "rising" "section 4.1's Direction cell reports what the model derived"
+  assert_grep "Direction compares the last period against the mean of the earlier ones." "$report"     "the one place the comparison is described says what the code does"
+  pass "a direction is measured against the mean of the earlier periods, and the report describes that comparison once"
+}
+
 test_a_last_period_with_no_measurement_reports_no_direction() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-sparse) || fail "no fixture root"
@@ -1612,6 +1648,7 @@ test_the_window_bounds_what_is_counted
 test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk
 test_a_review_on_an_open_pull_request_is_counted_once
 test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound
+test_a_direction_is_measured_against_the_earlier_mean_not_the_period_before
 test_a_last_period_with_no_measurement_reports_no_direction
 test_a_commit_whose_workflow_ran_twice_counts_every_attempt
 test_an_account_reaching_the_table_only_through_a_merged_pull_request_is_whole

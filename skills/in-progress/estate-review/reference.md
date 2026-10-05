@@ -44,7 +44,7 @@ Each value below is a lever: editing it is the supported way to change what it b
 | `MAX_REPOS` | 100 | repositories reviewed | past this an organization review stops being readable in one sitting |
 | `MAX_PRS` | 300 | pull requests counted per repository | enough to cover a busy quarter without a walk that outlives the reader's patience |
 | `MAX_LISTED` | 15 | rows shown per risk list | the model keeps every row; only the report is bounded |
-| `TREND_BAND_PCT` | 15 | period-over-period change that reads as a direction | narrower than this and one quiet fortnight is reported as a slowdown |
+| `TREND_BAND_PCT` | 15 | how far the last period must sit from the earlier periods' mean to read as a direction | narrower than this and one quiet fortnight is reported as a slowdown |
 | `REST_PER_PAGE` | 100 | items per REST page | GitHub's maximum, so the walk makes the fewest requests |
 | `REST_MAX_PAGES` | 30 | REST pages per read | 3,000 commits, runs or issues in one window is past where another page changes a conclusion |
 | `PR_PAGE_SIZE` | 50 | pull requests per GraphQL page | a page this size stays inside GitHub's point budget with reviews attached |

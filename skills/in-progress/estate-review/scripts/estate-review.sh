@@ -102,7 +102,7 @@ UNMAINTAINED_DAYS=180 # a repository unpushed this long is unmaintained
 MAX_REPOS=100         # repositories reviewed at most
 MAX_PRS=300           # pull requests counted per repository at most, per walk
 MAX_LISTED=15         # rows shown per risk list; the model keeps every row
-TREND_BAND_PCT=15     # period-over-period change beyond this reads as a direction
+TREND_BAND_PCT=15     # the last period must differ from the earlier mean by more than this
 
 need_value() {
   [ "$2" -gt 1 ] || die "$1 needs a value" 2
@@ -1077,7 +1077,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   "Two reports of the same estate are therefore comparable line for line, and section 9 names the read every figure came from.",
   "",
   "Selection: forks \(if $o.include_forks then "included" else "excluded" end), archived repositories included and labelled, at most \(if $o.max_repos == 0 then "no limit on" else "\($o.max_repos)" end) repositories.",
-  "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; a period-over-period change beyond \($o.trend_band_pct)% is called rising or falling, and anything inside that band is flat.",
+  "Thresholds: an open pull request idle for \($o.stalled_days) days or more is stalled; a repository unpushed for \($o.unmaintained_days) days or more is unmaintained; the trend band section 4.1 reports a direction outside is \($o.trend_band_pct)%.",
   "Both of those thresholds, and every figure they select over, are measured from when this review collected rather than from inside the window, because they are facts about the estate now rather than events in it: the repository set and each default branch, the archived flag, whether an account is automation, days since last push, the open pull request and open issue counts, the stalled list with its idle and age days, and what section 9 records as read.",
   "Rather than list where each is labelled, the rule holds everywhere: a table column carrying a figure measured that way ends its heading `at collection`, and a column carrying a figure that does not is bounded by the window. A column that names rather than measures - a repository, an account, a pull request's number or title - carries no clock. Section 9 is the exception and is collection-time throughout, because it records the reads themselves.",
   "A direction is never drawn from a period that ended before the window did: where the last period holds no measurement, no direction is reported and the empty periods are named.",
