@@ -1155,7 +1155,7 @@ test_a_repository_with_no_push_date_is_named_unmaintained() {
 }
 
 test_a_never_pushed_repository_heads_the_bounded_unmaintained_list() {
-  local root bin model report listed
+  local root bin model report rows
   root=$(xo_test_tmproot xo-estate-review-nopush-order) || fail "no fixture root"
   bin=$(xo_fakebin "$root")
   write_fixtures "$root/fixtures"
@@ -1183,10 +1183,18 @@ test_a_never_pushed_repository_heads_the_bounded_unmaintained_list() {
 
   report=$root/report.md
   "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
-  assert_grep "| acme/placeholder | not measurable |" "$report"     "the never-pushed row survives the row bound instead of being truncated away"
+  # Section 6.2's own rows only: section 7 emits a row per reviewed repository,
+  # so an unscoped match would be satisfied by rows this assertion is not about.
+  unmaintained_rows() {
+    sed -n '/^### 6.2 Unmaintained/,/^### 6.3 /p' "$1" |
+      awk -F'|' '/^\| acme\// { gsub(/ /, "", $2); print $2 }'
+  }
+  rows=$(unmaintained_rows "$report")
+  assert_equals "15" "$(printf '%s\n' "$rows" | grep -c .)"     "the unmaintained list emits exactly the row bound it discloses"
+  assert_contains "$rows" "acme/placeholder"     "the never-pushed repository is listed rather than truncated away"
+  assert_equals "acme/placeholder" "$(printf '%s\n' "$rows" | head -n 1)"     "it is the first row, because a null idle count ranks worst"
+  assert_grep "| acme/placeholder | not measurable |" "$report"     "its day count renders as unmeasurable rather than as a number"
   assert_grep "2 further repositories are in this report" "$report"     "the rows the list did not show are still disclosed"
-  listed=$(awk -F'|' '/^\| acme\// { gsub(/ /, "", $2); print $2 }' "$report" | head -n 15 | wc -l)
-  assert_equals "15" "$listed" "the list is bounded at the row cap it discloses"
   pass "a repository with no push date heads the unmaintained list rather than being truncated out of it"
 }
 
