@@ -577,11 +577,13 @@ collect() {
 
   local line full name owner branch archived fork pushed private detail over
   local -a chosen=()
+  local listed=0
   while IFS= read -r line; do
     [ -n "$line" ] || continue
     case $line in repo*) ;; *) continue ;; esac
     IFS=$'\t' read -r _ full name owner branch archived fork pushed private <<< "$line"
     [ -n "$full" ] || continue
+    listed=$((listed + 1))
     # The fork filter is the organization listing's, not the estate's: it drops the
     # forks an organization happens to own from a review of that organization's own
     # work. A repository someone named is the estate they asked about, fork or not.
@@ -590,6 +592,13 @@ collect() {
   done < "$REPOS_FILE"
 
   if [ "${#chosen[@]}" -eq 0 ]; then
+    # Nothing listed and nothing filtered are different estates and the reader
+    # has to be told which one: naming the fork filter for a listing that came
+    # back empty sends them looking for forks that were never there, when the
+    # cause is an organization owning no repository or a token that cannot see
+    # the ones it owns.
+    [ "$listed" -gt 0 ] ||
+      die "organization '$SCOPE_NAME' listed no repository: it owns none, or the token this review reads with cannot see them"
     die "no repository of organization '$SCOPE_NAME' matched the selection: an organization review excludes forks, so every repository the estate listed is one"
   fi
   selected=${#chosen[@]}

@@ -878,6 +878,35 @@ test_repository_selection_excludes_forks_and_discloses_it() {
   pass "forks are excluded from an organization review and the report discloses it"
 }
 
+test_an_organization_that_listed_nothing_is_not_told_its_repositories_were_forks() {
+  local root bin out code
+  root=$(xo_test_tmproot xo-estate-review-empty-org) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+
+  # An organization GitHub lists no repository for: it owns none, or the token
+  # cannot see the ones it owns. Nothing was listed, so nothing was filtered, and
+  # a refusal naming the fork filter would send the reader after forks that were
+  # never there.
+  cp "$root/fixtures/repos.json" "$root/fixtures/repos-listed.json"
+  printf '[]\n' > "$root/fixtures/repos.json"
+  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" 2>&1) && code=0 || code=$?
+  assert_equals "1" "$code" "an organization that listed no repository is refused"
+  assert_contains "$out" "listed no repository" "the refusal says the listing was empty"
+  assert_not_contains "$out" "excludes forks" "an empty listing is not blamed on the fork filter"
+  assert_not_contains "$out" "xo-estate-review.v1" "an empty listing produced no report"
+
+  # The fork filter is still named when it is what emptied the selection, which
+  # is the other estate this refusal has to tell apart.
+  jq '[.[] | .fork = true]' "$root/fixtures/repos-listed.json" > "$root/fixtures/repos.json" ||
+    fail "could not mark every listed repository as a fork"
+  out=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" 2>&1) && code=0 || code=$?
+  assert_equals "1" "$code" "an organization owning only forks is refused"
+  assert_contains "$out" "excludes forks" "a listing the fork filter emptied names the fork filter"
+  pass "an empty organization listing is refused on its own terms, and the fork filter is named only when it filtered"
+}
+
 test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork() {
   local root bin model report
   root=$(xo_test_tmproot xo-estate-review-named-fork) || fail "no fixture root"
@@ -1634,6 +1663,7 @@ test_scope_and_argument_validation_refuses_rather_than_guessing
 test_a_single_repository_review_is_the_same_report_with_one_row
 test_repository_selection_excludes_forks_and_discloses_it
 test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork
+test_an_organization_that_listed_nothing_is_not_told_its_repositories_were_forks
 test_an_archived_repository_is_reviewed_and_labelled
 test_a_repository_with_no_push_date_is_named_unmaintained
 test_a_never_pushed_repository_heads_the_bounded_unmaintained_list
