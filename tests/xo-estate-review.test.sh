@@ -391,6 +391,20 @@ assert_every_column_states_its_clock() {  # <report>
   done < <(sed -n '/^## 2\./,/^## 9\./p' "$report" | awk '/^\| --- /{print prev} {prev=$0}')
 }
 
+# The report states what a Direction label compares exactly once, and section
+# 4.1 is where it states it. One report carrying two accounts of one computation
+# is what the trend-band rounds were about, and the two ways that returns are a
+# second copy elsewhere and this copy moved somewhere else, so both are checked.
+DIRECTION_RULE="Direction compares the last period against the mean of the earlier ones."
+
+assert_the_direction_rule_is_stated_once_in_4_1() {  # <report> <label>
+  local report=$1 label=$2 whole inside
+  whole=$(grep -cF -- "$DIRECTION_RULE" "$report") || whole=0
+  assert_equals "1" "$whole" "$label: the report states the direction rule $whole times, not once"
+  inside=$(sed -n '/^### 4.1 Throughput/,/^### 4.2 /p' "$report" | grep -cF -- "$DIRECTION_RULE") || inside=0
+  assert_equals "1" "$inside" "$label: section 4.1 is where the direction rule belongs, and it states it $inside times"
+}
+
 test_collection_derives_the_documented_figures() {
   local root model
   root=$(xo_test_tmproot xo-estate-review-fix) || fail "no fixture root"
@@ -853,16 +867,24 @@ test_a_record_whose_last_field_is_blank_estate_text_keeps_every_field() {
 test_the_skills_own_script_passes_shellcheck() {
   # The script sits outside bin/xo-lint.sh's canonical roots, so the skill runs
   # the analyser over its own artifact rather than widening a shared definition.
-  # ShellCheck's findings are the contract here, not the file's text.
-  local out code
+  # ShellCheck's findings are the contract here, not the file's text, and they
+  # have to be the analyser's own: --norc suppresses .shellcheckrc but not
+  # SHELLCHECK_OPTS, which ShellCheck reads as further command-line options, so a
+  # host exporting exclusions there would be handed a pass that analysed less
+  # than this line claims. The version is reported rather than pinned, because a
+  # portable skill test has to run on whatever analyser the host has while its
+  # evidence still says whose opinion produced the pass.
+  local out code version
   command -v shellcheck > /dev/null 2>&1 || {
     printf 'skip: shellcheck absent, so the estate-review script could not be analysed\n'
     return 0
   }
-  out=$(shellcheck --norc --external-sources -- "$REVIEW" 2>&1) && code=0 || code=$?
-  [ "$code" = 0 ] || fail "shellcheck reported findings against the estate-review script:
+  version=$(env -u SHELLCHECK_OPTS shellcheck --version 2>/dev/null | sed -n 's/^version: //p' | head -n 1)
+  [ -n "$version" ] || version=unreported
+  out=$(env -u SHELLCHECK_OPTS shellcheck --norc --external-sources -- "$REVIEW" 2>&1) && code=0 || code=$?
+  [ "$code" = 0 ] || fail "shellcheck $version reported findings against the estate-review script:
 $out"
-  pass "the skill's own script is analysed by shellcheck from the skill's own suite and reports no findings"
+  pass "the skill's own script is analysed by shellcheck $version from the skill's own suite and reports no findings"
 }
 
 test_a_pull_request_read_that_returned_no_repository_is_a_gap_not_a_complete_read() {
@@ -1604,7 +1626,7 @@ test_a_direction_is_measured_against_the_earlier_mean_not_the_period_before() {
   "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
   row=$(sed -n '/^### 4.1 Throughput/,/^### 4.2 /p' "$report" | grep '^| Commits authored |')
   assert_contains "$row" "rising" "section 4.1's Direction cell reports what the model derived"
-  assert_grep "Direction compares the last period against the mean of the earlier ones." "$report"     "the one place the comparison is described says what the code does"
+  assert_the_direction_rule_is_stated_once_in_4_1 "$report" "an active estate"
   pass "a direction is measured against the mean of the earlier periods, and the report describes that comparison once"
 }
 
@@ -1646,8 +1668,7 @@ test_the_direction_rule_is_stated_even_where_no_commit_or_merge_landed() {
   assert_fixed_shape "$report" "an estate where nothing landed but pull requests were opened"
   row=$(sed -n '/^### 4.1 Throughput/,/^### 4.2 /p' "$report" | grep '^| Pull requests opened |')
   assert_contains "$row" "rising" "section 4.1 prints a Direction for the opened row"
-  assert_grep "Direction compares the last period against the mean of the earlier ones." "$report" \
-    "the rule behind that label is stated even though nothing landed or merged"
+  assert_the_direction_rule_is_stated_once_in_4_1 "$report" "an estate where nothing landed or merged"
   assert_grep "No commit or merge landed in this window" "$report" \
     "the absent-data sentence is printed beside the rule rather than in place of it"
   pass "the rule a Direction label means is stated in every report, including one where nothing landed or merged"
