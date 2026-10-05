@@ -277,7 +277,7 @@ family_for_basename() {
     xo-classify-decision-key.test.sh|\
     xo-composer-ghost.test.sh|xo-composer-lib.test.sh|\
     xo-crew-state.test.sh|xo-captain-hold-lifecycle.test.sh|\
-    xo-documentation-audiences.test.sh|xo-ensure-agents-md.test.sh|xo-grok-harness.test.sh|\
+    xo-documentation-audiences.test.sh|xo-ensure-agents-md.test.sh|xo-estate-review.test.sh|xo-grok-harness.test.sh|\
     xo-kimi-harness.test.sh|xo-muse-harness.test.sh|xo-rovo-harness.test.sh|xo-omp-harness.test.sh|xo-herdr-lab.test.sh|xo-lint.test.sh|\
     xo-lint-workflows.test.sh|\
     xo-operational-input.test.sh|xo-pi-primary-types.test.sh|\
@@ -338,7 +338,7 @@ family_for_basename() {
     xo-cmux-claude-composer-live-e2e.test.sh|\
     xo-composer-matrix-live-e2e.test.sh|\
     xo-codex-continuity-live-e2e.test.sh|xo-grok-continuity-live-e2e.test.sh|\
-    xo-cursor-primary-live-e2e.test.sh|\
+    xo-cursor-primary-live-e2e.test.sh|xo-estate-review-live-e2e.test.sh|\
     xo-grok-stop-live-e2e.test.sh|xo-harness-adapter-instructions-live-e2e.test.sh|\
     xo-harness-liveness-drift-live-e2e.test.sh|\
     xo-muse-signals-live-e2e.test.sh|xo-rovo-signals-live-e2e.test.sh|\

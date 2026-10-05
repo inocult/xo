@@ -166,6 +166,14 @@
       "audience": "agent-runtime"
     },
     {
+      "path": "skills/in-progress/estate-review/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": "skills/in-progress/estate-review/reference.md",
+      "audience": "maintainer-architecture"
+    },
+    {
       "path": "skills/in-progress/xo-codexapp/SKILL.md",
       "audience": "agent-runtime"
     },
@@ -459,6 +467,10 @@
     },
     {
       "path": "docs/verification/dispatch-auth.md",
+      "audience": "maintainer-verification"
+    },
+    {
+      "path": "docs/verification/estate-review.md",
       "audience": "maintainer-verification"
     },
     {
