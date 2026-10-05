@@ -1471,12 +1471,24 @@ test_a_pull_request_with_more_reviews_than_one_page_discloses_the_bound() {
   # shortens the review list inside a pull request, and nothing else, so it must
   # not reach a merged count that is exact.
   assert_equals "1" "$(jq -r '[.caps[] | select(.repo == "acme/widgets" and .signal == "pull_request_reviews")] | length' "$root/model.json")"     "the review page bound is recorded as a cap of its own"
-  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_request_reviews") | .detail' "$root/model.json")"     "carry more than 50 reviews" "the cap says what was shortened"
+  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_request_reviews") | .detail' "$root/model.json")"     "1 pull request carries more than 50 reviews" "the cap says what was shortened, and one pull request is one"
   assert_equals "complete" "$(jq -r '.repositories[0].signals.pull_requests.detail' "$root/model.json")"     "the pull-request walk itself is still recorded as complete"
   "$REVIEW" --from-json "$root/model.json" > "$root/report.md" || fail "rendering failed"
   assert_fixed_shape "$root/report.md" "an estate with a heavily reviewed pull request"
   assert_grep "Reads that hit a cap" "$root/report.md" "section 9.2 surfaces the bound to the reader"
-  assert_grep "carry more than 50 reviews" "$root/report.md" "the reader is told which bound shortened the figures"
+  assert_grep "1 pull request carries more than 50 reviews" "$root/report.md" "the reader is told which bound shortened the figures"
+
+  # And the same notice over two such pull requests, so the sentence is pinned in
+  # both the forms a count puts it in rather than only the one this fixture hits.
+  jq '.data.repository.pullRequests.nodes |= map(if .number == 2
+        then .reviews.totalCount = 60 else . end)' \
+    "$root/fixtures/prs-widgets.json" > "$root/fixtures/prs.tmp" ||
+    fail "could not widen the second review count"
+  mv "$root/fixtures/prs.tmp" "$root/fixtures/prs-widgets.json" || fail "could not install the widened fixture"
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection over two heavily reviewed pull requests failed"
+  printf '%s' "$model" > "$root/model-two.json"
+  assert_contains "$(jq -r '.caps[] | select(.signal == "pull_request_reviews") | .detail' "$root/model-two.json")"     "2 pull requests carry more than 50 reviews" "two pull requests are two"
   pass "a pull request carrying more reviews than one page holds is disclosed as a cap rather than silently shortening a review count"
 }
 
@@ -1716,6 +1728,49 @@ test_a_person_table_is_ordered_by_account_not_by_volume() {
   pass "the person table is ordered by account name and says in writing that it is not a ranking"
 }
 
+test_a_count_of_one_reads_as_one_in_every_sentence_a_count_governs() {
+  local root model report
+  root=$(xo_test_tmproot xo-estate-review-singular) || fail "no fixture root"
+  model=$(collect_model "$root/fixtures" ok) || fail "collection failed"
+  # The stored model is the renderer's input contract, so the counts that govern
+  # the report's wording are set to one here rather than through an estate shaped
+  # to produce each of them at once. Every bounded list is given one row more
+  # than the row bound, so each withholds exactly one.
+  printf '%s' "$model" | jq '
+      (.risk.stalled_pull_requests[0]) as $pr
+    | (.risk.unmaintained[0]) as $repo
+    | .risk.stalled_pull_requests = [range(16) | $pr + {number: (200 + .), idle_days: (100 - .)}]
+    | .risk.unmaintained = [range(16) | $repo + {repo: "acme/attic\(.)", idle_days: (900 - .)}]
+    | .risk.concentrated_repositories = [range(16) | {repo: "acme/solo\(.)", top: "ada",
+        top_share_pct: 90, authors: 1, commits: (20 - .)}]
+    | .velocity.cycle_hours.measured = 0
+    | .velocity.cycle_hours.unmeasurable = 1' > "$root/withheld.json" ||
+    fail "could not set the withheld and unmeasurable counts to one"
+  report=$root/withheld.md
+  "$REVIEW" --from-json "$root/withheld.json" > "$report" || fail "rendering failed"
+  assert_fixed_shape "$report" "an estate whose lists each withhold one row"
+  assert_grep "1 further pull request is in this report's model but not listed above" "$report" \
+    "one withheld pull request is one pull request"
+  assert_equals "2" "$(grep -c "1 further repository is in this report's model but not listed above" "$report")" \
+    "both repository lists state one withheld repository as one repository"
+  assert_grep "1 merged pull request was excluded for that reason." "$report" \
+    "one unmeasurable merged pull request is one pull request"
+  assert_no_grep "1 further pull requests" "$report" "no sentence pairs the count one with a plural"
+  assert_no_grep "1 further repositories" "$report" "no sentence pairs the count one with a plural"
+
+  # The same counts in the branches that render when the figure is measurable.
+  printf '%s' "$model" | jq '.velocity.cycle_hours.unmeasurable = 1' > "$root/measured.json" ||
+    fail "could not set the unmeasurable counts to one"
+  report=$root/measured.md
+  "$REVIEW" --from-json "$root/measured.json" > "$report" || fail "rendering failed"
+  assert_grep "Unmeasurable: 1 merged pull request had no readable first commit" "$report" \
+    "one pull request with no readable first commit is one pull request"
+  assert_grep "Not included: 1 merged pull request had no review from another account" "$report" \
+    "one pull request with no outside review is one pull request"
+  assert_no_grep "1 merged pull requests" "$report" "no bullet pairs the count one with a plural"
+  pass "every sentence a count governs reads as one at one, in the bounded lists and the unmeasurable notices alike"
+}
+
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-listed) || fail "no fixture root"
@@ -1864,6 +1919,7 @@ test_a_window_behind_the_pull_request_cap_is_still_reached
 test_a_walk_that_cannot_reach_the_window_names_the_page_bound
 test_a_person_table_is_ordered_by_account_not_by_volume
 test_a_bounded_risk_list_states_how_many_rows_it_did_not_show
+test_a_count_of_one_reads_as_one_in_every_sentence_a_count_governs
 test_from_json_re_emits_the_stored_model_and_refuses_a_different_window
 test_the_window_bounds_what_is_counted
 test_a_full_page_of_mostly_pull_requests_does_not_end_the_issue_walk

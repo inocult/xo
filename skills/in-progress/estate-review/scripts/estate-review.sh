@@ -571,7 +571,7 @@ collect() {
 
   list_repos
 
-  local line full name owner branch archived fork pushed private detail over
+  local line full name owner branch archived fork pushed private detail over over_subject
   local -a chosen=()
   local listed=0
   while IFS= read -r line; do
@@ -640,9 +640,15 @@ collect() {
         printf 'signal\t%s\topen_pull_requests\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
       fi
       over=$(reviews_over "$full")
-      [ "$over" = 0 ] ||
-        printf 'signal\t%s\tpull_request_reviews\tread\t%s pull requests carry more than %s reviews; only the first %s of each were read\n' \
-          "$full" "$over" "$REVIEWS_PER_PR" "$REVIEWS_PER_PR" >> "$RECORDS"
+      if [ "$over" != 0 ]; then
+        if [ "$over" = 1 ]; then
+          over_subject="1 pull request carries"
+        else
+          over_subject="$over pull requests carry"
+        fi
+        printf 'signal\t%s\tpull_request_reviews\tread\t%s more than %s reviews; only the first %s of each were read\n' \
+          "$full" "$over_subject" "$REVIEWS_PER_PR" "$REVIEWS_PER_PR" >> "$RECORDS"
+      fi
     else
       printf 'signal\t%s\tpull_requests\tunread\t%s\n' "$full" "$GH_READ_ERROR" >> "$RECORDS"
       printf 'signal\t%s\topen_pull_requests\tunread\tnot attempted after the pull-request read failed\n' "$full" >> "$RECORDS"
@@ -1009,13 +1015,17 @@ def trendword: if . == "rising" then "rising"
 def row($cells): "| " + ($cells | map(tostring | gsub("[|]"; "\\|")) | join(" | ")) + " |";
 def header($cells): [row($cells), "|" + ($cells | map(" --- ") | join("|")) + "|"];
 def bullet($text): "- " + $text;
+# Wording a count governs is chosen here and nowhere else, so a sentence
+# that reads correctly at two reads cannot read "1 reads" at one.
+def plural($n; $one; $many): if $n == 1 then $one else $many end;
 # A risk list is already ordered worst first, so bounding the rows a reader has
 # to scan costs nothing as long as the remainder is disclosed. The model keeps
 # every row; only this presentation is bounded, and the counts above each list
 # are always the complete ones.
 def listed($rows; $cap): if $cap == 0 or ($rows | length) <= $cap then $rows else $rows[0:$cap] end;
-def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then []
-  else ["", "\(($rows | length) - $cap) further \($what) are in this report's model but not listed above; `--json` prints the model, which carries every one of them."] end;
+def remainder($rows; $cap; $one; $many): if $cap == 0 or ($rows | length) <= $cap then []
+  else (($rows | length) - $cap) as $n
+    | ["", "\($n) further \(plural($n; $one; $many)) \(plural($n; "is"; "are")) in this report's model but not listed above; `--json` prints the model, which carries every one of them."] end;
 
 . as $m
 | $m.window as $w
@@ -1035,12 +1045,12 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
     | ([$m.caps[] | select(.signal as $s | any($signals[]; . == $s))] | length) as $capped
     | ($failed + $capped) as $n
     | ([(if $failed == 0 then empty
-         else "\(if $failed == 1 then "1 read" else "\($failed) reads" end) behind this figure failed" end),
+         else "\($failed) \(plural($failed; "read"; "reads")) behind this figure failed" end),
         (if $capped == 0 then empty
-         elif $failed == 0 then "\(if $capped == 1 then "1 read" else "\($capped) reads" end) behind this figure stopped at a cap"
+         elif $failed == 0 then "\($capped) \(plural($capped; "read"; "reads")) behind this figure stopped at a cap"
          else "\($capped) stopped at a cap" end)] | join(" and ")) as $what
     | if $n == 0 then ""
-      else " (\($what); section 9.2 names \(if $n == 1 then "it" else "them" end))" end;
+      else " (\($what); section 9.2 names \(plural($n; "it"; "them")))" end;
   def absent($subject; $consequence; $clock; $signals):
     (readnote($signals)) as $note
     | (if $note != "" then (if $clock == "collection" then "in what could be read, as at collection" else "in what could be read" end)
@@ -1170,11 +1180,11 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ]
 + (if $m.velocity.cycle_hours.measured == 0
    then [absent_in_window("merged pull request with a readable first commit"; "so cycle time is unmeasurable here"; $merged_pr_reads),
-         "\($m.velocity.cycle_hours.unmeasurable) merged pull requests were excluded for that reason."]
+         "\($m.velocity.cycle_hours.unmeasurable) merged pull \(plural($m.velocity.cycle_hours.unmeasurable; "request was"; "requests were")) excluded for that reason."]
    else [bullet("Median: \($m.velocity.cycle_hours.median | hrs) over \($m.velocity.cycle_hours.measured) merged pull requests"),
          bullet("p90: \($m.velocity.cycle_hours.p90 | hrs)"),
          bullet(direction($m.velocity.cycle_hours.per_period_median; $m.velocity.cycle_hours.trend; "rising means slower")),
-         bullet("Unmeasurable: \($m.velocity.cycle_hours.unmeasurable) merged pull requests had no readable first commit"),
+         bullet("Unmeasurable: \($m.velocity.cycle_hours.unmeasurable) merged pull \(plural($m.velocity.cycle_hours.unmeasurable; "request"; "requests")) had no readable first commit"),
          ""]
         + header(["Period beginning"] + $labels)
         + [row(["Median hours"] + ($m.velocity.cycle_hours.per_period_median | map(num)))]
@@ -1190,7 +1200,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
    else [bullet("Median: \($m.velocity.review_latency_hours.median | hrs) over \($m.velocity.review_latency_hours.measured) merged pull requests"),
          bullet("p90: \($m.velocity.review_latency_hours.p90 | hrs)"),
          bullet(direction($m.velocity.review_latency_hours.per_period_median; $m.velocity.review_latency_hours.trend; "rising means longer waits")),
-         bullet("Not included: \($m.velocity.review_latency_hours.unmeasurable) merged pull requests had no review from another account"),
+         bullet("Not included: \($m.velocity.review_latency_hours.unmeasurable) merged pull \(plural($m.velocity.review_latency_hours.unmeasurable; "request"; "requests")) had no review from another account"),
          ""]
         + header(["Period beginning"] + $labels)
         + [row(["Median hours"] + ($m.velocity.review_latency_hours.per_period_median | map(num)))]
@@ -1283,7 +1293,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
                 + header(["Repository", "Account", "Share", "Authors", "Authored commits"])
                 + [listed($m.risk.concentrated_repositories; $o.max_listed)[]
                    | row([.repo, (.top | dash), (.top_share_pct | pc), .authors, .commits])]
-                + remainder($m.risk.concentrated_repositories; $o.max_listed; "repositories")
+                + remainder($m.risk.concentrated_repositories; $o.max_listed; "repository"; "repositories")
            end)
         + ["",
            "This evidences where the estate's recorded history sits with one account.",
@@ -1300,7 +1310,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
          ""]
         + header(["Repository", "Days since last push, at collection", "Archived, at collection", "Commits in window"])
         + [listed($m.risk.unmaintained; $o.max_listed)[] | row([.repo, (.idle_days | num), yn(.archived), .commits_in_window])]
-        + remainder($m.risk.unmaintained; $o.max_listed; "repositories")
+        + remainder($m.risk.unmaintained; $o.max_listed; "repository"; "repositories")
    end)
 + [
   "",
@@ -1319,7 +1329,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
         + header(["Repository", "Number", "Idle days, at collection", "Age days, at collection", "Author", "Draft, at collection", "Title"])
         + [listed($m.risk.stalled_pull_requests; $o.max_listed)[]
            | row([.repo, .number, .idle_days, .age_days, (.author | dash), yn(.draft), .title])]
-        + remainder($m.risk.stalled_pull_requests; $o.max_listed; "pull requests")
+        + remainder($m.risk.stalled_pull_requests; $o.max_listed; "pull request"; "pull requests")
    end)
 + [
   "",
@@ -1388,7 +1398,7 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
    end)
 + [""]
 + (if ($m.selection.capped | not) then []
-   else ["More repositories matched the selection than were reviewed: \($m.selection.matched) matched, \($m.selection.reviewed) reviewed under this review's cap of \($m.options.max_repos) \(if $m.options.max_repos == 1 then "repository" else "repositories" end).", ""]
+   else ["More repositories matched the selection than were reviewed: \($m.selection.matched) matched, \($m.selection.reviewed) reviewed under this review's cap of \($m.options.max_repos) \(plural($m.options.max_repos; "repository"; "repositories")).", ""]
    end)
 | join("\n")
 JQ
