@@ -100,8 +100,9 @@ PERIODS=6             # equal periods the window is split into for the trend
 STALLED_DAYS=14       # an open pull request idle this long is stalled
 UNMAINTAINED_DAYS=180 # a repository unpushed this long is unmaintained
 MAX_REPOS=100         # repositories reviewed at most
-MAX_PRS=300           # pull requests updated inside the window counted per repository at most
+MAX_PRS=300           # pull requests counted per repository at most, per walk
 MAX_LISTED=15         # rows shown per risk list; the model keeps every row
+TREND_BAND_PCT=15     # period-over-period change beyond this reads as a direction
 
 need_value() {
   [ "$2" -gt 1 ] || die "$1 needs a value" 2
@@ -477,10 +478,12 @@ PR_SHAPE_JQ='
 # a pull request nobody has touched for a year is exactly the stalled work
 # section 6.3 has to name.
 #
-# MAX_PRS is spent only on pull requests inside the window: the walk descends
-# from the present, and letting recent activity spend the budget would stop it
-# before the window and print every figure as zero. MAX_PR_PAGES then bounds the
-# walk itself. reference.md section 3 has the whole contract.
+# The window pass spends MAX_PRS only on pull requests updated before the window
+# ended: the walk descends from the present, and letting activity since the window
+# spend the budget would stop it before the window and print every figure as zero.
+# The open pass spends its own MAX_PRS on every open pull request it reads, the
+# window being irrelevant to what is open. MAX_PR_PAGES then bounds each walk
+# itself. reference.md section 3 has the whole contract.
 PR_PAGE_SIZE=50       # pull requests per page of the walk
 MAX_PR_PAGES=40       # pages walked per repository at most
 PR_CAPPED=0
@@ -886,7 +889,7 @@ $win as $w
                   oldest_open_days: ($ri | map(select(.created != null) | (($nowe - .created) / 86400) | floor) | max) },
         concentration: concentration_of($ra) })
    | sort_by(.name)) as $repo_models
-| ($repo_models | map(select(.idle_days != null and .idle_days >= $o.unmaintained_days or .archived)
+| ($repo_models | map(select(.pushed_at == null or (.idle_days != null and .idle_days >= $o.unmaintained_days) or .archived)
     | {repo: .name, idle_days: .idle_days, archived: .archived, commits_in_window: .commits.total})
    | sort_by(-(.idle_days // 0), .repo)) as $unmaintained
 | ($repo_models | map(select(.concentration.commits > 0 and .concentration.accounts_covering_half == 1)
@@ -1286,8 +1289,8 @@ def remainder($rows; $cap; $what): if $cap == 0 or ($rows | length) <= $cap then
   ""
   ]
 + (if ($m.risk.unmaintained | length) == 0
-   then ["No reviewed repository is archived or had gone \($o.unmaintained_days) days without a push when this review collected."]
-   else ["Repositories archived or unpushed for \($o.unmaintained_days) days or more as at \($m.generated_at): \($m.risk.unmaintained | length).",
+   then ["No reviewed repository is archived, has never been pushed to, or had gone \($o.unmaintained_days) days without a push when this review collected."]
+   else ["Repositories archived, never pushed to, or unpushed for \($o.unmaintained_days) days or more as at \($m.generated_at): \($m.risk.unmaintained | length).",
          ""]
         + header(["Repository", "Days since last push, at collection", "Archived, at collection", "Commits in window"])
         + [listed($m.risk.unmaintained; $o.max_listed)[] | row([.repo, (.idle_days | num), yn(.archived), .commits_in_window])]
@@ -1418,7 +1421,7 @@ OPTIONS_JSON=$(jq -n \
   --argjson window_days "$WINDOW_DAYS" --argjson periods "$PERIODS" \
   --argjson stalled_days "$STALLED_DAYS" --argjson unmaintained_days "$UNMAINTAINED_DAYS" \
   --argjson max_repos "$MAX_REPOS" --argjson max_prs "$MAX_PRS" \
-  --argjson max_listed "$MAX_LISTED" \
+  --argjson max_listed "$MAX_LISTED" --argjson trend_band "$TREND_BAND_PCT" \
   --argjson reviews_per_pr "$REVIEWS_PER_PR" --argjson max_pages "$REST_MAX_PAGES" \
   --argjson pr_page_limit "$MAX_PR_PAGES" --argjson pr_page_size "$PR_PAGE_SIZE" \
   --arg scope_kind "$SCOPE_KIND" \
@@ -1428,7 +1431,7 @@ OPTIONS_JSON=$(jq -n \
     include_forks: ($scope_kind != "organization"),
     reviews_per_pull_request: $reviews_per_pr, page_limit: $max_pages,
     pull_request_page_limit: $pr_page_limit, pull_request_page_size: $pr_page_size,
-    trend_band_pct: 15}')
+    trend_band_pct: $trend_band}')
 
 # The recorded commands are templates with this run's window substituted, one per
 # read the report depends on, rather than one line per page of every repository.

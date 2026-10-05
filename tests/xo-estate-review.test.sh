@@ -507,7 +507,7 @@ test_an_estate_with_no_data_still_emits_every_section() {
   assert_grep "there is no review depth to report" "$root/empty.md" "the review-depth section states its emptiness"
   assert_grep "there is no latest-attempt pass rate to report" "$root/empty.md" "the CI section states its emptiness"
   assert_grep "so concentration is unmeasurable" "$root/empty.md" "the concentration section states its emptiness"
-  assert_grep "No reviewed repository is archived or had gone" "$root/empty.md" "the unmaintained section states its emptiness"
+  assert_grep "No reviewed repository is archived, has never been pushed to, or had gone" "$root/empty.md" "the unmaintained section states its emptiness"
   assert_grep "No open pull request has been idle" "$root/empty.md" "the stalled section states its emptiness"
   assert_grep "No commit, pull request, review, or workflow run in this window" "$root/empty.md" "the headline says the window was silent rather than reading as low activity"
   assert_no_grep "behind this figure failed" "$root/empty.md" "an estate that was read completely is not told its reads failed"
@@ -1125,6 +1125,35 @@ test_an_archived_repository_is_reviewed_and_labelled() {
   pass "an archived repository is reviewed, labelled, and surfaced in the unmaintained list"
 }
 
+test_a_repository_with_no_push_date_is_named_unmaintained() {
+  local root bin model report
+  root=$(xo_test_tmproot xo-estate-review-nopush) || fail "no fixture root"
+  bin=$(xo_fakebin "$root")
+  write_fixtures "$root/fixtures"
+  # A repository created and never pushed to, which real organizations carry as
+  # placeholders: GitHub reports pushed_at as null, so its idle days cannot be
+  # measured. It is still the strongest case of what section 6.2 names, and the
+  # report must not say nothing is unmaintained while that repository is in it.
+  jq '[.[] | select(.name == "widgets")] + [{full_name: "acme/placeholder", name: "placeholder",
+       owner: {login: "acme"}, default_branch: "main", archived: false, fork: false,
+       pushed_at: null, private: false}]' "$root/fixtures/repos.json" > "$root/fixtures/repos.tmp" &&
+    mv "$root/fixtures/repos.tmp" "$root/fixtures/repos.json" ||
+    fail "could not write the never-pushed repository"
+  install_fake_gh_axi "$bin" "$root/fixtures" ok
+  model=$(PATH="$bin:$PATH" XO_ESTATE_REVIEW_NOW=$NOW "$REVIEW" acme "${WINDOW[@]}" --json) ||
+    fail "collection failed"
+  printf '%s' "$model" > "$root/model.json"
+  assert_equals "null" "$(jq -r '.repositories[] | select(.name == "acme/placeholder") | .idle_days | tostring' "$root/model.json")"     "a repository with no push date has no measurable idle days"
+  assert_equals "acme/placeholder" "$(jq -r '.risk.unmaintained[] | select(.repo == "acme/placeholder") | .repo' "$root/model.json")"     "a repository with no push date reaches the unmaintained list"
+
+  report=$root/report.md
+  "$REVIEW" --from-json "$root/model.json" > "$report" || fail "rendering failed"
+  assert_no_grep "No reviewed repository is archived" "$report"     "section 6.2 does not claim nothing is unmaintained while that repository is in the set"
+  assert_grep "never pushed to" "$report"     "section 6.2 names the selection that put it there"
+  assert_grep "| acme/placeholder | not measurable |" "$report"     "its day count renders as unmeasurable rather than as a number"
+  pass "a repository GitHub reports with no push date is named unmaintained with its idle days unmeasurable"
+}
+
 test_an_estate_larger_than_the_caps_names_both_of_them() {
   local root bin model
   root=$(xo_test_tmproot xo-estate-review-listcap) || fail "no fixture root"
@@ -1524,6 +1553,7 @@ test_a_single_repository_review_is_the_same_report_with_one_row
 test_repository_selection_excludes_forks_and_discloses_it
 test_a_named_repository_is_reviewed_whether_or_not_it_is_a_fork
 test_an_archived_repository_is_reviewed_and_labelled
+test_a_repository_with_no_push_date_is_named_unmaintained
 test_an_estate_larger_than_the_caps_names_both_of_them
 test_a_cap_on_the_window_pass_leaves_the_open_count_unhedged
 test_each_pull_request_walk_spends_its_own_budget
