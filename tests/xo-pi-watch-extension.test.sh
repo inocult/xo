@@ -215,13 +215,16 @@ EOF
   pass "Pi custom tool exposes repair-only metadata and returns automatic-continuation guidance"
 }
 
-# xo_watch_arm_pi renders its own shell, so it reproduces Pi's tool-call header
-# through .pi/extensions/lib/xo-stock-tool-header.ts, which covers only what
-# scalar arguments reach. This asserts XO's own schema stays inside that scope
-# and so is deliberately not gated on the installed Pi version: a string, array
-# or object parameter added here must fail by name rather than silently put the
-# helper out of step with Pi's format.
-test_pi_stock_header_tool_keeps_scalar_parameters() {
+# xo_watch_arm_pi renders its own shell, which is why it reproduces Pi's
+# tool-call header through .pi/extensions/lib/xo-stock-tool-header.ts at all.
+# This pins that ownership - the shell and the object schema the helper is
+# handed - and is deliberately not gated on the installed Pi version because it
+# inspects only XO's own registration. It does NOT bound parameter types: this
+# tool declares `Type.Object({})`, and the fixture's typebox stub exports only
+# Object, so adding any parameter here fails at module import instead. The
+# scalar-type bound lives in tests/xo-pi-branch-extension.test.sh, over the two
+# helper-backed tools that actually declare parameters.
+test_pi_stock_header_tool_owns_its_shell() {
   local repo home plugin out status
   repo="$TMP_ROOT/pi-stock-header-scalar-root"
   home="$TMP_ROOT/pi-stock-header-scalar-home"
@@ -249,20 +252,12 @@ if (tool.renderShell !== "self") {
 if (tool.parameters?.type !== "object") {
   throw new Error(`xo_watch_arm_pi parameters are not an object schema: ${JSON.stringify(tool.parameters)}`);
 }
-const SCALAR_TYPES = new Set(["number", "integer", "boolean"]);
-for (const [property, declared] of Object.entries(tool.parameters.properties ?? {})) {
-  if (!SCALAR_TYPES.has(declared?.type)) {
-    throw new Error(
-      `xo_watch_arm_pi parameter ${property} is declared ${JSON.stringify(declared?.type ?? declared)}, which xo-stock-tool-header.ts does not reproduce; reproduce and compare Pi's format for that shape before adding it`,
-    );
-  }
-}
 EOF
 )
   status=$?
-  expect_code 0 "$status" "xo_watch_arm_pi must keep the scalar parameters the stock header reproduces: $out"
-  [ -z "$out" ] || fail "Pi stock header scalar parameter test printed output: $out"
-  pass "xo_watch_arm_pi keeps scalar-only parameters"
+  expect_code 0 "$status" "xo_watch_arm_pi must keep owning the stock call header it renders: $out"
+  [ -z "$out" ] || fail "Pi stock header shell ownership test printed output: $out"
+  pass "xo_watch_arm_pi renders its own shell over an object parameter schema"
 }
 
 test_pi_redundant_tool_call_is_owned_noop() {
@@ -4027,7 +4022,7 @@ EOF
 
 test_pi_extension_reports_external_healthy_watcher
 test_pi_tool_returns_agent_tool_result
-test_pi_stock_header_tool_keeps_scalar_parameters
+test_pi_stock_header_tool_owns_its_shell
 test_pi_redundant_tool_call_is_owned_noop
 test_pi_scheduled_retry_call_is_owned_noop
 test_pi_actionable_close_starts_single_successor_before_delivery

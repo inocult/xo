@@ -776,7 +776,7 @@ SH
   chmod +x "$fixture/operational-input-probe.sh"
 
   output_file="$fixture/node-output"
-  (cd "$fixture" && EXT="$fixture/xo-calm.ts" WATCH_EXT="$fixture/xo-primary-pi-watch.ts" XO_HOME="$fixture/home" XO_OPERATIONAL_INPUT_SCRIPT="$fixture/operational-input-probe.sh" XO_OPERATIONAL_INPUT_OWNER="$OPERATIONAL_INPUT" XO_OPERATIONAL_INPUT_CALLS="$fixture/operational-input-calls" PI_PACKAGE_DIR="$PI_PACKAGE_DIR" node --input-type=module) >"$output_file" 2>&1 <<'JS'
+  (cd "$fixture" && EXT="$fixture/xo-calm.ts" WATCH_EXT="$fixture/xo-primary-pi-watch.ts" XO_HOME="$fixture/home" XO_OPERATIONAL_INPUT_SCRIPT="$fixture/operational-input-probe.sh" XO_OPERATIONAL_INPUT_OWNER="$OPERATIONAL_INPUT" XO_OPERATIONAL_INPUT_CALLS="$fixture/operational-input-calls" PI_PACKAGE_DIR="$PI_PACKAGE_DIR" PI_VERSION="$version" node --input-type=module) >"$output_file" 2>&1 <<'JS'
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -787,6 +787,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const extPath = fileURLToPath(pathToFileURL(process.env.EXT).href);
 
 const packageRoot = process.env.PI_PACKAGE_DIR;
+const piVersion = process.env.PI_VERSION ?? "unknown";
 const [{ AssistantMessageComponent }, { CustomEntryComponent }, { ToolExecutionComponent }, { UserMessageComponent }, { InteractiveMode }, { initTheme, theme }, { Text, getKeybindings, setCapabilities }, { createToolHtmlRenderer }, { createReadToolDefinition, createBashToolDefinition, createEditToolDefinition, createWriteToolDefinition, createGrepToolDefinition, createFindToolDefinition, createLsToolDefinition }] = await Promise.all([
   import(pathToFileURL(`${packageRoot}/dist/modes/interactive/components/assistant-message.js`).href),
   import(pathToFileURL(`${packageRoot}/dist/modes/interactive/components/custom-entry.js`).href),
@@ -1336,12 +1337,14 @@ async function assertStockHtmlRendering(command, submitData) {
       result.details,
       result.isError,
     );
-    // Order matters: a pre-1.0 Pi ignores getToolRenderers and renders no
+    // Order matters: a pre-1.0.1 Pi ignores getToolRenderers and renders no
     // tool at all, so the falsy-callHtml check below would fire first and
-    // report this as Calm hiding rows. Diagnose the rename as a rename.
+    // report this as Calm hiding rows. This suite has no version gate ahead of
+    // it, so an install too old for the dependency is the likely cause and is
+    // named first.
     if (lookups.count === 0) {
       throw new Error(
-        `Pi's HTML tool renderer did not call getToolRenderers for ${command}: its renderer-lookup dependency was renamed again`,
+        `Pi's HTML tool renderer never called getToolRenderers for ${command}: installed Pi ${piVersion} is too old for this suite, which needs the renderer-lookup dependency Pi has used since 1.0.1 - update Pi. If the installed Pi is 1.0.1 or newer, the dependency was renamed again.`,
       );
     }
     if (!callHtml || !resultHtml?.expanded) {

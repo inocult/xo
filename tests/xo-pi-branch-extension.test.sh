@@ -15,15 +15,21 @@ set -u
 TMP_ROOT=$(xo_test_tmproot xo-pi-branch-extension)
 EXT="$ROOT/.pi/extensions/xo-branch-supervision.ts"
 export NODE_NO_WARNINGS=1
-# Oldest Pi whose stock tool rendering matches what the extension's own
-# renderers emit, and so the oldest Pi this file's renderer cases can compare
-# against. Two stock changes set it, and the newer one binds:
+# Oldest Pi the renderer cases in this file can compare against, which is the
+# newest of the vendor changes they depend on. Three set it, and 1.0.1 binds:
 #   0.84.4 stopped supplying an implicit reset at multiline boundaries, which
 #          the extension now emits itself;
 #   0.99.0 replaced the bare-title tool-call header with title-plus-arguments
 #          (formatToolCallWithArgs), which the extension reproduces through
-#          .pi/extensions/lib/xo-stock-tool-header.ts.
-PI_STOCK_RENDER_FLOOR=0.99.0
+#          .pi/extensions/lib/xo-stock-tool-header.ts;
+#   1.0.1  renamed createToolHtmlRenderer's renderer-lookup dependency from
+#          getToolDefinition to getToolRenderers, and the export-host fixtures
+#          in the gated case pass that name only.
+# Verified against the published packages: 0.99.0 and 1.0.0 still read
+# getToolDefinition, 1.0.1 reads getToolRenderers. Keeping the floor below
+# 1.0.1 would let a 1.0.0 install past the skip and then fail as a third
+# rename, which is the opposite of its real cause.
+PI_STOCK_RENDER_FLOOR=1.0.1
 
 # Semantic-version floor for a version string this file already holds (Pi's
 # package.json field). bin/xo-bootstrap.sh's tool_version_at_least is the same

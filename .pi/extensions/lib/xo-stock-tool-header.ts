@@ -33,13 +33,15 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 // xo_branch_outcomes, `{through: 7}` for xo_branch_processed - collapsed and
 // expanded, comparing each rendered row against the same row rendered by the
 // installed Pi itself, so no Pi constant, format or spelling is restated
-// here. A companion case walks those same tools' registered schemas and
-// fails, naming the property and its type, if a parameter that is not a
-// scalar is ever added; tests/xo-pi-watch-extension.test.sh does the same for
-// xo_watch_arm_pi. Adding a long, tabbed, multiline or non-scalar parameter
-// therefore breaks that guard instead of silently putting this helper out of
+// here. A companion case in that same file walks those two tools' registered
+// schemas and fails, naming the property and its type, if a parameter that is
+// not a scalar is ever added, so a long, tabbed, multiline or non-scalar
+// parameter breaks that guard instead of silently putting this helper out of
 // scope, and the part of Pi's format it needs must be reproduced and compared
-// before the parameter lands.
+// before the parameter lands. xo_watch_arm_pi declares no parameters at all;
+// tests/xo-pi-watch-extension.test.sh pins only that it still renders its own
+// shell, and its fixture rejects any added parameter at module import rather
+// than by name.
 export function formatStockToolCallHeader(
   title: string,
   args: unknown,
