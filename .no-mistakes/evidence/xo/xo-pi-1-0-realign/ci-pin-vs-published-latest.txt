@@ -1,0 +1,6 @@
+$ npm view @earendil-works/pi-coding-agent version dist-tags
+version = '1.0.4'
+dist-tags = { 'legacy-node20': '0.74.2', latest: '1.0.4' }
+
+$ grep XO_PI_PACKAGE_VERSION .github/workflows/ci.yml
+25:  XO_PI_PACKAGE_VERSION: 1.0.4

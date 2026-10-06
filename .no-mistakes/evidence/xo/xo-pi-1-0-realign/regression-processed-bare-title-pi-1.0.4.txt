@@ -1,0 +1,9 @@
+not ok - Pi outcomes rendering consumers must preserve stock behavior: file:///tmp/xo-pi-branch-extension.cCKBDk/stock-render-consumers/[eval1]:180
+      throw new Error(
+            ^
+
+Error: xo_branch_processed {"through":7} collapsed differs from Pi stock: {"wanted":["","\u001b[48;5;23m                                                                                                    \u001b[49m","\u001b[48;5;23m \u001b[38;5;254mxo_branch_processed\u001b[39m \u001b[38;5;145mthrough=7\u001b[39m                                                                      \u001b[49m","\u001b[48;5;23m \u001b[38;5;145mSWEPT_OUTCOME\u001b[39m                                                                                      \u001b[49m","\u001b[48;5;23m                                                                                                    \u001b[49m"],"got":["","\u001b[48;5;23m                                                                                                    \u001b[49m","\u001b[48;5;23m \u001b[38;5;254mxo_branch_processed\u001b[39m                                                                                \u001b[49m","\u001b[48;5;23m \u001b[38;5;145mSWEPT_OUTCOME\u001b[39m                                                                                      \u001b[49m","\u001b[48;5;23m                                                                                                    \u001b[49m"]}
+    at file:///tmp/xo-pi-branch-extension.cCKBDk/stock-render-consumers/[eval1]:180:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v26.8.1: expected exit 0, got 1

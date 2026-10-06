@@ -1,0 +1,146 @@
+<!doctype html><html><head><meta charset="utf-8"><title>XO Pi tool-row rendering vs Pi 1.0.4 stock</title>
+<style>
+ body{background:#0f1115;color:#dfe3ea;font:14px/1.5 ui-sans-serif,system-ui,sans-serif;margin:0;padding:28px 32px}
+ h1{font-size:20px;margin:0 0 4px}
+ .sub{color:#9aa4b2;margin:0 0 24px;font-size:13px}
+ .case{margin:0 0 26px;border-top:1px solid #222733;padding-top:14px}
+ h3{font-size:13px;font-weight:600;margin:0 0 10px;letter-spacing:.02em}
+ .args{color:#8ab4ff;font-family:ui-monospace,monospace}
+ .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+ .cap{font-size:11px;color:#9aa4b2;margin:0 0 3px;text-transform:uppercase;letter-spacing:.06em}
+ .ref{text-transform:none;letter-spacing:0;color:#6b7280}
+ .ok{color:#5ddc8f;text-transform:none;letter-spacing:0}
+ .bad{color:#ff7b72;text-transform:none;letter-spacing:0}
+ pre.term{margin:0;padding:8px 10px;background:#000;border-radius:5px;overflow-x:auto;
+   font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;min-width:0}
+</style></head><body>
+<h1>XO Pi tool rows rendered by real Pi 1.0.4</h1>
+<p class="sub">Every argument shape the two self-shelled XO tool schemas admit, collapsed and expanded, rendered through the installed
+<code>@earendil-works/pi-coding-agent</code> 1.0.4 <code>ToolExecutionComponent</code>. Each case shows Pi's own stock row, XO's row on this
+change, and XO's row before it.</p>
+
+<section class="case">
+  <h3>xo_branch_outcomes <span class="args">{}</span> &middot; collapsed</h3>
+  <div class="grid">
+    <div><div class="cap">Pi 1.0.4 stock row <span class="ref">(reference)</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; this change <span class="ok">byte-identical to Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; before this change <span class="ok">identical</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+  </div>
+</section>
+<section class="case">
+  <h3>xo_branch_outcomes <span class="args">{}</span> &middot; expanded</h3>
+  <div class="grid">
+    <div><div class="cap">Pi 1.0.4 stock row <span class="ref">(reference)</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; this change <span class="ok">byte-identical to Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; before this change <span class="ok">identical</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+  </div>
+</section>
+<section class="case">
+  <h3>xo_branch_outcomes <span class="args">{&quot;recent&quot;: 2}</span> &middot; collapsed</h3>
+  <div class="grid">
+    <div><div class="cap">Pi 1.0.4 stock row <span class="ref">(reference)</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recent=2</span><span style="background:rgb(0, 95, 95)">                                                                        </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; this change <span class="ok">byte-identical to Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recent=2</span><span style="background:rgb(0, 95, 95)">                                                                        </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; before this change <span class="bad">differs from Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+  </div>
+</section>
+<section class="case">
+  <h3>xo_branch_outcomes <span class="args">{&quot;recent&quot;: 2}</span> &middot; expanded</h3>
+  <div class="grid">
+    <div><div class="cap">Pi 1.0.4 stock row <span class="ref">(reference)</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">  recent: 2</span><span style="background:rgb(0, 95, 95)">                                                                                        </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; this change <span class="ok">byte-identical to Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">  recent: 2</span><span style="background:rgb(0, 95, 95)">                                                                                        </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; before this change <span class="bad">differs from Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_outcomes</span><span style="background:rgb(0, 95, 95)">                                                                                 </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+  </div>
+</section>
+<section class="case">
+  <h3>xo_branch_processed <span class="args">{&quot;through&quot;: 7}</span> &middot; collapsed</h3>
+  <div class="grid">
+    <div><div class="cap">Pi 1.0.4 stock row <span class="ref">(reference)</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_processed</span><span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">through=7</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; this change <span class="ok">byte-identical to Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_processed</span><span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">through=7</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; before this change <span class="bad">differs from Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_processed</span><span style="background:rgb(0, 95, 95)">                                                                                </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+  </div>
+</section>
+<section class="case">
+  <h3>xo_branch_processed <span class="args">{&quot;through&quot;: 7}</span> &middot; expanded</h3>
+  <div class="grid">
+    <div><div class="cap">Pi 1.0.4 stock row <span class="ref">(reference)</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_processed</span><span style="background:rgb(0, 95, 95)">                                                                                </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">  through: 7</span><span style="background:rgb(0, 95, 95)">                                                                                       </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; this change <span class="ok">byte-identical to Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_processed</span><span style="background:rgb(0, 95, 95)">                                                                                </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">  through: 7</span><span style="background:rgb(0, 95, 95)">                                                                                       </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+    <div><div class="cap">XO row &mdash; before this change <span class="bad">differs from Pi stock</span></div><pre class="term">&nbsp;
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(228, 228, 228);background:rgb(0, 95, 95)">xo_branch_processed</span><span style="background:rgb(0, 95, 95)">                                                                                </span>
+<span style="background:rgb(0, 95, 95)"> </span><span style="color:rgb(175, 175, 175);background:rgb(0, 95, 95)">recorded outcome 41 (routine)</span><span style="background:rgb(0, 95, 95)">                                                                      </span>
+<span style="background:rgb(0, 95, 95)">                                                                                                    </span></pre></div>
+  </div>
+</section>
+</body></html>

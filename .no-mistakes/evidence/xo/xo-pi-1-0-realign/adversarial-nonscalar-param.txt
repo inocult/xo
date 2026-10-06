@@ -1,0 +1,10 @@
+ok - xo_branch_outcomes hides through ToolExecutionComponent while Calm-off and HTML export stay stock
+not ok - self-shelled tools must keep the scalar parameters the stock header reproduces: file:///tmp/xo-pi-branch-extension.MWqBnf/stock-header-scalar-params/[eval1]:28
+      throw new Error(
+            ^
+
+Error: xo_branch_processed parameter note is declared "string", which xo-stock-tool-header.ts does not reproduce; reproduce and compare Pi's format for that shape before adding it
+    at file:///tmp/xo-pi-branch-extension.MWqBnf/stock-header-scalar-params/[eval1]:28:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v26.8.1: expected exit 0, got 1

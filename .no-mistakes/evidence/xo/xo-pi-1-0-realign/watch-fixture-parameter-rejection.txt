@@ -1,0 +1,23 @@
+Probe: what happens when a parameter is added to xo_watch_arm_pi, under the
+watch suite's typebox stub (`export const Type = { Object(...) }` only).
+
+Fixture: a minimal copy of .pi/extensions/xo-primary-pi-watch.ts plus its libs,
+with the same Object-only typebox stub the watch suite installs.
+
+### PATCHED (string parameter added to xo_watch_arm_pi)
+import OK
+activate THREW: Type.String is not a function
+
+### UNPATCHED (as shipped)
+import OK
+activate OK
+
+Whole-suite effect of the same patch (the behavior that matters):
+
+  $ XO_PI_PACKAGE_DIR=<pi-1.0.4> bash tests/xo-pi-watch-extension.test.sh
+  not ok - Pi extension must surface an external healthy watcher as an owned-wake failure: expected exit 0, got 1
+  exit=1
+
+So the guard is real and loud: adding any parameter reddens the suite. It fires
+when the extension's default export runs (registration), not at module import -
+the docs/comments say "at module import".
