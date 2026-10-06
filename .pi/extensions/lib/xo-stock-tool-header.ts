@@ -28,7 +28,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 // not fidelity.
 //
 // Two cases hold that scope, and together they are what makes the parity
-// claim above checkable rather than asserted. tests/xo-pi-branch-extension.sh
+// claim above checkable rather than asserted. tests/xo-pi-branch-extension.test.sh
 // sweeps every arg shape the schemas admit - `{}` and `{recent: 2}` for
 // xo_branch_outcomes, `{through: 7}` for xo_branch_processed - collapsed and
 // expanded, comparing each rendered row against the same row rendered by the
@@ -51,11 +51,9 @@ export function formatStockToolCallHeader(
   const entries = Object.entries(args as Record<string, unknown>);
   if (entries.length === 0) return header;
   if (expanded) {
-    const lines = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value) ?? String(value)}`);
+    const lines = entries.map(([key, value]) => `  ${key}: ${JSON.stringify(value)}`);
     return `${header}\n${theme.fg("muted", lines.join("\n"))}`;
   }
-  const pairs = entries
-    .map(([key, value]) => `${key}=${JSON.stringify(value) ?? String(value)}`)
-    .join(" ");
+  const pairs = entries.map(([key, value]) => `${key}=${JSON.stringify(value)}`).join(" ");
   return `${header} ${theme.fg("muted", pairs)}`;
 }

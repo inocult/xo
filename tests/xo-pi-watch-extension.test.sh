@@ -71,24 +71,6 @@ export const Type = {
   Object(properties) {
     return { type: "object", properties, additionalProperties: false };
   },
-  String(options) {
-    return { type: "string", ...(options ?? {}) };
-  },
-  Number(options) {
-    return { type: "number", ...(options ?? {}) };
-  },
-  Integer(options) {
-    return { type: "integer", ...(options ?? {}) };
-  },
-  Boolean(options) {
-    return { type: "boolean", ...(options ?? {}) };
-  },
-  Array(items, options) {
-    return { type: "array", items, ...(options ?? {}) };
-  },
-  Optional(schema) {
-    return { ...schema, optional: true };
-  },
 };
 JS
 }

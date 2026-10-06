@@ -1697,6 +1697,42 @@ The same guard against the pre-change extension in the same lab measured a 676.9
 Measured through the same real `xo_branch_report` tool and real `bin/` scripts with a 1 ms interval timer, the largest single block of the JavaScript thread fell from 273 ms to 2.0 ms for a routine outcome, from 286 ms to 2.0 ms for a captain outcome, and from 134 ms to 1.9 ms for main's acknowledgement, against a 1.3-2.2 ms idle-loop floor.
 Those absolute figures are specific to this host and Pi version; the guards assert the relationship (delivery must stay in the class of the same machine's own floor) rather than a remembered millisecond number.
 
+### 2026-10-06 Pi 1.0.4 SDK compatibility refresh
+
+The CI pin crossed Pi's 0.x to 1.0 major boundary (0.87.1 to 1.0.4), so the credential-free live SDK guards were rerun against a real installed `@earendil-works/pi-coding-agent` 1.0.4 on Linux 7.2.5-3-omarchy x86_64, Node v26.8.1.
+The package was installed under `$HOME/.cache/xo-pi-verify/1.0.4` rather than globally, so it cannot shadow this machine's mise-managed `pi`.
+Both guards read no credentials and made no provider call that leaves the machine.
+
+```sh
+PV=$HOME/.cache/xo-pi-verify/1.0.4
+XO_PI_BRANCH_LIVE_E2E=1 \
+XO_PI_PACKAGE_DIR=$PV/lib/node_modules/@earendil-works/pi-coding-agent \
+tests/xo-pi-branch-live-e2e.test.sh
+
+PATH="$PV/bin:$PATH" \
+XO_PI_PACKAGE_DIR=$PV/lib/node_modules/@earendil-works/pi-coding-agent \
+tests/xo-pi-branch-responsiveness-live-e2e.test.sh
+```
+
+```text
+ok - real Pi SDK 1.0.4 accepts the branch session construction and preserves an unpromptable wake
+ok - real Pi SDK 1.0.4 rejects a post-construction 429 to watcher-owned main delivery without losing its durable row
+ok - real Pi SDK 1.0.4 applies an explicit branch model on create and over a reopened session's recorded model
+ok - real Pi SDK 1.0.4 reports its own supported effort levels and applies an explicit branch effort over a reopened session's recorded level
+ok - real Pi SDK 1.0.4 immediately renders appendEntry in the active transcript, persists it across reopen, and excludes it from model context
+ok - real Pi SDK 1.0.4 queues a streaming-time watcher wake without before_agent_start, keeps the successor chain, and surfaces consumption of both follow-ups
+pi 1.0.4 keystroke echo, worst observed: floor 13.8 ms, extension idle 14.3 ms, extension delivering 15.6 ms
+ok - supervision outcome delivery keeps the real Pi 1.0.4 TUI echoing keystrokes at its unloaded floor
+```
+
+Together these guards cover the Pi SDK surface the supervision branch builds on: `createAgentSession` with its `model`, `modelRuntime` and `thinkingLevel` options, `DefaultResourceLoader` with `extensionFactories`, `SessionManager`, `createBashToolDefinition`'s `spawnHook`, `sendCustomMessage`, `appendEntry` and `registerEntryRenderer`, the `before_provider_request` hook, a fresh `ModelRuntime`, and `getSupportedThinkingLevels`/`clampThinkingLevel`.
+The millisecond figures are this host's, and the echo guard asserts the relationship rather than a remembered number: delivering must stay in the class of the same machine's own unloaded floor, which it does here at 15.6 ms against a 13.8 ms floor.
+An earlier run of the same guard on a quieter machine observed floor 6.6 ms, idle 15.9 ms and delivering 17.8 ms; the absolute numbers move with host load, the verdict does not.
+
+`tests/xo-pi-primary-live-e2e.test.sh` was NOT run: it is credentialed and spends real model tokens on the captain's account, and it covers the primary-watcher path rather than the branch SDK surface named above.
+This refresh is therefore evidence for that SDK surface and for TUI responsiveness under delivery, not for full live Pi coverage.
+Neither guard runs in CI, and this refresh did not add a live lane or change which guards CI runs.
+
 ## Native Codex through Pi
 
 Verified on 2026-09-08 with Pi 0.85.1 and the installed `pi-codex-native` 0.2.1 adapter.
