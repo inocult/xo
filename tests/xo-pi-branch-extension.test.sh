@@ -4260,7 +4260,12 @@ test_outcomes_tool_uses_stock_execution_and_export_consumers() {
   ln -s "$package_dir/node_modules/@earendil-works/pi-ai" "$fixture/node_modules/@earendil-works/pi-ai"
   ln -s "$package_dir/node_modules/typebox" "$fixture/node_modules/typebox"
 
-  out=$(cd "$fixture" && EXT="$fixture/.pi/extensions/xo-branch-supervision.ts" PI_PACKAGE_DIR="$package_dir" node --input-type=module 2>&1 <<'JS'
+  # The here-document stays out of a $( ... ) capture, like every other Node
+  # driver in this file: stock macOS Bash 3.2 scans a command substitution for
+  # its closing parenthesis without treating a here-document body as data, so a
+  # parenthesis in this JS ends the substitution early and the rest of the file
+  # is parsed as shell. Same constraint as docs/verification/estate-review.md.
+  (cd "$fixture" && EXT="$fixture/.pi/extensions/xo-branch-supervision.ts" PI_PACKAGE_DIR="$package_dir" node --input-type=module > "$TMP_ROOT/node-output" 2>&1 <<'JS'
 import { pathToFileURL } from "node:url";
 
 const packageRoot = process.env.PI_PACKAGE_DIR;
@@ -4452,6 +4457,7 @@ for (const [toolName, shape] of sweepShapes) {
 JS
   )
   status=$?
+  out=$(cat "$TMP_ROOT/node-output")
   expect_code 0 "$status" "Pi outcomes rendering consumers must preserve stock behavior: $out"
   [ -z "$out" ] || fail "Pi outcomes rendering consumer test printed output: $out"
   pass "xo_branch_outcomes hides through ToolExecutionComponent while Calm-off and HTML export stay stock"
@@ -4469,7 +4475,10 @@ test_stock_header_callers_keep_scalar_parameters() {
   local repo out status
   repo="$TMP_ROOT/stock-header-scalar-params"
   install_pi_branch_extension_fixture "$repo"
-  out=$(cd "$repo" && EXT="$repo/.pi/extensions/xo-branch-supervision.ts" node --input-type=module 2>&1 <<'JS'
+  # Redirected to a file rather than captured with $( ... ), for the stock
+  # Bash 3.2 reason given in
+  # test_outcomes_tool_uses_stock_execution_and_export_consumers.
+  (cd "$repo" && EXT="$repo/.pi/extensions/xo-branch-supervision.ts" node --input-type=module > "$TMP_ROOT/node-output" 2>&1 <<'JS'
 import { pathToFileURL } from "node:url";
 
 const tools = [];
@@ -4506,6 +4515,7 @@ for (const name of ["xo_branch_outcomes", "xo_branch_processed"]) {
 JS
   )
   status=$?
+  out=$(cat "$TMP_ROOT/node-output")
   expect_code 0 "$status" "self-shelled tools must keep the scalar parameters the stock header reproduces: $out"
   [ -z "$out" ] || fail "stock header scalar parameter test printed output: $out"
   pass "xo_branch_outcomes and xo_branch_processed keep scalar-only parameters"

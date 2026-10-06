@@ -2228,21 +2228,6 @@ TS
     return 1
   }
 
-  wait_for_geometry_transition() {
-    local file=$1 transient_text=$2 final_text=$3 attempt=0 saw_transient=0
-    while [ "$attempt" -lt 600 ]; do
-      capture_geometry_viewport "$file" || true
-      if grep -Fq "$transient_text" "$file" 2>/dev/null; then
-        saw_transient=1
-      elif [ "$saw_transient" -eq 1 ] && grep -Fq "$final_text" "$file" 2>/dev/null; then
-        return 0
-      fi
-      sleep 0.01
-      attempt=$((attempt + 1))
-    done
-    return 1
-  }
-
   assert_geometry_gap() {
     local file=$1 label=$2
     skill_line=$(grep -n -m1 '\[skill\] ahoy' "$file" | cut -d: -f1)
@@ -2289,10 +2274,13 @@ TS
 
   tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" -l '/reload'
   tmux -L "$TMUX_SOCKET" send-keys -t "$TMUX_SESSION" Enter
-  wait_for_geometry_transition \
-    "$snapshot" \
-    "Reloading keybindings, extensions, skills, prompts, themes, and context files..." \
-    "CALM_GEOMETRY_FINAL" \
+  # Wait on Pi's durable post-reload status row rather than on sighting its
+  # transient "Reloading..." box: Pi prints that status only after the reload
+  # rebuilt the chat from persisted messages, so seeing it proves the transcript
+  # under the gap assertion below is the reloaded one. Sampling the box instead
+  # made the pass depend on a capture landing inside its lifetime.
+  wait_for_geometry_text "$snapshot" \
+    "Reloaded keybindings, extensions, skills, prompts, themes, and context files" \
     || fail "Pi Calm hidden-block geometry E2E did not complete the /reload viewport transition"
   assert_geometry_gap "$snapshot" "reloaded native Calm transcript"
 
@@ -3555,7 +3543,14 @@ TS
 {"type":"message","id":"a0000016","parentId":"a0000015","timestamp":"$now","message":{"role":"assistant","content":[{"type":"text","text":"The deterministic tool example is complete."}],"api":"anthropic-messages","provider":"anthropic","model":"claude-sonnet-4-5","usage":{"input":2,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":3,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"stop","timestamp":16}}
 JSON
 
-  tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 180 -y 44 \
+  # Tall enough for the startup header, the whole fixture transcript, and the
+  # taller Ctrl+O expansion of both to be on screen at once. Pi 1.0 runs its
+  # TUI in the alternate screen, so whatever does not fit is not in the terminal
+  # scrollback that wait_for_text captures: a pane that only fits the tail would
+  # hide the early rows these Calm-off assertions are about, and would make the
+  # Calm-on absence checks after the restart below pass on rows that were never
+  # rendered at all.
+  tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 180 -y 200 \
     "cd '$project' && env XO_HOME='$home' PI_CODING_AGENT_DIR='$config' XO_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi --approve --no-skills --no-prompt-templates --no-context-files --session '$session_file'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 30"
   wait_for_text "$default_snapshot" "The deterministic tool example is complete." \
     || fail "Pi calm E2E did not reach the restored session transcript"
@@ -3770,8 +3765,36 @@ const tree = dom.match(/<div[^>]*id="tree-container"[^>]*>([\s\S]*?)<div[^>]*id=
 if (!messages || !tree) process.exit(1);
 if (!/<div class="user-message"[^>]*>[\s\S]*Show a deterministic tool example\./.test(messages)) process.exit(1);
 if (!/<div class="assistant-message"[^>]*>[\s\S]*The deterministic tool example is complete\./.test(messages)) process.exit(1);
-if (messages.includes('<div class="hook-message"')) process.exit(1);
-if (messages.includes("[xo-synthetic-input]")) process.exit(1);
+// Pi 1.0 does emit a display:false custom message into the conversation pane,
+// as <div class="hook-message hook-message-hidden"> that the export stylesheet
+// gives display:none; older Pi left the element out of the pane entirely. What
+// Calm owns is what the captain can see, so drop the subtrees Pi marks hidden
+// and require the visible remainder to carry no hook message and no synthetic
+// input. A hook message Pi renders without that marker is visible, is not
+// dropped here, and still fails.
+const stripHidden = (html) => {
+  for (;;) {
+    const start = html.search(/<div class="[^"]*\bhook-message-hidden\b[^"]*"/);
+    if (start === -1) return html;
+    const tags = /<\/?div\b[^>]*>/g;
+    tags.lastIndex = start;
+    let depth = 0;
+    let end = -1;
+    let tag;
+    while ((tag = tags.exec(html))) {
+      depth += tag[0].startsWith("</div") ? -1 : 1;
+      if (depth === 0) {
+        end = tags.lastIndex;
+        break;
+      }
+    }
+    if (end === -1) return html;
+    html = html.slice(0, start) + html.slice(end);
+  }
+};
+const visibleMessages = stripHidden(messages);
+if (visibleMessages.includes("hook-message")) process.exit(1);
+if (visibleMessages.includes("[xo-synthetic-input]")) process.exit(1);
 for (const current of ["CURRENT_WATCHER_E2E", "CURRENT_TURN_END_E2E", "CURRENT_AWAY_E2E", "CURRENT_FROM_PRIMARY_E2E", "CURRENT_LAUNCH_BRIEF_E2E"]) {
   if (!messages.includes(current)) process.exit(1);
 }
@@ -4154,7 +4177,7 @@ JS
     || fail "Pi did not exit cleanly before the Calm persistence restart"
   tmux -L "$TMUX_SOCKET" kill-session -t "$TMUX_SESSION" 2>/dev/null || true
 
-  tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 180 -y 44 \
+  tmux -L "$TMUX_SOCKET" new-session -d -s "$TMUX_SESSION" -x 180 -y 200 \
     "cd '$project' && env XO_HOME='$home' PI_CODING_AGENT_DIR='$config' XO_OPERATIONAL_INPUT_SCRIPT='$OPERATIONAL_INPUT' PI_OFFLINE=1 pi --approve --no-skills --no-prompt-templates --no-context-files --session '$session_file'; rc=\$?; printf '\nPI_EXIT=%s\n' \"\$rc\"; sleep 30"
   wait_for_text "$restarted_snapshot" "CALM_WORKING_E2E_RESPONSE" \
     || fail "Pi did not restore the persisted session after restart"
