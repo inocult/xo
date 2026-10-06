@@ -34,6 +34,7 @@ install_pi_watch_extension_fixture() {
   cp "$EXT" "$repo/.pi/extensions/xo-primary-pi-watch.ts"
   cp "$ROOT/.pi/extensions/lib/xo-branch-dispatch.ts" "$repo/.pi/extensions/lib/xo-branch-dispatch.ts"
   cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$repo/.pi/extensions/lib/xo-native-contract.ts"
+  cp "$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts" "$repo/.pi/extensions/lib/xo-stock-tool-header.ts"
   cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$repo/.pi/extensions/lib/xo-async-exec.ts"
   cp "$ROOT/.pi/extensions/lib/xo-calm-visibility.ts" "$repo/.pi/extensions/lib/xo-calm-visibility.ts"
   cp "$ROOT/.pi/extensions/lib/xo-operational-input.ts" "$repo/.pi/extensions/lib/xo-operational-input.ts"
@@ -212,6 +213,51 @@ EOF
   expect_code 0 "$status" "Pi custom tool must expose first-cycle or repair-only metadata and return Pi's AgentToolResult shape"
   [ -z "$out" ] || fail "Pi tool-result test printed output: $out"
   pass "Pi custom tool exposes repair-only metadata and returns automatic-continuation guidance"
+}
+
+# xo_watch_arm_pi renders its own shell, which is why it reproduces Pi's
+# tool-call header through .pi/extensions/lib/xo-stock-tool-header.ts at all.
+# This pins that ownership - the shell and the object schema the helper is
+# handed - and is deliberately not gated on the installed Pi version because it
+# inspects only XO's own registration. It does NOT bound parameter types: this
+# tool declares `Type.Object({})`, and the fixture's typebox stub exports only
+# Object, so adding any parameter here fails at module import instead. The
+# scalar-type bound lives in tests/xo-pi-branch-extension.test.sh, over the two
+# helper-backed tools that actually declare parameters.
+test_pi_stock_header_tool_owns_its_shell() {
+  local repo home plugin out status
+  repo="$TMP_ROOT/pi-stock-header-scalar-root"
+  home="$TMP_ROOT/pi-stock-header-scalar-home"
+  mkdir -p "$repo/bin" "$home/state" "$home/config"
+  install_pi_watch_extension_fixture "$repo"
+  plugin="$repo/.pi/extensions/xo-primary-pi-watch.ts"
+  out=$(PLUGIN="$plugin" XO_HOME="$home" XO_ROOT_OVERRIDE="$repo" node --input-type=module 2>&1 <<'EOF'
+import { pathToFileURL } from "node:url";
+
+let tool = null;
+const pi = {
+  on() {},
+  registerCommand() {},
+  registerTool(candidate) {
+    if (candidate.name === "xo_watch_arm_pi") tool = candidate;
+  },
+  sendUserMessage: async () => {},
+};
+const mod = await import(pathToFileURL(process.env.PLUGIN).href);
+mod.default(pi);
+if (!tool) throw new Error("Pi watch tool was not registered");
+if (tool.renderShell !== "self") {
+  throw new Error(`xo_watch_arm_pi no longer renders its own shell (${JSON.stringify(tool.renderShell)}), so it no longer owns Pi's call header`);
+}
+if (tool.parameters?.type !== "object") {
+  throw new Error(`xo_watch_arm_pi parameters are not an object schema: ${JSON.stringify(tool.parameters)}`);
+}
+EOF
+)
+  status=$?
+  expect_code 0 "$status" "xo_watch_arm_pi must keep owning the stock call header it renders: $out"
+  [ -z "$out" ] || fail "Pi stock header shell ownership test printed output: $out"
+  pass "xo_watch_arm_pi renders its own shell over an object parameter schema"
 }
 
 test_pi_redundant_tool_call_is_owned_noop() {
@@ -3976,6 +4022,7 @@ EOF
 
 test_pi_extension_reports_external_healthy_watcher
 test_pi_tool_returns_agent_tool_result
+test_pi_stock_header_tool_owns_its_shell
 test_pi_redundant_tool_call_is_owned_noop
 test_pi_scheduled_retry_call_is_owned_noop
 test_pi_actionable_close_starts_single_successor_before_delivery

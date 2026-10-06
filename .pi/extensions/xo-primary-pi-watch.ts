@@ -30,6 +30,7 @@ import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
 import { Box, Container, Text, type Component } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { registerXoTool } from "./lib/xo-native-contract.ts";
+import { formatStockToolCallHeader } from "./lib/xo-stock-tool-header.ts";
 import {
   createBranchDispatchOffer,
   XO_BRANCH_DISPATCH_EVENT,
@@ -1129,13 +1130,14 @@ export default function (pi: ExtensionAPI) {
     ],
     parameters: Type.Object({}),
     renderShell: "self",
-    renderCall: (_args, theme, context) => {
+    renderCall: (args, theme, context) => {
       if (calmHides("assistant-tool-call")) return new Container();
+      const header = formatStockToolCallHeader("xo_watch_arm_pi", args, theme, context.expanded);
       if (calmPresentation.stockExportRendering) {
-        return new Text(theme.fg("toolTitle", theme.bold("xo_watch_arm_pi")), 0, 0);
+        return new Text(header, 0, 0);
       }
       const state = context.state as WatchToolShellState;
-      state.call = new Text(theme.fg("toolTitle", theme.bold("xo_watch_arm_pi")), 0, 0);
+      state.call = new Text(header, 0, 0);
       return refreshWatchToolShell(state, theme, context);
     },
     renderResult: (result, _options, theme, context) => {

@@ -40,6 +40,7 @@ cp "$ROOT/.pi/extensions/lib/xo-calm-operational-user-layout.ts" "$TMP_ROOT/lib/
 cp "$ROOT/.pi/extensions/lib/xo-calm-visibility.ts" "$TMP_ROOT/lib/xo-calm-visibility.ts"
 cp "$ROOT/.pi/extensions/lib/xo-calm-working-ship.ts" "$TMP_ROOT/lib/xo-calm-working-ship.ts"
 cp "$ROOT/.pi/extensions/lib/xo-operational-input.ts" "$TMP_ROOT/lib/xo-operational-input.ts"
+cp "$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts" "$TMP_ROOT/lib/xo-stock-tool-header.ts"
 ln -s "$PI_PACKAGE_DIR" "$TMP_ROOT/node_modules/@earendil-works/pi-coding-agent"
 ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-tui" "$TMP_ROOT/node_modules/@earendil-works/pi-tui"
 ln -s "$PI_PACKAGE_DIR/node_modules/@earendil-works/pi-ai" "$TMP_ROOT/node_modules/@earendil-works/pi-ai"

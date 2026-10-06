@@ -203,6 +203,35 @@ The Ahoy first-message boundary was reverified on 2026-07-22 with Pi 0.81.1 and 
 Marked current operational input and the two exact legacy compatibility shapes selected Bearings, while genuine near-miss captain messages remained real boundaries.
 The detailed reconciliation and task chronology stay in the private audit report and PR evidence.
 
+## Pi extension rendering parity
+
+XO's own Pi tools render their own shell so Calm can hide a row completely, which means XO reproduces Pi's stock tool-call header instead of inheriting it.
+That parity was reverified on 2026-10-05 against real installed Pi packages, both installed exactly as CI installs them (`npm install -g @earendil-works/pi-coding-agent@<version>`).
+
+```sh
+XO_PI_PACKAGE_DIR="$(npm root -g)/@earendil-works/pi-coding-agent" \
+  tests/xo-pi-branch-extension.test.sh
+XO_PI_PACKAGE_DIR="$(npm root -g)/@earendil-works/pi-coding-agent" \
+  tests/xo-calm-pi-extension.test.sh
+```
+
+| Pi installed | Branch extension | Calm extension |
+| --- | --- | --- |
+| 1.0.4 | 43 passed, 0 skipped | 13 passed |
+| 0.87.1 | 42 passed, stock-render comparison skipped by `PI_STOCK_RENDER_FLOOR` | not supported, fails at the export-host fixture naming the installed version and the 1.0.1 requirement |
+
+The branch suite compares every argument shape those tools' schemas admit - `{}` and `{recent: 2}` for `xo_branch_outcomes`, `{through: 7}` for `xo_branch_processed` - collapsed and expanded, against the installed Pi's own rendering of the same row, so the comparison restates no Pi constant or format.
+A companion case, deliberately ungated on the Pi version because it inspects only XO's schemas, fails by name if a parameter that is not a scalar is ever added to either of those tools.
+`xo_watch_arm_pi` declares no parameters, so `tests/xo-pi-watch-extension.test.sh` pins only that it still renders its own shell over an object schema; its fixture's typebox stub exports `Object` alone, so any parameter added there fails at module import instead of by name.
+
+Two stock changes in that interval are load-bearing and were each bisected against the published packages rather than inferred from the failures.
+Pi 0.99.0 replaced the bare-title tool-call header with title-plus-arguments, so an XO tool that still emitted a bare title diverged from every stock row beside it.
+Pi 1.0.1 renamed `createToolHtmlRenderer`'s renderer-lookup dependency from `getToolDefinition` to `getToolRenderers`; no XO extension calls that API, so it reached only the two export-host fixtures that stand in for one - in `tests/xo-calm-pi-extension.test.sh` and in `tests/xo-pi-branch-extension.test.sh` - where an unrecognized dependency is swallowed and renders no tool at all.
+Both fixtures supply the 1.0.1 name only and count the lookups, so a third rename fails loudly in either suite instead of passing while asserting nothing.
+That silent swallow is why the branch fixture needed the counter: `undefined` is also how this API signals "delegate to the structured fallback", so the stale spelling made its delegation assertion hold while reaching no renderer at all.
+It is also why the Calm suite needs Pi 1.0.1 or newer: it has no version gate, so a developer on an older Pi gets a failure naming the installed version and telling them to update, rather than a green suite proving nothing.
+The branch suite instead skips below `PI_STOCK_RENDER_FLOOR`, which is 1.0.1 for the same reason.
+
 ## Semantic busy state
 
 The per-adapter semantic sources behind [`bin/xo-busy-lib.sh`](../../bin/xo-busy-lib.sh) were live-verified on 2026-07-28 against XO-launched workers wired exactly as `xo-spawn` writes them.

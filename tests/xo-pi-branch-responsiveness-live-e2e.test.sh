@@ -50,7 +50,7 @@ cleanup() {
 trap cleanup EXIT
 
 cp "$ROOT/.pi/extensions/xo-branch-supervision.ts" "$PROJECT/.pi/extensions/xo-branch-supervision.ts"
-for lib in xo-async-exec xo-branch-dispatch xo-branch-model-picker xo-calm-visibility xo-native-contract xo-operational-input; do
+for lib in xo-async-exec xo-branch-dispatch xo-branch-model-picker xo-calm-visibility xo-native-contract xo-operational-input xo-stock-tool-header; do
   cp "$ROOT/.pi/extensions/lib/$lib.ts" "$PROJECT/.pi/extensions/lib/$lib.ts"
 done
 

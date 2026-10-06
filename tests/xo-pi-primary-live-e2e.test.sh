@@ -254,6 +254,7 @@ cp "$ROOT/.pi/extensions/lib/xo-calm-visibility.ts" "$PROJECT/.pi/extensions/lib
 cp "$ROOT/.pi/extensions/lib/xo-calm-working-ship.ts" "$PROJECT/.pi/extensions/lib/xo-calm-working-ship.ts"
 cp "$ROOT/.pi/extensions/lib/xo-branch-dispatch.ts" "$PROJECT/.pi/extensions/lib/xo-branch-dispatch.ts"
 cp "$ROOT/.pi/extensions/lib/xo-native-contract.ts" "$PROJECT/.pi/extensions/lib/xo-native-contract.ts"
+cp "$ROOT/.pi/extensions/lib/xo-stock-tool-header.ts" "$PROJECT/.pi/extensions/lib/xo-stock-tool-header.ts"
 cp "$ROOT/.pi/extensions/lib/xo-async-exec.ts" "$PROJECT/.pi/extensions/lib/xo-async-exec.ts"
 cp "$ROOT/.pi/extensions/lib/xo-operational-input.ts" "$PROJECT/.pi/extensions/lib/xo-operational-input.ts"
 cp "$ROOT/.pi/extensions/xo-primary-turnend-guard.ts" "$PROJECT/.pi/extensions/xo-primary-turnend-guard.ts"
