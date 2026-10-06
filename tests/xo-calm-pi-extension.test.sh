@@ -1301,9 +1301,9 @@ for (const { name, actual } of rows) {
   }
 }
 // Pi renamed createToolHtmlRenderer's renderer-lookup dependency from
-// getToolDefinition to getToolRenderers in 1.0.1. Supply the 1.0 name only, so
-// a pre-1.0 Pi fails loudly here instead of passing quietly against a line XO
-// does not verify. Count the lookups too: Pi swallows a throwing or missing
+// getToolDefinition to getToolRenderers in 1.0.1. Supply the 1.0.1 name only,
+// so a pre-1.0.1 Pi fails loudly here instead of passing quietly against a line
+// XO does not verify. Count the lookups too: Pi swallows a throwing or missing
 // dependency and simply renders no tool, so without this counter a third
 // rename would leave the case passing while asserting nothing.
 function createExportHostRenderer() {

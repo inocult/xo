@@ -227,7 +227,7 @@ A companion case, deliberately ungated on the Pi version because it inspects onl
 Two stock changes in that interval are load-bearing and were each bisected against the published packages rather than inferred from the failures.
 Pi 0.99.0 replaced the bare-title tool-call header with title-plus-arguments, so an XO tool that still emitted a bare title diverged from every stock row beside it.
 Pi 1.0.1 renamed `createToolHtmlRenderer`'s renderer-lookup dependency from `getToolDefinition` to `getToolRenderers`; no XO extension calls that API, so it reached only the two export-host fixtures that stand in for one - in `tests/xo-calm-pi-extension.test.sh` and in `tests/xo-pi-branch-extension.test.sh` - where an unrecognized dependency is swallowed and renders no tool at all.
-Both fixtures supply the 1.0 name only and count the lookups, so a pre-1.0 Pi and a third rename each fail loudly instead of passing while asserting nothing.
+Both fixtures supply the 1.0.1 name only and count the lookups, so a third rename fails loudly in either suite instead of passing while asserting nothing.
 That silent swallow is why the branch fixture needed the counter: `undefined` is also how this API signals "delegate to the structured fallback", so the stale spelling made its delegation assertion hold while reaching no renderer at all.
 It is also why the Calm suite needs Pi 1.0.1 or newer: it has no version gate, so a developer on an older Pi gets a failure naming the installed version and telling them to update, rather than a green suite proving nothing.
 The branch suite instead skips below `PI_STOCK_RENDER_FLOOR`, which is 1.0.1 for the same reason.
